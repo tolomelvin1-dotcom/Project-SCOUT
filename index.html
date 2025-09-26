@@ -1,6 +1,4 @@
-// The part of the Arduino code that returns the HTML page
 String getHTMLPage() {
-  // NOTE: The video feed link is REMOVED since the webcam is on the Wyse
   return R"rawliteral(
     <!doctype html>
     <html>
@@ -8,24 +6,46 @@ String getHTMLPage() {
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>S.C.O.U.T. Rover Control</title>
         <style>
-            body { font-family: Arial, sans-serif; text-align: center; margin: 0; }
-            .container { max-width: 600px; margin: auto; padding: 20px; }
+            body { font-family: Arial, sans-serif; text-align: center; margin: 0; padding-top: 20px; background-color: #f0f2f5; }
+            .container { max-width: 600px; margin: auto; padding: 20px; background-color: #fff; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+            h1 { color: #0056b3; margin-bottom: 5px; }
+            h2 { color: #333; border-bottom: 2px solid #ccc; padding-bottom: 5px; margin-top: 20px; }
             .control-panel { margin-top: 20px; }
             .control-panel button { 
                 padding: 15px 30px; margin: 5px; font-size: 16px; width: 150px; 
                 cursor: pointer; background-color: #007bff; color: white; border: none; 
-                border-radius: 5px;
+                border-radius: 5px; transition: background-color 0.3s;
             }
-            .control-panel button:active { background-color: #0056b3; }
+            .control-panel button:hover { background-color: #0056b3; }
+            .control-panel button:active { background-color: #004080; }
             .command-group { margin: 15px 0; }
+            /* Styling for the AI results section */
+            #ai-results { 
+                text-align: left; 
+                padding: 15px; 
+                border: 2px solid #28a745; /* Green border for success data */
+                border-radius: 8px; 
+                background-color: #e2f0e6; 
+                margin: 15px 0;
+            }
+            #ai-results p { margin: 5px 0; }
+            #status { margin-top: 10px; font-weight: bold; }
         </style>
     </head>
     <body>
         <div class="container">
-            <h1>S.C.O.U.T. Rover Bridge Control (No Video Stream)</h1>
-            <p>Video is streamed directly from the USB Webcam on the Dell Wyse PC.</p>
+            <h1>S.C.O.U.T. Rover Bridge Control</h1>
+            <p style="color: #666;">Video feed managed by USB Webcam on the Dell Wyse PC.</p>
             
+            <h2>AI Analysis Results 🔬</h2>
+            <div id="ai-results">
+                <p><strong>Last Analysis:</strong> Fetching...</p>
+                <p><strong>Crop Health:</strong> Fetching...</p>
+                <p><strong>Soil Recommendation:</strong> Fetching...</p>
+            </div>
+
             <div class="control-panel">
+                <h2>Rover Movement</h2>
                 <div class="command-group">
                     <button onclick="sendCommand('forward')">↑ Forward</button><br>
                     <button onclick="sendCommand('left')">← Left</button>
@@ -40,12 +60,14 @@ String getHTMLPage() {
                     <button onclick="sendCommand('read_nav')">Read GPS/Mag</button>
                 </div>
                 
-                <div id="status"></div>
+                <div id="status">Ready</div>
             </div>
         </div>
 
         <script>
-            // JavaScript command function remains the same
+            // !! IMPORTANT: REPLACE WITH YOUR DELL WYSE IP !!
+            const WYSE_IP = "http://192.168.X.X:5000"; 
+
             function sendCommand(dir) {
                 document.getElementById('status').innerHTML = 'Sending ' + dir + '...';
                 fetch('/move?dir=' + dir)
@@ -58,8 +80,16 @@ String getHTMLPage() {
                         document.getElementById('status').innerHTML = 'Command ' + dir + ' FAILED';
                     });
             }
-        </script>
-    </body>
-    </html>
-  )rawliteral";
-}
+
+            // Function to fetch AI results from the Dell Wyse Flask server
+            function fetchAIResults() {
+                fetch(WYSE_IP + '/ai_results')
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Server returned error ' + response.status);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        let html = `
+                            <p><strong>Last Analysis:</strong> ${data.last_analysis_
