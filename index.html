@@ -29,7 +29,7 @@
         .gallery-item { width: 120px; height: 120px; background-color: #3c3c3c; border: 1px solid #5a5a5a; display: flex; align-items: center; justify-content: center; color: #d4d4d4; font-size: 0.8em; }
         .gallery-item img { width: 100%; height: 100%; object-fit: cover; }
 
-        /* AI Results Styling (New Section for Analysis Text) */
+        /* AI Results Styling (Updated Section) */
         #ai-analysis { 
             margin-top: 15px; 
             padding: 15px; 
@@ -39,6 +39,7 @@
         }
         #ai-analysis p { margin: 5px 0; font-size: 0.95em; }
         #ai-analysis strong { color: #f28b82; }
+        #ai-analysis h3 { color: #d6b8ff; margin-top: 8px; margin-bottom: 3px; border-bottom: 1px dashed #5a5a5a; padding-bottom: 3px; }
 
     </style>
 </head>
@@ -50,10 +51,22 @@
         <p>System Status: <span id="status">Connecting...</span></p>
 
         <div id="ai-analysis">
-            <h2>AI Analysis Results 🧠</h2>
-            <p><strong>Last Image Analysis:</strong> <span id="ai-time">Fetching...</span></p>
+            <h2>Comprehensive Analysis 🧠</h2>
+            <p><strong>Last Update Time:</strong> <span id="ai-time">Fetching...</span></p>
+            
+            <h3>Image Analysis</h3>
             <p><strong>Crop Health Score:</strong> <span id="ai-health">Fetching...</span></p>
-            <p><strong>Recommendation:</strong> <span id="ai-recommendation">Fetching...</span></p>
+            
+            <h3>Soil Moisture Analysis</h3>
+            <p><strong>Moisture Status:</strong> <span id="ai-moisture-status">Fetching...</span></p>
+            <p><strong>Moisture Reading:</strong> <span id="ai-moisture-value">N/A</span></p>
+
+            <h3>NPK Analysis</h3>
+            <p><strong>Nutrient Balance:</strong> <span id="ai-npk-status">Fetching...</span></p>
+            <p><strong>NPK Reading:</strong> <span id="ai-npk-value">N/A</span></p>
+
+            <h3 style="border-bottom: none;">Overall Recommendation</h3>
+            <p><strong>Action Required:</strong> <span id="ai-recommendation">Fetching...</span></p>
         </div>
         <div class="move-controls">
             <h2>Rover Movement</h2>
@@ -186,7 +199,7 @@
     }
 
 
-    // --- AI Analysis Fetch Function ---
+    // --- AI Analysis Fetch Function (UPDATED) ---
     function fetchAIResults() {
         fetch(DELL_WYSE_IP + '/ai_results')
             .then(response => {
@@ -198,12 +211,20 @@
             .then(data => {
                 document.getElementById('ai-time').innerText = data.last_analysis_time || 'N/A';
                 document.getElementById('ai-health').innerText = data.image_health_score || 'N/A';
-                document.getElementById('ai-recommendation').innerText = data.soil_recommendation || 'No Recommendation';
+                document.getElementById('ai-recommendation').innerText = data.overall_recommendation || 'No Recommendation';
+
+                // New Soil Analysis Fields
+                document.getElementById('ai-moisture-status').innerText = data.moisture_status || 'N/A';
+                document.getElementById('ai-moisture-value').innerText = data.moisture_value || 'N/A';
+                document.getElementById('ai-npk-status').innerText = data.npk_status || 'N/A';
+                document.getElementById('ai-npk-value').innerText = data.npk_value || 'N/A';
             })
             .catch(error => {
                 document.getElementById('ai-time').innerText = 'ERROR';
                 document.getElementById('ai-health').innerText = 'ERROR';
                 document.getElementById('ai-recommendation').innerText = 'Cannot connect to Dell Wyse AI server.';
+                document.getElementById('ai-moisture-status').innerText = 'ERROR';
+                document.getElementById('ai-npk-status').innerText = 'ERROR';
                 console.error('Fetch AI error:', error);
             });
     }
@@ -235,7 +256,10 @@
                 }
 
                 if (command.startsWith('read_') || command === 'probe') {
+                    // Force a fetch of the webpage data (which updates live sensor data)
+                    // and then force an AI results fetch shortly after.
                     setTimeout(() => fetchData(command), 500); 
+                    setTimeout(() => fetchAIResults(), 1000); 
                 }
             })
             .catch(error => {
@@ -249,6 +273,7 @@
         
         STATUS_ELEMENT.innerText = "Fetching latest data...";
         
+        // This is a simplified fetch/parse for simulation. In a real system, you'd fetch /sensor_data JSON
         fetch(ESP32_URL_BASE)
             .then(response => {
                 if (!response.ok) {
@@ -257,10 +282,7 @@
                 return response.text();
             })
             .then(html => {
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, 'text/html');
-
-                 // --- SIMULATED DATA UPDATES ---
+                // --- SIMULATED DATA UPDATES (Simplified as ESP32 HTML is static) ---
                  currentRoverData.latitude = "40.7128";
                  currentRoverData.longitude = "-74.0060";
                  let headingStr = (Math.random() * 360).toFixed(1) + ' deg';
