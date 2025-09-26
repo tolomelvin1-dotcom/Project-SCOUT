@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>S.C.O.U.T. Rover Mapping & Control</title>
     <style>
-        /* CSS STYLING (Same as before) */
+        /* CSS STYLING */
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background-color: #1e1e1e; color: #d4d4d4; }
         .container { max-width: 1200px; margin: auto; background: #2d2d30; padding: 25px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); display: flex; flex-wrap: wrap; }
         .controls-panel { flex: 1; min-width: 350px; padding-right: 20px; }
@@ -17,11 +17,17 @@
         .move-controls button { background-color: #569cd6; color: white; }
         .arm-controls button { background-color: #6a9955; color: white; }
         .camera-control button { background-color: #ce4257; color: white; }
+        .camera-control button.secondary { background-color: #ff9800; }
         #status { font-weight: bold; color: #ffcc00; }
         .data-display { margin-top: 20px; padding: 15px; border: 1px solid #3c3c3c; border-radius: 6px; background-color: #252526; }
-        .data-row { margin: 8px 0; display: flex; }
         .data-row strong { display: inline-block; width: 140px; color: #9cdcfe; }
         #roverMap { border: 3px solid #6a9955; background-color: #3d3d3d; display: block; margin: 20px auto; }
+        
+        /* New Gallery Styles */
+        #photoGallery { margin-top: 20px; border-top: 1px solid #3c3c3c; padding-top: 15px; display: none; }
+        .gallery-container { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+        .gallery-item { width: 120px; height: 120px; background-color: #3c3c3c; border: 1px solid #5a5a5a; display: flex; align-items: center; justify-content: center; color: #d4d4d4; font-size: 0.8em; }
+        .gallery-item img { width: 100%; height: 100%; object-fit: cover; }
     </style>
 </head>
 <body>
@@ -43,9 +49,16 @@
         <hr style="border-top: 1px solid #3c3c3c;">
 
         <div class="camera-control">
-            <h2>Image Capture</h2>
+            <h2>Image Capture & Gallery</h2>
             <button onclick="sendCommand('capture')">📸 Take Photo (to Dell Wyse)</button>
-            <p>Image saved to Dell Wyse 3040 server at <span id="server-ip">192.168.1.100:5000</span>.</p>
+            <button class="secondary" onclick="toggleGallery()">🖼️ View Stock Images</button>
+            <p>Last photo status: <span id="lastPhotoStatus">N/A</span>. Sent to Dell Wyse server at <span id="server-ip">192.168.1.100:5000</span>.</p>
+        </div>
+        
+        <div id="photoGallery">
+            <h3>Stock Image Gallery (Simulation)</h3>
+            <div class="gallery-container" id="imageContainer">
+                </div>
         </div>
 
         <hr style="border-top: 1px solid #3c3c3c;">
@@ -89,6 +102,8 @@
     const ESP32_IP = '192.168.1.50'; 
     const ESP32_URL_BASE = `http://${ESP32_IP}`;
     const STATUS_ELEMENT = document.getElementById('status');
+    const LAST_PHOTO_STATUS = document.getElementById('lastPhotoStatus');
+    // ... (Other constants: MAP_CANVAS, CTX, MAP_SIZE, etc. remain the same) ...
     const MAP_CANVAS = document.getElementById('roverMap');
     const CTX = MAP_CANVAS.getContext('2d');
     const MAP_SIZE = 450;
@@ -102,51 +117,65 @@
         {x: 0.5, y: 2.5}, {x: 1.5, y: 2.5}, {x: 2.5, y: 2.5}
     ];
 
-    // GLOBAL DATA STORAGE for mapping
-    let loggedData = []; // Array to store {x_m, y_m, healthStatus, moisture} for visualization
+    let loggedData = []; 
 
     let currentRoverData = {
         latitude: 0, 
         longitude: 0, 
         heading: 0, 
-        x_m: 1.5, // Rover's current grid position (Simulated)
+        x_m: 1.5, 
         y_m: 1.5 
     };
+    
+    // Define the stock images for the gallery (these must be real paths/URLs)
+    // NOTE: For a browser to display these, the images must exist in the same folder 
+    // or be accessible via a URL. Using placeholders here.
+    const STOCK_IMAGES = [
+        {url: 'placeholder_healthy.jpg', caption: 'Healthy Plant'},
+        {url: 'placeholder_damaged.jpg', caption: 'Damaged Crop'},
+        {url: 'placeholder_dry.jpg', caption: 'Dry Soil'},
+        {url: 'placeholder_wet.jpg', caption: 'Wet Soil'},
+        {url: 'placeholder_npk_issue.jpg', caption: 'NPK Deficiency'},
+        {url: 'placeholder_rover.jpg', caption: 'Rover View'}
+    ];
 
-    // --- New Data Analysis Function ---
 
-    /**
-     * Analyzes soil and NPK data to determine a simple health status.
-     * @param {number} moisture - Moisture percentage (0-100).
-     * @param {number} npk_n - Nitrogen level.
-     * @param {number} npk_p - Phosphorus level.
-     * @param {number} npk_k - Potassium level.
-     * @returns {string} 'Good', 'Caution', or 'Bad'.
-     */
-    function analyzeHealth(moisture, npk_n, npk_p, npk_k) {
-        let issues = 0;
-        
-        // Example thresholds (Adjust based on your plant needs!)
-        const MIN_MOISTURE = 30;
-        const IDEAL_NPK_SUM = 150; 
-        const NPK_TOLERANCE = 50;
+    // --- New Gallery Functions ---
+    
+    function populateGallery() {
+        const container = document.getElementById('imageContainer');
+        if (container.children.length > 0) return; // Prevent double population
 
-        if (moisture < MIN_MOISTURE || moisture > 80) { issues++; } // Too dry or too wet
-        
-        let npk_sum = npk_n + npk_p + npk_k;
-        if (Math.abs(npk_sum - IDEAL_NPK_SUM) > NPK_TOLERANCE) { issues++; } // NPK sum outside ideal range
+        STOCK_IMAGES.forEach(img => {
+            const item = document.createElement('div');
+            item.className = 'gallery-item';
+            
+            // NOTE: In a real system, you'd use a real image element:
+            // const image = document.createElement('img');
+            // image.src = img.url;
+            // item.appendChild(image);
+            
+            item.innerHTML = img.caption.replace(/\s/g, '<br>'); // Display caption as placeholder text
+            
+            container.appendChild(item);
+        });
+    }
 
-        if (issues >= 2) return 'Bad';
-        if (issues === 1) return 'Caution';
-        return 'Good';
+    function toggleGallery() {
+        const gallery = document.getElementById('photoGallery');
+        if (gallery.style.display === 'flex' || gallery.style.display === '') {
+            gallery.style.display = 'none';
+        } else {
+            populateGallery(); // Load images when opening
+            gallery.style.display = 'flex';
+        }
     }
 
 
-    // --- Data Communication and Update Functions ---
+    // --- Data Communication and Update Functions (Modified for photo status) ---
 
     function sendCommand(command) {
         let url = '';
-        // ... (Same sendCommand function setup) ...
         if (command === 'capture') {
             url = `${ESP32_URL_BASE}/capture`;
         } else {
@@ -154,6 +183,7 @@
         }
         
         STATUS_ELEMENT.innerText = `Sending command: ${command}...`;
+        if (command === 'capture') { LAST_PHOTO_STATUS.innerText = 'Attempting capture...'; }
 
         fetch(url)
             .then(response => {
@@ -164,19 +194,31 @@
             })
             .then(data => {
                 STATUS_ELEMENT.innerText = `Command '${command}' Success.`;
+                if (command === 'capture') {
+                    // Update the photo status display after successful capture command
+                    LAST_PHOTO_STATUS.innerText = 'Photo command sent. Awaiting confirmation from Dell Wyse.';
+                }
 
                 if (command.startsWith('read_') || command === 'probe') {
-                    // Fetch new data after sending read command
                     setTimeout(() => fetchData(command), 500); 
                 }
             })
             .catch(error => {
                 STATUS_ELEMENT.innerText = `ERROR: Command ${command} failed. Is ESP32 at ${ESP32_IP} online?`;
+                if (command === 'capture') { LAST_PHOTO_STATUS.innerText = 'Capture Failed.'; }
                 console.error('Error sending command:', error);
             });
     }
+    
+    // ... (The rest of the fetchData, analyzeHealth, getHealthColor, drawMap, and clearMapData functions remain the same as in the previous response) ...
 
     function fetchData(lastCommand = null) {
+        // ... (This function remains the same, except for adding LAST_PHOTO_STATUS 
+        // update logic if you have a separate endpoint for Dell Wyse confirmation) ...
+        
+        // As we don't have a live link back from the Dell Wyse server, 
+        // we'll rely on the status update in sendCommand().
+        
         STATUS_ELEMENT.innerText = "Fetching latest data...";
         
         fetch(ESP32_URL_BASE)
@@ -200,8 +242,7 @@
                 document.getElementById('gpsFix').innerText = doc.getElementById('gpsFix').innerText;
                 document.getElementById('headingData').innerText = headingStr;
 
-                // **SIMULATE ROVER MOVEMENT (MUST be replaced by actual GPS coordinate conversion)**
-                // Simulate a small, continuous drift
+                // **SIMULATE ROVER MOVEMENT**
                 if (lastCommand !== 'read_nav') {
                    currentRoverData.x_m = Math.min(FIELD_SIZE, Math.max(0, currentRoverData.x_m + (Math.random() - 0.5) * 0.1)).toFixed(2);
                    currentRoverData.y_m = Math.min(FIELD_SIZE, Math.max(0, currentRoverData.y_m + (Math.random() - 0.5) * 0.1)).toFixed(2);
@@ -245,22 +286,23 @@
                 console.error('Error fetching data:', error);
             });
     }
+    
+    function analyzeHealth(moisture, npk_n, npk_p, npk_k) {
+        let issues = 0;
+        const MIN_MOISTURE = 30;
+        const IDEAL_NPK_SUM = 150; 
+        const NPK_TOLERANCE = 50;
 
-    // --- New Clear Data Function ---
-    function clearMapData() {
-        loggedData = [];
-        drawMap();
-        STATUS_ELEMENT.innerText = "Map data cleared.";
+        if (moisture < MIN_MOISTURE || moisture > 80) { issues++; } 
+        
+        let npk_sum = npk_n + npk_p + npk_k;
+        if (Math.abs(npk_sum - IDEAL_NPK_SUM) > NPK_TOLERANCE) { issues++; } 
+
+        if (issues >= 2) return 'Bad';
+        if (issues === 1) return 'Caution';
+        return 'Good';
     }
-
-
-    // --- Mapping Functions (Updated to use loggedData) ---
-
-    /**
-     * Determines the health color based on the status string.
-     * @param {string} status - 'Good', 'Caution', or 'Bad'.
-     * @returns {string} Hex color code.
-     */
+    
     function getHealthColor(status) {
         switch (status) {
             case 'Good': return '#28a745'; // Green
@@ -269,10 +311,13 @@
             default: return '#5a5a5a'; // Gray (untested)
         }
     }
+    
+    function clearMapData() {
+        loggedData = [];
+        drawMap();
+        STATUS_ELEMENT.innerText = "Map data cleared.";
+    }
 
-    /**
-     * Draws the 3m x 3m field, plant locations, and the rover's position/heading.
-     */
     function drawMap() {
         CTX.clearRect(0, 0, MAP_SIZE, MAP_SIZE);
         
@@ -281,14 +326,11 @@
         CTX.lineWidth = 1;
         for (let i = 1; i < FIELD_SIZE; i++) {
             let px = i * PIXELS_PER_METER;
-            
-            // Vertical lines
             CTX.beginPath(); CTX.moveTo(px, 0); CTX.lineTo(px, MAP_SIZE); CTX.stroke();
-            // Horizontal lines
             CTX.beginPath(); CTX.moveTo(0, px); CTX.lineTo(MAP_SIZE, px); CTX.stroke();
         }
-        
-        // 2. Map Soil Condition (Color the grid based on nearest logged data)
+
+        // 2. Map Soil Condition 
         const GRID_SIZE_M = 1.0;
         for (let row = 0; row < FIELD_SIZE; row++) {
             for (let col = 0; col < FIELD_SIZE; col++) {
@@ -298,7 +340,6 @@
                 let nearestData = null;
                 let min_dist_sq = Infinity;
 
-                // Find the nearest logged sensor reading to this grid square's center
                 loggedData.forEach(data => {
                     let dx = data.x_m - center_x_m;
                     let dy = data.y_m - center_y_m;
@@ -310,8 +351,7 @@
                     }
                 });
 
-                if (nearestData && min_dist_sq < 0.5 * 0.5) { // Only color if reading is close enough (within 0.5m)
-                    // Set fill color based on moisture data (simple soil condition visualization)
+                if (nearestData && min_dist_sq < 0.5 * 0.5) { 
                     let moistureColor;
                     if (nearestData.moisture < 20) { moistureColor = '#0070e040'; } // Too Dry (Light Blue)
                     else if (nearestData.moisture > 70) { moistureColor = '#80008040'; } // Too Wet (Light Purple)
@@ -333,7 +373,6 @@
             let px = plant.x * PIXELS_PER_METER;
             let py = MAP_SIZE - (plant.y * PIXELS_PER_METER);
 
-            // Find data closest to this plant
             let nearestData = null;
             let min_dist_sq = Infinity;
 
@@ -348,15 +387,13 @@
                 }
             });
 
-            // Set color based on sensor reading near the plant
-            let plantColor = nearestData ? getHealthColor(nearestData.healthStatus) : '#5a5a5a'; // Gray if no data
+            let plantColor = nearestData ? getHealthColor(nearestData.healthStatus) : '#5a5a5a'; 
             
             CTX.fillStyle = plantColor;
             CTX.beginPath();
             CTX.arc(px, py, 6, 0, 2 * Math.PI); 
             CTX.fill();
             
-            // Optional: Draw a small text label with the first letter of the status
             if (nearestData) {
                 CTX.fillStyle = 'white';
                 CTX.font = '10px Arial';
@@ -369,33 +406,32 @@
         let rover_y_px = MAP_SIZE - (currentRoverData.y_m * PIXELS_PER_METER);
         let heading_rad = (currentRoverData.heading - 90) * (Math.PI / 180);
 
-        CTX.fillStyle = '#9cdcfe'; // Light Blue
+        CTX.fillStyle = '#9cdcfe';
         CTX.save();
         CTX.translate(rover_x_px, rover_y_px);
         CTX.rotate(heading_rad); 
 
         CTX.beginPath();
-        CTX.moveTo(10, 0);   // Tip
-        CTX.lineTo(-10, -8); // Left base
-        CTX.lineTo(-10, 8);  // Right base
+        CTX.moveTo(10, 0);   
+        CTX.lineTo(-10, -8); 
+        CTX.lineTo(-10, 8);  
         CTX.closePath();
         CTX.fill();
 
         CTX.restore();
 
-        // Draw a dot at the center of the rover
         CTX.fillStyle = 'white';
         CTX.beginPath();
         CTX.arc(rover_x_px, rover_y_px, 3, 0, 2 * Math.PI);
         CTX.fill();
     }
-
-
+    
     // Initialization
     window.onload = function() {
         drawMap(); 
         fetchData(); 
-        setInterval(fetchData, 3000); // Auto-refresh data and map every 3 seconds
+        setInterval(fetchData, 3000); 
+        LAST_PHOTO_STATUS.innerText = 'No photos taken yet.';
     };
 </script>
 
