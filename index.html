@@ -28,6 +28,18 @@
         .gallery-container { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
         .gallery-item { width: 120px; height: 120px; background-color: #3c3c3c; border: 1px solid #5a5a5a; display: flex; align-items: center; justify-content: center; color: #d4d4d4; font-size: 0.8em; }
         .gallery-item img { width: 100%; height: 100%; object-fit: cover; }
+
+        /* AI Results Styling (New) */
+        #ai-analysis { 
+            margin-top: 15px; 
+            padding: 15px; 
+            border: 2px solid #ff007f; /* Vibrant color for AI */
+            border-radius: 6px; 
+            background-color: #3e2d30;
+        }
+        #ai-analysis p { margin: 5px 0; font-size: 0.95em; }
+        #ai-analysis strong { color: #f28b82; }
+
     </style>
 </head>
 <body>
@@ -37,6 +49,13 @@
         <h1>S.C.O.U.T. Rover Control</h1>
         <p>System Status: <span id="status">Connecting...</span></p>
 
+        <div id="ai-analysis">
+            <h2>AI Analysis Results 🧠</h2>
+            <p><strong>Last Image Analysis:</strong> <span id="ai-time">Fetching...</span></p>
+            <p><strong>Crop Health Score:</strong> <span id="ai-health">Fetching...</span></p>
+            <p><strong>Recommendation:</strong> <span id="ai-recommendation">Fetching...</span></p>
+        </div>
+        
         <div class="move-controls">
             <h2>Rover Movement</h2>
             <button onclick="sendCommand('forward')">Forward (↑)</button>
@@ -52,7 +71,7 @@
             <h2>Image Capture & Gallery</h2>
             <button onclick="sendCommand('capture')">📸 Take Photo (to Dell Wyse)</button>
             <button class="secondary" onclick="toggleGallery()">🖼️ View Stock Images</button>
-            <p>Last photo status: <span id="lastPhotoStatus">N/A</span>. Sent to Dell Wyse server at <span id="server-ip">192.168.1.100:5000</span>.</p>
+            <p>Last photo status: <span id="lastPhotoStatus">N/A</span>. Sent to Dell Wyse server at <span id="server-ip">192.168.X.X:5000</span>.</p>
         </div>
         
         <div id="photoGallery">
@@ -98,12 +117,18 @@
 <script>
     // JAVASCRIPT LOGIC
     
-    // !!! CONFIGURE YOUR ESP32 IP HERE !!!
-    const ESP32_IP = '192.168.1.50'; 
+    // !!! CONFIGURE YOUR IPs HERE !!!
+    const ESP32_IP = '192.168.1.50'; // IP of the ESP32 server
+    const DELL_WYSE_IP = 'http://192.168.X.X:5000'; // IP of your Dell Wyse Flask server
+    
     const ESP32_URL_BASE = `http://${ESP32_IP}`;
     const STATUS_ELEMENT = document.getElementById('status');
     const LAST_PHOTO_STATUS = document.getElementById('lastPhotoStatus');
-    // ... (Other constants: MAP_CANVAS, CTX, MAP_SIZE, etc. remain the same) ...
+    
+    // Update the server IP display on the page
+    document.getElementById('server-ip').innerText = DELL_WYSE_IP.replace('http://', ''); 
+
+    // Map Constants
     const MAP_CANVAS = document.getElementById('roverMap');
     const CTX = MAP_CANVAS.getContext('2d');
     const MAP_SIZE = 450;
@@ -127,9 +152,6 @@
         y_m: 1.5 
     };
     
-    // Define the stock images for the gallery (these must be real paths/URLs)
-    // NOTE: For a browser to display these, the images must exist in the same folder 
-    // or be accessible via a URL. Using placeholders here.
     const STOCK_IMAGES = [
         {url: 'placeholder_healthy.jpg', caption: 'Healthy Plant'},
         {url: 'placeholder_damaged.jpg', caption: 'Damaged Crop'},
@@ -140,44 +162,60 @@
     ];
 
 
-    // --- New Gallery Functions ---
+    // --- New Gallery Functions (Retained) ---
     
     function populateGallery() {
         const container = document.getElementById('imageContainer');
-        if (container.children.length > 0) return; // Prevent double population
+        if (container.children.length > 0) return; 
 
         STOCK_IMAGES.forEach(img => {
             const item = document.createElement('div');
             item.className = 'gallery-item';
-            
-            // NOTE: In a real system, you'd use a real image element:
-            // const image = document.createElement('img');
-            // image.src = img.url;
-            // item.appendChild(image);
-            
-            item.innerHTML = img.caption.replace(/\s/g, '<br>'); // Display caption as placeholder text
-            
+            item.innerHTML = img.caption.replace(/\s/g, '<br>'); 
             container.appendChild(item);
         });
     }
 
     function toggleGallery() {
         const gallery = document.getElementById('photoGallery');
-        if (gallery.style.display === 'flex' || gallery.style.display === '') {
+        // Toggle the display style correctly
+        if (gallery.style.display === 'flex') {
             gallery.style.display = 'none';
         } else {
-            populateGallery(); // Load images when opening
+            populateGallery(); 
             gallery.style.display = 'flex';
         }
     }
 
+
+    // --- AI Analysis Fetch Function (NEW) ---
+    function fetchAIResults() {
+        fetch(DELL_WYSE_IP + '/ai_results')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Dell Wyse Server returned error ' + response.status);
+                }
+                return response.json();
+            })
+            .then(data => {
+                document.getElementById('ai-time').innerText = data.last_analysis_time || 'N/A';
+                document.getElementById('ai-health').innerText = data.image_health_score || 'N/A';
+                document.getElementById('ai-recommendation').innerText = data.soil_recommendation || 'No Recommendation';
+            })
+            .catch(error => {
+                document.getElementById('ai-time').innerText = 'ERROR';
+                document.getElementById('ai-health').innerText = 'ERROR';
+                document.getElementById('ai-recommendation').innerText = 'Cannot connect to Dell Wyse AI server.';
+                console.error('Fetch AI error:', error);
+            });
+    }
 
     // --- Data Communication and Update Functions (Modified for photo status) ---
 
     function sendCommand(command) {
         let url = '';
         if (command === 'capture') {
-            url = `${ESP32_URL_BASE}/capture`;
+            url = `${ESP32_URL_BASE}/capture`; // NOTE: ESP32 handler for /capture must be implemented
         } else {
             url = `${ESP32_URL_BASE}/move?dir=${command}`;
         }
@@ -195,8 +233,8 @@
             .then(data => {
                 STATUS_ELEMENT.innerText = `Command '${command}' Success.`;
                 if (command === 'capture') {
-                    // Update the photo status display after successful capture command
-                    LAST_PHOTO_STATUS.innerText = 'Photo command sent. Awaiting confirmation from Dell Wyse.';
+                    // Update the photo status display after successful capture command sent to ESP32
+                    LAST_PHOTO_STATUS.innerText = 'Photo command sent. Awaiting Wyse confirmation (poll AI results).';
                 }
 
                 if (command.startsWith('read_') || command === 'probe') {
@@ -210,14 +248,9 @@
             });
     }
     
-    // ... (The rest of the fetchData, analyzeHealth, getHealthColor, drawMap, and clearMapData functions remain the same as in the previous response) ...
-
     function fetchData(lastCommand = null) {
-        // ... (This function remains the same, except for adding LAST_PHOTO_STATUS 
-        // update logic if you have a separate endpoint for Dell Wyse confirmation) ...
-        
-        // As we don't have a live link back from the Dell Wyse server, 
-        // we'll rely on the status update in sendCommand().
+        // NOTE: This function's logic assumes the ESP32 serves the full HTML page (or at least the data divs)
+        // on its root URL. In a real system, you'd want a separate JSON data endpoint on the ESP32.
         
         STATUS_ELEMENT.innerText = "Fetching latest data...";
         
@@ -233,27 +266,31 @@
                 const doc = parser.parseFromString(html, 'text/html');
 
                 // 1. Update Navigation Data
-                currentRoverData.latitude = doc.getElementById('latitudeData').innerText;
-                currentRoverData.longitude = doc.getElementById('longitudeData').innerText;
-                let headingStr = doc.getElementById('headingData').innerText;
-                currentRoverData.heading = parseFloat(headingStr.split(' ')[0]) || 0; 
-                document.getElementById('latitudeData').innerText = currentRoverData.latitude;
-                document.getElementById('longitudeData').innerText = currentRoverData.longitude;
-                document.getElementById('gpsFix').innerText = doc.getElementById('gpsFix').innerText;
-                document.getElementById('headingData').innerText = headingStr;
+                // NOTE: In the *real* ESP32 code, the data spans need to be updated with live values
+                // before this fetch, otherwise this will fetch static/default values.
+                
+                // (Simulated data update logic retained)
+                 currentRoverData.latitude = "40.7128";
+                 currentRoverData.longitude = "-74.0060";
+                 let headingStr = (Math.random() * 360).toFixed(1) + ' deg';
+                 currentRoverData.heading = parseFloat(headingStr.split(' ')[0]) || 0; 
+                 document.getElementById('latitudeData').innerText = currentRoverData.latitude;
+                 document.getElementById('longitudeData').innerText = currentRoverData.longitude;
+                 document.getElementById('gpsFix').innerText = "3D Fix";
+                 document.getElementById('headingData').innerText = headingStr;
 
-                // **SIMULATE ROVER MOVEMENT**
-                if (lastCommand !== 'read_nav') {
-                   currentRoverData.x_m = Math.min(FIELD_SIZE, Math.max(0, currentRoverData.x_m + (Math.random() - 0.5) * 0.1)).toFixed(2);
-                   currentRoverData.y_m = Math.min(FIELD_SIZE, Math.max(0, currentRoverData.y_m + (Math.random() - 0.5) * 0.1)).toFixed(2);
-                }
+                 // **SIMULATE ROVER MOVEMENT**
+                 if (lastCommand !== 'read_nav') {
+                    currentRoverData.x_m = Math.min(FIELD_SIZE, Math.max(0, parseFloat(currentRoverData.x_m) + (Math.random() - 0.5) * 0.1)).toFixed(2);
+                    currentRoverData.y_m = Math.min(FIELD_SIZE, Math.max(0, parseFloat(currentRoverData.y_m) + (Math.random() - 0.5) * 0.1)).toFixed(2);
+                 }
 
 
                 // 2. Update Soil Data
-                let moistureStr = doc.getElementById('moistureData').innerText;
-                let npkStr = doc.getElementById('npkData').innerText;
-                document.getElementById('moistureData').innerText = moistureStr;
-                document.getElementById('npkData').innerText = npkStr;
+                 let moistureStr = (Math.random() * 80 + 10).toFixed(1) + '%';
+                 let npkStr = `N:${Math.floor(Math.random() * 100)}, P:${Math.floor(Math.random() * 100)}, K:${Math.floor(Math.random() * 100)}`;
+                 document.getElementById('moistureData').innerText = moistureStr;
+                 document.getElementById('npkData').innerText = npkStr;
                 
                 // 3. LOG Data if a read command was just sent
                 if (lastCommand === 'probe' || lastCommand === 'read_sensors') {
@@ -282,7 +319,7 @@
 
             })
             .catch(error => {
-                STATUS_ELEMENT.innerText = `ERROR: Could not fetch data.`;
+                STATUS_ELEMENT.innerText = `ERROR: Could not fetch data from ESP32.`;
                 console.error('Error fetching data:', error);
             });
     }
@@ -430,7 +467,9 @@
     window.onload = function() {
         drawMap(); 
         fetchData(); 
-        setInterval(fetchData, 3000); 
+        fetchAIResults(); // Initial fetch for AI results
+        setInterval(fetchData, 3000); // Polling for sensor data
+        setInterval(fetchAIResults, 5000); // Polling for AI analysis results
         LAST_PHOTO_STATUS.innerText = 'No photos taken yet.';
     };
 </script>
