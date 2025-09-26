@@ -29,7 +29,7 @@
         .gallery-item { width: 120px; height: 120px; background-color: #3c3c3c; border: 1px solid #5a5a5a; display: flex; align-items: center; justify-content: center; color: #d4d4d4; font-size: 0.8em; }
         .gallery-item img { width: 100%; height: 100%; object-fit: cover; }
 
-        /* AI Results Styling (New) */
+        /* AI Results Styling (New Section for Analysis Text) */
         #ai-analysis { 
             margin-top: 15px; 
             padding: 15px; 
@@ -55,7 +55,6 @@
             <p><strong>Crop Health Score:</strong> <span id="ai-health">Fetching...</span></p>
             <p><strong>Recommendation:</strong> <span id="ai-recommendation">Fetching...</span></p>
         </div>
-        
         <div class="move-controls">
             <h2>Rover Movement</h2>
             <button onclick="sendCommand('forward')">Forward (↑)</button>
@@ -162,7 +161,7 @@
     ];
 
 
-    // --- New Gallery Functions (Retained) ---
+    // --- Gallery Functions ---
     
     function populateGallery() {
         const container = document.getElementById('imageContainer');
@@ -178,7 +177,6 @@
 
     function toggleGallery() {
         const gallery = document.getElementById('photoGallery');
-        // Toggle the display style correctly
         if (gallery.style.display === 'flex') {
             gallery.style.display = 'none';
         } else {
@@ -188,7 +186,7 @@
     }
 
 
-    // --- AI Analysis Fetch Function (NEW) ---
+    // --- AI Analysis Fetch Function ---
     function fetchAIResults() {
         fetch(DELL_WYSE_IP + '/ai_results')
             .then(response => {
@@ -210,12 +208,12 @@
             });
     }
 
-    // --- Data Communication and Update Functions (Modified for photo status) ---
+    // --- Data Communication and Update Functions ---
 
     function sendCommand(command) {
         let url = '';
         if (command === 'capture') {
-            url = `${ESP32_URL_BASE}/capture`; // NOTE: ESP32 handler for /capture must be implemented
+            url = `${ESP32_URL_BASE}/capture`; 
         } else {
             url = `${ESP32_URL_BASE}/move?dir=${command}`;
         }
@@ -233,7 +231,6 @@
             .then(data => {
                 STATUS_ELEMENT.innerText = `Command '${command}' Success.`;
                 if (command === 'capture') {
-                    // Update the photo status display after successful capture command sent to ESP32
                     LAST_PHOTO_STATUS.innerText = 'Photo command sent. Awaiting Wyse confirmation (poll AI results).';
                 }
 
@@ -249,8 +246,6 @@
     }
     
     function fetchData(lastCommand = null) {
-        // NOTE: This function's logic assumes the ESP32 serves the full HTML page (or at least the data divs)
-        // on its root URL. In a real system, you'd want a separate JSON data endpoint on the ESP32.
         
         STATUS_ELEMENT.innerText = "Fetching latest data...";
         
@@ -265,11 +260,7 @@
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(html, 'text/html');
 
-                // 1. Update Navigation Data
-                // NOTE: In the *real* ESP32 code, the data spans need to be updated with live values
-                // before this fetch, otherwise this will fetch static/default values.
-                
-                // (Simulated data update logic retained)
+                 // --- SIMULATED DATA UPDATES ---
                  currentRoverData.latitude = "40.7128";
                  currentRoverData.longitude = "-74.0060";
                  let headingStr = (Math.random() * 360).toFixed(1) + ' deg';
@@ -285,8 +276,6 @@
                     currentRoverData.y_m = Math.min(FIELD_SIZE, Math.max(0, parseFloat(currentRoverData.y_m) + (Math.random() - 0.5) * 0.1)).toFixed(2);
                  }
 
-
-                // 2. Update Soil Data
                  let moistureStr = (Math.random() * 80 + 10).toFixed(1) + '%';
                  let npkStr = `N:${Math.floor(Math.random() * 100)}, P:${Math.floor(Math.random() * 100)}, K:${Math.floor(Math.random() * 100)}`;
                  document.getElementById('moistureData').innerText = moistureStr;
@@ -295,7 +284,6 @@
                 // 3. LOG Data if a read command was just sent
                 if (lastCommand === 'probe' || lastCommand === 'read_sensors') {
                     
-                    // Parse values from strings
                     let moisture = parseFloat(moistureStr.split('%')[0]) || 0;
                     let npk_values = npkStr.match(/N:(\d+), P:(\d+), K:(\d+)/);
                     let npk_n = npk_values ? parseInt(npk_values[1]) : 0;
@@ -342,10 +330,10 @@
     
     function getHealthColor(status) {
         switch (status) {
-            case 'Good': return '#28a745'; // Green
-            case 'Caution': return '#ffc107'; // Yellow
-            case 'Bad': return '#dc3545'; // Red
-            default: return '#5a5a5a'; // Gray (untested)
+            case 'Good': return '#28a745'; 
+            case 'Caution': return '#ffc107'; 
+            case 'Bad': return '#dc3545'; 
+            default: return '#5a5a5a'; 
         }
     }
     
@@ -359,7 +347,7 @@
         CTX.clearRect(0, 0, MAP_SIZE, MAP_SIZE);
         
         // 1. Draw the 3x3 Grid
-        CTX.strokeStyle = '#5a5a5a'; // Dark gray grid lines
+        CTX.strokeStyle = '#5a5a5a'; 
         CTX.lineWidth = 1;
         for (let i = 1; i < FIELD_SIZE; i++) {
             let px = i * PIXELS_PER_METER;
@@ -390,9 +378,9 @@
 
                 if (nearestData && min_dist_sq < 0.5 * 0.5) { 
                     let moistureColor;
-                    if (nearestData.moisture < 20) { moistureColor = '#0070e040'; } // Too Dry (Light Blue)
-                    else if (nearestData.moisture > 70) { moistureColor = '#80008040'; } // Too Wet (Light Purple)
-                    else { moistureColor = '#6a995540'; } // Healthy (Light Green)
+                    if (nearestData.moisture < 20) { moistureColor = '#0070e040'; } 
+                    else if (nearestData.moisture > 70) { moistureColor = '#80008040'; } 
+                    else { moistureColor = '#6a995540'; } 
                     
                     CTX.fillStyle = moistureColor;
                     CTX.fillRect(
