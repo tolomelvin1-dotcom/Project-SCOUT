@@ -318,19 +318,9 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
  */
 
 // --- 0.2.1 HARDWARE AND NETWORK CONFIGURATION (CRITICAL SYSTEM IDENTIFIERS) ---
-// 🛑 CRITICAL: Update this IP to the actual local IP printed by your ESP32 Serial Monitor 🛑
-const HARDWARE_ESP32_IP_ADDRESS = '192.168.1.50'; // e.g., '192.168.1.100'
-
-// THINGSPEAK TELEMETRY CONFIGURATION
-const THINGSPEAK_CHANNEL_ID = '3093113';       // <--- INSERT CHANNEL ID HERE
-const THINGSPEAK_READ_API_KEY = 'IWLHAT1BGO6CXA5O';   // <--- INSERT READ KEY HERE
-
-// ThingSpeak API URL to get the last entry (Derived from the constants above)
-const THINGSPEAK_FETCH_URL = `https://api.thingspeak.com/channels/${THINGSPEAK_CHANNEL_ID}/feeds/last.json?api_key=${THINGSPEAK_READ_API_KEY}`;
-
-// Retaining the original constant for the Rover's internal mock-transmit logic (write key)
-const THINGSPEAK_WRITE_API_KEY = '6OXH3SUQ4VNSOJX1'; 
-const MAX_HISTORY_TRIALS = 50;
+const HARDWARE_ESP32_IP_ADDRESS = '192.168.1.50';
+const THINGSPEAK_API_KEY = '6OXH3SUQ4VNSOJX1'; // CONFIRMED: Key retained for ThingSpeak data transmission
+const MAX_HISTORY_TRIALS = 50; 
 
 // --- 0.2.2 PHYSICAL SYSTEM AND UI CONSTANTS (STRICT ADHERENCE TO SPECIFICATIONS) ---
 const FIELD_GRID_SIZE_M = 4; 
@@ -381,80 +371,6 @@ for(let r=0; r<FIELD_GRID_SIZE_M; r++) {
 
 // ==================================================================================
 // SECTION 1.0: HARDWARE COMMUNICATIONS & SENSOR DATA LOGGING (Standard Logic)
-// ----------------------------------------------------------------------------------
-   // ----------------------------------------------------------------------------------
-// NEW: ESP32 LOCAL COMMAND BRIDGE (Option B)
-// ----------------------------------------------------------------------------------
-/**
- * Sets the status message for the Command Bridge.
- * @param {string} message - The status message.
- * @param {boolean} isError - True if the message indicates an error.
- */
-function setCommandStatus(message, isError = false) {
-    const statusEl = document.getElementById('commandStatus');
-    if (statusEl) {
-        statusEl.innerText = message;
-        // Use existing color variables for consistency
-        statusEl.style.color = isError ? '#f85149' : '#3fb950'; 
-    }
-}
-
-/**
- * Sends a command directly to the ESP32's local web server on port 80.
- * @param {string} command - The raw command string (e.g., 'MOVE,200,200', 'STOP', 'SERVO,90').
- */
-function sendCommand(command) {
-    setCommandStatus(`DISPATCH: Sending local command '${command}'...`);
-
-    if (HARDWARE_ESP32_IP_ADDRESS === 'YOUR_ESP32_LOCAL_IP') {
-        setCommandStatus('ERROR: Update HARDWARE_ESP32_IP_ADDRESS in the code!', true);
-        return;
-    }
-
-    // The ESP32 is listening on http://[IP]/command?cmd=[command]
-    const url = `http://${192.168.1.50/command?cmd=${command}`;
-    
-    fetch(url)
-        .then(response => {
-            if (response.ok) {
-                return response.text();
-            } else {
-                // HTTP status code other than 2xx
-                throw new Error(`HTTP Error: ${response.status} ${response.statusText}`);
-            }
-        })
-        .then(data => {
-            setCommandStatus(`RESPONSE: ESP32 acknowledged command: ${command}.`);
-            console.log("Local Command Response:", data);
-        })
-        .catch(error => {
-            setCommandStatus(`FAILURE: Command failed! Check ESP32 IP/Network.`, true);
-            console.error("Error sending local command:", error);
-        });
-} <div class="rover-controls">
-    <h2>Rover Control & Command Bridge</h2>
-    <p style="margin-top: 15px;">
-        <strong>Command Status:</strong> <span id="commandStatus" style="color:#3fb950;">Ready.</span>
-    </p>
-                    
-    <div class="move-controls" style="text-align: center;">
-        <button onclick="sendCommand('MOVE,200,200')">FORWARD (Y+)</button>
-        <button onclick="sendCommand('STOP')">  🛑  EMERGENCY STOP</button>
-        <button onclick="sendCommand('MOVE,-200,-200')">BACKWARD (Y-)</button><br>
-        <button onclick="sendCommand('MOVE,0,200')">TURN LEFT (Pvt)</button>
-        <button onclick="sendCommand('MOVE,200,0')">TURN RIGHT (Pvt)</button>
-        <p style="font-size:0.8em; color:#8b949e;">Controls send commands directly to ESP32 local server.</p>
-    </div>
-
-    <hr style="border-color:#30363d;">
-                    
-    <div class="servo-controls" style="text-align: center;">
-        <h3>Soil Probe & Tool Control</h3>
-        <label for="servoAngle">Probe Angle (0-180°):</label>
-        <input type="number" id="servoAngle" value="90" min="0" max="180" style="width: 80px;">
-        <button onclick="sendCommand('SERVO,' + document.getElementById('servoAngle').value)">Set Angle</button>
-    </div>
-</div>
 // ----------------------------------------------------------------------------------
 function transmitSensorDataViaESP32ToThingSpeak(dataPacket) {
     const apiEndpointUrl = "https://api.thingspeak.com/update";
