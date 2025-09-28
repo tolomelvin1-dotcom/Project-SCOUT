@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PROJECT SCOUT - Rover Control & Fused AI Analysis (v1.4)</title>
+<title>PROJECT SCOUT - Rover Control & Fused AI Analysis (v1.5)</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -67,7 +67,7 @@ body {
 .photo-panel { flex: 1; min-width: 480px; } 
 .map-3d-panel { flex: 0 0 480px; margin-top: 15px; } 
 .plant-analysis-panel { 
-    flex-basis: 100%; 
+    flex-basis: 100%; /* Confirmed 100% width for visibility */
     margin-top: 30px; 
     padding-top: 25px; 
     border-top: 2px solid var(--color-border); 
@@ -423,7 +423,7 @@ button:active {
 
 
 <div class="footer" style="text-align: center; color: #5a5a5a; margin-top: 30px; font-size: 0.8em;">
-    All Rights Reserved: BanScie RIM Team 2025 | Fused AI Logic v1.4
+    All Rights Reserved: BanScie RIM Team 2025 | Fused AI Logic v1.5
 </div>
 
 <script>
@@ -823,10 +823,10 @@ function getPhotoPrediction(photoEntry) {
     }
     
     // Case 2: Manual Upload (Base64 string) or Live Photo Capture
-    // We treat it as a generic photo that has been uploaded but not yet AI-analyzed, use a default severity 
+    // We assign a default low severity score for an unanalyzed photo.
     return {
-        name: "Photo Uploaded (AI Analysis Pending - Assumed Healthy for now)",
-        severity: 10, // Default low severity for unanalyzed manual photo
+        name: "Photo Uploaded (AI Analysis Pending)",
+        severity: 20, // Low severity (80 score) for an unanalyzed photo indicating "better than nothing"
         class: 'rec-initial',
         visual_rec: "Photo successfully logged. Visual analysis is PENDING the AI backend system response."
     };
@@ -844,35 +844,36 @@ function analyzePlant(plant, sensorData, photoEntry) {
     let visualRecommendation = 'No photo provided. Visual diagnosis cannot be performed.'; 
     let fusedRecommendation = 'Awaiting both photo and soil sensor data for a comprehensive fused recommendation.'; 
     let healthClass = 'rec-initial';
-    let finalScore = 5; 
+    let finalScore = 0; // **FIXED: Default score set to 0**
     let photoExists = !!photoEntry;
     let visualPrediction = null;
     const realSensorDataAvailable = sensorData && sensorData.moisture > 0;
 
-    // --- 1. Process Visual Data and Set Initial Score ---
+    // --- 1. Process Visual Data and Set Initial Score (if photo exists) ---
     if (photoExists) {
         visualPrediction = getPhotoPrediction(photoEntry);
         visualDiagnosis = `Visual: ${visualPrediction.name}`;
         visualRecommendation = visualPrediction.visual_rec;
-        // Start final score based on visual severity
-        finalScore = Math.max(10, 100 - visualPrediction.severity); 
+        
+        // **FIXED: Score calculated based on photo analysis (100 - severity)**
+        finalScore = Math.max(0, 100 - visualPrediction.severity); 
         healthClass = visualPrediction.class;
     }
 
     // --- 2. Fused Recommendation Logic ---
     if (!photoExists && !realSensorDataAvailable) {
-        // Case A: No data at all (Default initial values are already set)
+        // Case A: No data at all (Default initial values and score=0 are already set)
+        finalScore = 0; 
     }
     else if (photoExists && !realSensorDataAvailable) {
-        // Case B: Photo exists, but no real sensor data (PARTIAL ANALYSIS - **Updated Logic**)
+        // Case B: Photo exists, but no real sensor data (PARTIAL ANALYSIS - FIXED TEXT/SCORE)
         const assessment = visualPrediction.name.split('(')[0].trim();
         const recClass = visualPrediction.class;
         
-        // Set score based on visual severity
-        finalScore = Math.max(20, 100 - visualPrediction.severity); 
+        // finalScore is already calculated as (100 - severity)
         healthClass = recClass; 
         
-        // Explicitly state partial analysis with the visual assessment and need for soil data
+        // **FIXED: Explicit Partial Analysis Recommendation**
         fusedRecommendation = `***PARTIAL ANALYSIS (${finalScore}/100)***: **Crop Health Assessment:** Plant visually assessed as '${assessment}'. **ACTION REQUIRED:** To ensure diagnosis accuracy and provide a full recommendation, deploy the **Soil Probe** to fuse NPK and Moisture data.`;
 
     }
@@ -892,17 +893,18 @@ function analyzePlant(plant, sensorData, photoEntry) {
                 soilScore -= guideline.penalty_major; 
                 soilProblems.push({ problem: `CRITICAL ${key}`, rec: value < guideline.low_crit ? guideline.low_rec : guideline.high_rec });
             } else if (key === 'moisture' && (value < guideline.low_crit || value > guideline.high_crit)) { 
-                 soilScore -= (guideline.penalty_major / 2); // Less penalty for moisture
+                 soilScore -= (guideline.penalty_major / 2); 
                  soilProblems.push({ problem: `Moisture CRITICAL`, rec: value < guideline.low_crit ? guideline.low_rec : guideline.high_rec });
             } else if (value < guideline.ideal_min || value > guideline.ideal_max) { 
-                soilScore -= (guideline.penalty_major / 4); // Minor penalty
+                soilScore -= (guideline.penalty_major / 4); 
                 soilProblems.push({ problem: `${key} Imbalance`, rec: value < guideline.ideal_min ? guideline.low_rec : guideline.high_rec });
             }
         });
         sensorDiagnosis = `Soil: M=${moisture}%, NPK=${npk_n}/${npk_p}/${npk_k}`;
 
         // C2. Combine Scores (Take the lower of the two systems: Visual vs. Soil)
-        finalScore = photoExists ? Math.min(finalScore, soilScore) : soilScore;
+        let visualScore = photoExists ? (100 - visualPrediction.severity) : 100; // If no photo, assume visual is perfect (100)
+        finalScore = Math.min(visualScore, soilScore);
 
         // C3. Final Fused Recommendation Logic
         if (photoExists && visualPrediction && visualPrediction.severity >= 80) {
@@ -912,7 +914,7 @@ function analyzePlant(plant, sensorData, photoEntry) {
         } else if (soilProblems.length > 0) {
             // Secondary Priority: Soil Issues
             const recString = soilProblems.map(p => `${p.problem}: ${p.rec}`).join('; ');
-            fusedRecommendation = `***FUSED ACTION REQUIRED***: ${recString}. **Visual check:** ${visualDiagnosis.replace('Visual:', '')}. Address soil imbalance first.`;
+            fusedRecommendation = `***FUSED ACTION REQUIRED***: ${recString}. **Visual check:** ${photoExists ? visualDiagnosis.replace('Visual:', '') : 'No photo provided'}. Address soil imbalance first.`;
             healthClass = finalScore <= 60 ? 'rec-action' : 'rec-optimal';
         } else {
             // Default: Healthy/Optimal
@@ -924,6 +926,7 @@ function analyzePlant(plant, sensorData, photoEntry) {
     
     // Case D: Data exists, but no photo
     if (!photoExists && realSensorDataAvailable) {
+        finalScore = soilScore;
         visualRecommendation = 'No photo provided. Visual diagnosis pending.';
         if (soilProblems.length > 0) {
             const recString = soilProblems.map(p => `${p.problem}: ${p.rec}`).join('; ');
@@ -936,7 +939,7 @@ function analyzePlant(plant, sensorData, photoEntry) {
     }
 
     // Set a minimum score
-    finalScore = Math.max(10, finalScore);
+    finalScore = Math.max(0, Math.min(100, finalScore));
 
     return { 
         id: plant.id, 
@@ -994,7 +997,7 @@ function fetchAIResults() {
     draw3DMap(); 
 }
 
-// --- 10.7: PHOTO & MODAL LOGIC (FIXED Stock Image Flow) ---
+// --- 10.7: PHOTO & MODAL LOGIC (FIXED Photo X Button) ---
 
 function generatePhotoGrid() {
     const grid = document.getElementById('photoGrid');
@@ -1002,6 +1005,7 @@ function generatePhotoGrid() {
         const cell = document.createElement('div');
         cell.className = 'grid-cell'; 
         cell.id = `zone-${i}`;
+        // Ensure event.stopPropagation is called to prevent the click from propagating to the cell's main click handler
         cell.innerHTML = `<span class="cell-label">${i}</span><button class="delete-photo-btn" onclick="event.stopPropagation(); deletePhoto(${i})">X</button>`;
         // Click sets zone AND triggers manual file input
         cell.setAttribute('onclick', `preparePhotoUpload(${i})`); 
@@ -1060,8 +1064,9 @@ function renderPhotoInCell(zoneId, photoEntry) {
 }
 
 function deletePhoto(zoneId) { 
+    // This is the function called by the 'X' button
     delete photoData[zoneId]; 
-    renderPhotoInCell(zoneId, null); 
+    renderPhotoInCell(zoneId, null); // Render the cell without a photo
     fetchAIResults(); 
     STATUS_ELEMENT.innerText = `Photo cleared from Zone ${zoneId}. Analysis updated to 'No Photo'.`;
 }
@@ -1168,7 +1173,7 @@ function assignStockPhoto(zoneId, photoKey) {
 }
 
 
-// --- 10.8: HISTORY LOGIC (Full implementation with 50 trial limit) ---
+// --- 10.8: HISTORY LOGIC (Full implementation with 50 trial limit and slot display) ---
 
 function saveCurrentTrial() {
     if (trialHistory.length >= MAX_TRIALS) {
@@ -1206,7 +1211,7 @@ function openHistoryModal() {
     if (trialHistory.length === 0) { 
         list.innerHTML = `<p style="color: #FFC000; font-style: italic;">No trial data saved yet. Run some tests and press "Save & New Trial". (${MAX_TRIALS} slots available)</p>`; 
     } else {
-        list.innerHTML += `<p style="color: var(--color-text-highlight);">Showing ${trialHistory.length} of ${MAX_TRIALS} possible trial slots:</p>`;
+        list.innerHTML += `<p style="color: var(--color-text-highlight);">Showing **${trialHistory.length}** of **${MAX_TRIALS}** possible trial slots:</p>`;
         [...trialHistory].reverse().forEach(trial => { 
             const item = document.createElement('div');
             item.className = 'trial-item';
@@ -1219,11 +1224,41 @@ function openHistoryModal() {
                 <button onclick="loadPastTrial(${trial.id})" style="float:right; background-color:#FF8C00; color:white; padding: 6px 10px; font-size: 0.8em; margin: 0;">Load Trial ${trial.id}</button>`;
             list.appendChild(item);
         });
-        
-        if (trialHistory.length < MAX_TRIALS) {
-             list.innerHTML += `<p style="margin-top: 20px; color: #5a5a5a; font-size:0.9em;">**${MAX_TRIALS - trialHistory.length}** trial slots are still available out of **${MAX_TRIALS}** total slots.</p>`;
-        }
     }
+    
+    // **FIXED: 50 Trial Slots / 4x4 Grid Visualization**
+    const trialSlotsContainer = document.createElement('div');
+    trialSlotsContainer.style.borderTop = '2px solid var(--color-primary)';
+    trialSlotsContainer.style.paddingTop = '20px';
+    trialSlotsContainer.innerHTML += '<h3>50 Pre-labeled Trial Slots (4x4 Grid Trial Zones)</h3>';
+    
+    const gridDiv = document.createElement('div');
+    gridDiv.style.display = 'grid';
+    gridDiv.style.gridTemplateColumns = 'repeat(5, 1fr)'; // 5 columns x 10 rows = 50 slots
+    gridDiv.style.gap = '10px';
+    gridDiv.style.maxWidth = '100%';
+    
+    for (let i = 1; i <= MAX_TRIALS; i++) {
+        const slot = document.createElement('div');
+        const isSaved = trialHistory.find(t => t.id === i);
+        
+        slot.style.padding = '10px 5px';
+        slot.style.border = isSaved ? '2px solid #6AA84F' : '1px dashed #5a5a5a';
+        slot.style.borderRadius = '6px';
+        slot.style.backgroundColor = isSaved ? '#1a3a1a' : '#2d2d30';
+        slot.style.color = isSaved ? 'white' : '#aaa';
+        slot.style.textAlign = 'center';
+        slot.style.fontSize = '0.9em';
+        
+        slot.innerHTML = `<strong>Trial ${i}</strong><br>
+                          <small>${isSaved ? 'SAVED' : 'READY'}</small><br>
+                          <small>4x4 Grid Trial Zones</small>`;
+        gridDiv.appendChild(slot);
+    }
+    
+    trialSlotsContainer.appendChild(gridDiv);
+    list.appendChild(trialSlotsContainer);
+    
     modal.style.display = "flex";
 }
 function closeHistoryModal() { document.getElementById('historyModal').style.display = "none"; }
@@ -1254,7 +1289,8 @@ function clearAllHistory() {
         currentTrialNumber = 1;
         document.getElementById('currentTrialNumber').innerText = currentTrialNumber;
         closeHistoryModal();
-        STATUS_ELEMENT.innerText = "All trial history cleared.";
+        clearMapData(true);
+        STATUS_ELEMENT.innerText = "All trial history cleared. Map data also reset.";
     }
 }
 
