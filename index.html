@@ -3,303 +3,521 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PROJECT S.C.O.U.T.: Fused AI & Rover Control Dashboard</title>
+<title>PROJECT SCOUT</title>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
 <style>
-/* --- 1. MODERNIZED STYLING & VARIABLE DEFINITIONS --- */
+/* =============================================================================
+--- SECTION 1: GLOBAL STYLING AND THEME DEFINITIONS ---
+=============================================================================
+*/
+
+/** Root Variables for Theming **/
 :root {
-    --color-primary: #0078D4; /* Modern Blue for actions/highlights */
-    --color-secondary: #4EC9B0; /* Teal/Cyan for headers */
-    --color-background: #1F1F1F; /* Darkest Background */
-    --color-card: #2D2D30; /* Card/Panel Background */
-    --color-text: #E0E0E0;
-    --color-border: #3C3C3C;
-    --color-status-good: #6AA84F; /* Green */
-    --color-status-caution: #FFC000; /* Yellow */
-    --color-status-bad: #C55050; /* Red */
-    --color-text-highlight: #9CDCFE;
+    --color-primary: #0078D4;       /* Command/Action Blue */
+    --color-secondary: #4EC9B0;     /* Header/Accent Teal */
+    --color-background: #121212;    /* Deep Background */
+    --color-card: #1E1E1E;          /* Panel/Card Background */
+    --color-text: #F0F0F0;          /* High Contrast Text */
+    --color-border: #3C3C3C;        /* Subtle Separator Lines */
+    --color-status-good: #6AA84F;   /* Health: Green */
+    --color-status-caution: #FFC000;/* Health: Yellow */
+    --color-status-bad: #C55050;    /* Health: Red */
+    --color-text-highlight: #9CDCFE;/* Code/Data Highlight */
+    --font-stack: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    --shadow-deep: 0 6px 20px rgba(0,0,0,0.6);
 }
 
-/* BASE STYLING */
+/* Base Body and Typography Reset */
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: var(--font-stack);
     margin: 0;
+    padding: 30px;
     background-color: var(--color-background);
     color: var(--color-text);
-    line-height: 1.5;
+    line-height: 1.6;
+    min-height: 100vh;
 }
 
-/* HEADER & FOOTER */
-.header-bar {
-    background-color: #1E1E1E;
-    color: var(--color-text);
-    padding: 15px 40px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.5);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-.header-bar h1 {
-    margin: 0;
-    color: var(--color-primary);
-    font-size: 1.8em;
-    font-weight: 300;
-}
-
-/* --- 2. GRID LAYOUT RESTORATION (2x3 Dashboard) --- */
+/* Main Layout Container (Flexbox for complex dashboard structure) */
 .container {
-    max-width: 1700px; /* Wider for 3 columns */
-    margin: 20px auto;
-    padding: 20px;
-    border-radius: 10px;
-    
-    /* 3 Columns: 1 for controls, 2 for visuals/analysis */
-    display: grid;
-    /* Fixed control width, rest splits evenly */
-    grid-template-columns: minmax(380px, 0.25fr) minmax(380px, 1fr) minmax(380px, 1fr);
-    gap: 20px;
-}
-
-/* Panel Styles */
-.panel {
+    max-width: 1700px;
+    margin: auto;
     background: var(--color-card);
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.4);
-    overflow: hidden; /* prevents content from leaking */
-}
-.panel h2 {
-    color: var(--color-secondary);
-    font-weight: 400;
-    border-bottom: 1px solid var(--color-border);
-    padding-bottom: 5px;
-    margin-top: 0;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: var(--shadow-deep);
+    display: flex;
+    flex-wrap: wrap; 
+    justify-content: flex-start;
+    gap: 25px; /* Consistent spacing between major panels */
 }
 
-/* Specific Panel Locations (Reverting to a clearer flow) */
-/* Controls panel spans column 1 and rows 1 & 2 */
-.controls-data-panel { grid-column: 1 / 2; grid-row: 1 / 3; }
-.map-2d-panel { grid-column: 2 / 3; grid-row: 1 / 2; }
-.photo-panel { grid-column: 3 / 4; grid-row: 1 / 2; }
-.map-3d-panel { grid-column: 2 / 3; grid-row: 2 / 3; }
-.analysis-panel { grid-column: 3 / 4; grid-row: 2 / 3; }
+/* =============================================================================
+--- SECTION 2: PANEL SIZING AND GENERAL STYLING ---
+=============================================================================
+*/
 
-/* DATA DISPLAY & BUTTONS */
-.data-row { margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;}
-.data-row strong { color: var(--color-text-highlight); font-weight: 500; min-width: 120px;}
-.data-value { font-family: 'Consolas', monospace; color: var(--color-text); text-align: right;}
-.section-divider { border-top: 1px solid var(--color-border); margin: 20px 0; }
+/* Panel Layout Rules */
+.controls-panel { flex: 0 0 350px; } /* Fixed width for controls */
+.map-panel { flex: 1; min-width: 450px; } /* 2D Map grows */
+.photo-panel { flex: 1; min-width: 450px; } /* Photo Grid grows */
+.map-3d-panel { flex: 0 0 450px; margin-top: 15px; } /* 3D Map forced to fixed size */
+.plant-analysis-panel { 
+    flex-basis: 100%; 
+    margin-top: 20px; 
+    padding-top: 25px; 
+    border-top: 2px solid var(--color-border); 
+} /* Analysis takes full width */
+
+.panel {
+    background: #252526;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.4);
+    transition: box-shadow 0.3s ease-in-out;
+}
+.panel:hover {
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+}
+
+/* Headers and Titles */
+h1 { 
+    color: var(--color-primary); 
+    border-bottom: 3px solid var(--color-border); 
+    padding-bottom: 12px; 
+    margin-top: 0; 
+    font-size: 1.8em;
+}
+h2 { 
+    color: var(--color-secondary); 
+    margin-top: 25px; 
+    font-weight: 600;
+    font-size: 1.3em;
+}
+
+/* =============================================================================
+--- SECTION 3: INTERACTIVE ELEMENTS (BUTTONS & DATA) ---
+=============================================================================
+*/
+
+/* Generic Button Styles */
 button {
-    padding: 10px 15px; margin: 5px 5px 5px 0; cursor: pointer; border: none;
-    border-radius: 6px; font-weight: bold; transition: background-color 0.2s, box-shadow 0.2s;
+    padding: 10px 18px; 
+    margin: 8px 5px 8px 0; 
+    cursor: pointer; 
+    border: none;
+    border-radius: 8px; 
+    font-weight: bold; 
+    transition: background-color 0.2s, transform 0.1s;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
+button:active {
+    transform: translateY(1px);
+}
+
+/* Specific Control Groups */
 .move-controls button { background-color: var(--color-primary); color: white; }
 .arm-controls button { background-color: var(--color-status-good); color: white; }
-.camera-control button { background-color: #C55050; color: white; } /* Dark Red */
+.camera-control button { background-color: var(--color-status-bad); color: white; }
+.history-controls button { background-color: #FF8C00; color: white; }
 
-/* MAPS */
-#roverMap, #threeDContainer {
-    width: 100%;
-    /* Ensure maps are vertically aligned in their rows */
-    height: 380px;
-    background-color: #3d3d3d;
-    border: 3px solid var(--color-primary);
-    margin-top: 10px;
-    display: block;
+/* Data Display Box */
+.data-display { 
+    margin-top: 15px; 
+    padding: 18px; 
+    border: 1px solid var(--color-border); 
+    border-radius: 8px; 
+    background-color: #1a1a1a; 
 }
-#threeDContainer { background-color: #1a1a1a; }
+.data-row { 
+    margin-bottom: 7px; 
+    display: flex;
+    justify-content: space-between;
+    padding-right: 5px;
+}
+.data-row strong { 
+    display: inline-block; 
+    width: 140px; 
+    color: var(--color-text-highlight); 
+    font-weight: normal;
+}
 
-/* PHOTO GRID */
+/* =============================================================================
+--- SECTION 4: MAPS AND VISUALIZATION CONTAINERS ---
+=============================================================================
+*/
+
+#roverMap { 
+    border: 3px solid var(--color-status-good); 
+    background-color: #3d3d3d; 
+    display: block; 
+    margin: 15px auto 0; 
+    width: 450px; 
+    height: 450px;
+    border-radius: 5px;
+}
+#threeDContainer {
+    width: 450px;
+    height: 450px;
+    border: 3px solid var(--color-primary);
+    background-color: #1a1a1a;
+    margin: 15px auto 0;
+    display: block;
+    border-radius: 5px;
+}
+
+/* =============================================================================
+--- SECTION 5: PHOTO GRID AND GALLERY STYLING ---
+=============================================================================
+*/
+
 #photoGrid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    display: grid; 
+    grid-template-columns: repeat(4, 1fr); 
     grid-template-rows: repeat(4, 1fr);
-    gap: 3px;
-    max-width: 400px;
+    gap: 8px; 
+    border: 2px solid var(--color-primary); 
+    max-width: 450px; 
     margin: 15px auto;
-    aspect-ratio: 1 / 1;
+    aspect-ratio: 1 / 1; 
+    background-color: #252526;
+    padding: 5px;
+    border-radius: 8px;
 }
 .grid-cell {
-    border: 1px solid var(--color-border); background-color: #444; cursor: pointer;
-    display: flex; justify-content: center; align-items: center; font-size: 0.9em;
-    color: #bbb; position: relative; overflow: hidden;
+    background-color: #3d3d3d; 
+    border: 1px solid var(--color-secondary); 
+    position: relative;
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    cursor: pointer; 
+    overflow: hidden;
+    transition: border-color 0.2s;
+    border-radius: 3px;
 }
-.grid-cell img { width: 100%; height: 100%; object-fit: cover; }
+.grid-cell:hover {
+    border-color: var(--color-primary);
+}
+.grid-cell img { 
+    width: 100%; 
+    height: 100%; 
+    object-fit: cover; 
+}
 .delete-photo-btn {
-    position: absolute; bottom: 2px; right: 2px;
-    background-color: rgba(220, 53, 69, 0.8); color: white; border: none;
-    border-radius: 3px; padding: 2px 5px; font-size: 10px; cursor: pointer;
-    z-index: 20; line-height: 1; display: none;
+    position: absolute; 
+    bottom: 4px; 
+    right: 4px; 
+    background-color: rgba(220, 53, 69, 0.9); 
+    color: white;
+    border-radius: 4px; 
+    padding: 3px 6px; 
+    font-size: 11px; 
+    cursor: pointer; 
+    z-index: 20; 
+    line-height: 1; 
+    display: none;
 }
 .grid-cell:has(.cell-photo) .delete-photo-btn { display: block; }
+.cell-label { font-size: 1.5em; font-weight: bold; color: rgba(255, 255, 255, 0.4); }
 
-
-/* ANALYSIS CARDS */
+/* =============================================================================
+--- SECTION 6: ANALYSIS CARDS AND DIAGNOSTICS ---
+=============================================================================
+*/
 #plantAnalysisGrid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 15px;
-    margin-top: 15px;
-    /* Limit height to match 3D map above */
-    max-height: 480px;
-    overflow-y: auto;
+    display: grid; 
+    grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); 
+    gap: 25px; 
+    margin-top: 20px;
 }
 .analysis-card {
-    padding: 15px; border-radius: 8px; background-color: #3e3e42; border-left: 5px solid;
+    background-color: #2D2D30;
+    padding: 20px;
+    border-radius: 8px;
+    border-left: 5px solid var(--color-primary);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
 }
-.plant-id-label {
-    font-size: 1.1em; font-weight: bold; color: var(--color-secondary);
-    border-bottom: 1px dashed var(--color-border); padding-bottom: 5px; margin-bottom: 10px;
+.plant-id-label { 
+    font-size: 1.5em; 
+    font-weight: bold; 
+    color: #ffd700; 
+    border-bottom: 2px solid var(--color-border); 
+    padding-bottom: 5px; 
+    margin-bottom: 15px; 
 }
-.rec-optimal { background-color: var(--color-status-good); color: white; }
-.rec-action { background-color: var(--color-status-caution); color: black; }
-.rec-critical { background-color: var(--color-status-bad); color: white; }
+/* Health Status Recommendations */
+.rec-optimal, .rec-action, .rec-critical {
+    padding: 10px; 
+    border-radius: 6px; 
+    display: block; 
+    font-weight: bold; 
+    width: 100%; 
+    box-sizing: border-box;
+    margin-top: 8px;
+    text-shadow: 1px 1px 1px rgba(0,0,0,0.4);
+}
+.rec-optimal { background-color: var(--color-status-good); color: white; border: 1px solid #486a34; }
+.rec-action { background-color: var(--color-status-caution); color: #333; border: 1px solid #a88100; }
+.rec-critical { background-color: var(--color-status-bad); color: white; border: 1px solid #843535; }
 
-/* MODAL STYLES (basic) */
-.modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.7); }
-.modal-content { background-color: var(--color-card); margin: 5% auto; padding: 25px; border-radius: 10px; width: 80%; max-width: 1100px; max-height: 90vh; overflow-y: auto; }
-.close { color: var(--color-text-highlight); float: right; font-size: 28px; font-weight: bold; }
-#stockImageGrid {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; padding: 10px;
+/* =============================================================================
+--- SECTION 7: MODALS AND HISTORY DISPLAY ---
+=============================================================================
+*/
+
+.modal { 
+    display: none; 
+    position: fixed; 
+    z-index: 1000; 
+    left: 0; 
+    top: 0; 
+    width: 100%; 
+    height: 100%; 
+    overflow: auto; 
+    background-color: rgba(0,0,0,0.85); 
 }
-#stockImageGrid img { width: 100%; height: 100px; object-fit: cover; border-radius: 5px; }
+.modal-content { 
+    background-color: var(--color-card); 
+    margin: 5% auto; 
+    padding: 30px; 
+    border: 2px solid var(--color-primary); 
+    width: 90%; 
+    max-width: 1100px; 
+    border-radius: 12px; 
+    box-shadow: var(--shadow-deep);
+}
+.close-btn { 
+    color: #aaa; 
+    float: right; 
+    font-size: 32px; 
+    font-weight: bold; 
+    transition: color 0.2s;
+}
+.close-btn:hover, .close-btn:focus {
+    color: white;
+    text-decoration: none;
+    cursor: pointer;
+}
+.trial-item { 
+    padding: 15px; 
+    margin-bottom: 8px; 
+    background-color: #252526; 
+    border-radius: 7px; 
+    cursor: pointer; 
+    transition: background-color 0.2s;
+    border-left: 4px solid #FF8C00;
+}
+.trial-item:hover {
+    background-color: #333333;
+}
+#stockImageGrid { 
+    display: grid; 
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); 
+    gap: 15px; 
+    padding: 10px; 
+}
+
+/* =============================================================================
+--- SECTION 8: FOOTER AND PROJECT IDENTITY ---
+=============================================================================
+*/
+
+.footer { 
+    text-align: center; 
+    padding: 15px; 
+    margin-top: 30px; 
+    font-size: 0.9em; 
+    color: #888; 
+    border-top: 1px solid #3C3C3C;
+    background-color: #1a1a1a;
+    border-radius: 8px;
+}
+
+/* =============================================================================
+--- SECTION 9: RESPONSIVENESS (for robustness) ---
+=============================================================================
+*/
+
+@media (max-width: 1400px) {
+    .controls-panel, .map-3d-panel {
+        flex-basis: 100%; /* Stack controls and 3D map vertically on smaller screens */
+    }
+    .map-panel, .photo-panel {
+        min-width: 0; /* Allow maps/photos to fill half the width */
+        flex: 1 1 45%; 
+    }
+}
+@media (max-width: 950px) {
+    .map-panel, .photo-panel {
+        flex: 1 1 100%; /* Stack all panels on very small screens */
+    }
+    #roverMap, #threeDContainer, #photoGrid {
+        width: 100%;
+        max-width: 450px; /* Keep max size constrained */
+    }
+    #plantAnalysisGrid {
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
+    }
+}
+
 </style>
 </head>
 <body>
-<div class="header-bar">
-    <h1>PROJECT S.C.O.U.T.: Fused AI & Rover Control Dashboard</h1>
-    <span id="status">System Initializing...</span>
-</div>
-
 <div class="container">
+    
+    <div class="controls-panel panel">
+        <h1>PROJECT SCOUT Control Dashboard</h1>
+        <p>System Status: <span id="status">Initializing Rover Connection...</span></p>
 
-    <div class="panel controls-data-panel">
-        <h2>Rover Control & Live ThingSpeak Data</h2>
-
-        <div>
-            <h3>Trial Management 💾</h3>
-            <div class="data-row">
-                <strong>Current Trial:</strong> <span class="data-value" id="currentTrialNumber">1</span>
-            </div>
-            <button onclick="saveCurrentTrial()"> 💾 Save & New Trial</button>
-            <button onclick="openHistoryModal()"> 📅 View History</button>
-        </div>
-
-        <div class="section-divider"></div>
-
-        <div class="move-controls">
-            <h3>Rover Movement (Mock ESP32 Commands)</h3>
+        <div class="data-display history-controls">
+            <h2>Trial Management 💾</h2>
+            <div class="data-row"><strong>Current Trial #:</strong> <span id="currentTrialNumber">1</span></div>
             <p>
-                <button onclick="sendCommand('forward')">Forward (↑)</button>
-                <button onclick="sendCommand('stop')"> 🛑 STOP</button>
-                <button onclick="sendCommand('backward')">Backward (↓)</button><br>
-                <button onclick="sendCommand('left')">Left (←)</button>
-                <button onclick="sendCommand('right')">Right (→)</button>
+                <button onclick="saveCurrentTrial()">💾 Save & New Trial</button>
+                <button onclick="openHistoryModal()">📅 View History</button>
             </p>
         </div>
 
-        <div class="section-divider"></div>
+        <div class="move-controls">
+            <h2>Rover Movement</h2>
+            <button onclick="sendCommand('forward')">Forward (↑)</button>
+            <button onclick="sendCommand('stop')">🛑 STOP</button>
+            <button onclick="sendCommand('backward')">Backward (↓)</button><br>
+            <button onclick="sendCommand('left')">Left (←)</button>
+            <button onclick="sendCommand('right')">Right (→)</button>
+        </div>
+
+        <div style="border-top: 1px solid var(--color-border); margin: 20px 0;"></div>
 
         <div class="arm-controls">
-            <h3>Data Acquisition</h3>
-            <button onclick="sendCommand('probe')"> 🔬 Probe Soil (Arm Down)</button>
-            <button onclick="fetchData('refresh')"> 📡 Refresh ThingSpeak</button>
+            <h2>Data Acquisition</h2>
+            <button onclick="sendCommand('probe')">🔬 Probe Soil (Log Data)</button>
+            <button onclick="fetchData('refresh')">📡 Refresh Live Data</button>
         </div>
 
-        <div style="margin-top: 20px;">
-            <h3>Live Sensor Data</h3>
-            <div class="data-row"><strong>Latitude:</strong> <span id="latitudeData" class="data-value">N/A</span></div>
-            <div class="data-row"><strong>Longitude:</strong> <span id="longitudeData" class="data-value">N/A</span></div>
-            <div class="data-row"><strong>Heading:</strong> <span id="headingData" class="data-value">N/A</span></div>
-            <div class="data-row"><strong>GPS Fix:</strong> <span id="gpsFix" class="data-value">No Fix</span></div>
-            <div class="section-divider" style="margin: 10px 0;"></div>
-            <div class="data-row"><strong>Moisture:</strong> <span id="moistureData" class="data-value">N/A</span></div>
-            <div class="data-row"><strong>NPK (N/P/K):</strong> <span id="npkData" class="data-value">N/A</span></div>
+        <div class="data-display">
+            <h3>Live Sensor Data (ThingSpeak)</h3>
+            <div class="data-row"><strong>GPS Latitude:</strong> <span id="latitudeData">N/A</span></div>
+            <div class="data-row"><strong>GPS Longitude:</strong> <span id="longitudeData">N/A</span></div>
+            <div class="data-row"><strong>Rover Heading:</strong> <span id="headingData">N/A</span></div>
+            <div class="data-row"><strong>Soil Moisture:</strong> <span id="moistureData">N/A</span></div>
+            <div class="data-row"><strong>NPK (N/P/K):</strong> <span id="npkData">N/A</span></div>
         </div>
     </div>
 
-    <div class="panel map-2d-panel">
+    <div class="map-panel panel">
         <h2>2D Field Map ($\mathbf{4\text{m} \times 4\text{m}}$ Grid)</h2>
         <canvas id="roverMap" width="450" height="450"></canvas>
-        <p><small>Map Key: $\text{Grid} = 1 \text{m} \times 1 \text{m}$. $\text{Circles} = \text{Health}$. $\text{Triangle} = \text{Rover}$.</small></p>
-        <button onclick="clearMapData()"> 🗑 Clear Data & Reset Rover</button>
+        <p><small>Map Key: $\text{Grid} = 1 \text{m} \times 1 \text{m}$. $\text{Circles} = \text{Logged Data}$. $\text{Triangle} = \text{Rover}$.</small></p>
+        <button onclick="clearMapData()">🗑️ Clear Map Data & Reset Rover</button>
     </div>
 
-    <div class="panel photo-panel">
+    <div class="photo-panel panel">
         <div class="camera-control">
             <h2>Image Capture & Gallery</h2>
-            <button onclick="sendCommand('capture')"> 📸 Take Photo (Current Zone)</button>
-            <button onclick="openStockImageModal()"> 🖼️ Load Simulation Photos</button>
-            <p><small>Click a zone to assign a photo. Last photo status: <span id="lastPhotoStatus">N/A</span>.</small></p>
+            <button onclick="sendCommand('capture')">📸 Take Photo (Current Zone)</button>
+            <button onclick="openStockImageModal()">🖼️ Load Simulation Photos</button>
+            <p><small>Click a zone cell to manually upload a photo. Last photo status: <span id="lastPhotoStatus">N/A</span>.</small></p>
         </div>
-
+        <div style="border-top: 1px solid var(--color-border); margin: 15px 0;"></div>
+        <h3>Plant Zone Photo Assignments (Zones 1-16)</h3>
         <div id="photoGrid">
-        </div>
+            </div>
         <input type="file" id="fileInput" accept="image/*" style="display:none;" onchange="handleFileSelect(event)">
     </div>
 
-    <div class="panel map-3d-panel">
+    <div class="map-3d-panel panel">
         <h2>3D Soil Metric Visualization 📊</h2>
         <div id="threeDContainer"></div>
         <p><small>Bar Height = Soil Moisture %. Bar Color = Plant Health (Green/Yellow/Red).</small></p>
     </div>
 
-    <div class="panel analysis-panel">
+    <div class="plant-analysis-panel panel">
         <h2>Plant-Specific Fused AI Analysis (16 Zones) 🔬</h2>
-        <p><small>Fused analysis of **Leaf Photo (AI)** + **ThingSpeak Soil Data**.</small></p>
+        <p>
+            <small>
+                **Fused analysis** prioritizes visual defects from the **Leaf Photo (AI)** and cross-references with **ThingSpeak Soil Data** for critical diagnosis. 
+                *Note: The system is tuned to prioritize Dark Spots/Mottling (Viral/Fungal threats) over minor NPK issues.*
+            </small>
+        </p>
         <div id="plantAnalysisGrid">
-        </div>
+            </div>
     </div>
-
 </div>
 
 <div id="historyModal" class="modal">
     <div class="modal-content">
-        <span class="close" onclick="closeHistoryModal()">&times;</span>
-        <h2>Trial History Log 📅</h2>
-        <div id="trialHistoryList"></div>
-        <button class="camera-control" onclick="clearAllHistory()" style="margin-top: 20px;"> ⚠️ Permanently Delete All History</button>
+        <span class="close-btn" onclick="closeHistoryModal()">&times;</span>
+        <h2>Saved Trial History</h2>
+        <div id="trialHistoryList">
+        </div>
+        <div style="border-top: 1px solid var(--color-border); margin-top: 15px;"></div>
+        <button onclick="clearAllHistory()" style="background-color: var(--color-status-bad);">🚨 Clear All Saved Trials</button>
     </div>
 </div>
+
 <div id="stockImageModal" class="modal">
     <div class="modal-content">
-        <span class="close" onclick="closeStockImageModal()">&times;</span>
+        <span class="close-btn" onclick="closeStockImageModal()">&times;</span>
         <h2>AI Simulation Photo Gallery 🖼️</h2>
-        <p>Select a simulated plant image to assign it to the selected plant zone.</p>
-        <div id="stockImageGrid"></div>
+        <p>Click on a stock photo to assign it to your currently selected plant zone. These images contain embedded AI diagnostic tags for demonstration.</p>
+        <div id="stockImageGrid">
+        </div>
     </div>
+</div>
+
+<div class="footer">
+    All Rights Reserved: BanScie RIM Team 2025
 </div>
 
 <script>
-// JAVASCRIPT LOGIC
-// !!! THING SPEAK CONFIGURATION !!!
-const ESP32_IP = '192.168.1.50'; // Placeholder for Rover IP
+/* =============================================================================
+=============================================================================
+--- SECTION 10: CORE JAVASCRIPT LOGIC & CONFIGURATION ---
+=============================================================================
+=============================================================================
+*/
+
+// --- 10.1: CORE CONFIGURATION CONSTANTS ---
+const ESP32_IP = '192.168.1.50'; 
 const ESP32_URL_BASE = `http://${ESP32_IP}`;
 
-// --- THINGSPEAK CONFIGURATION (USING USER'S KEY) ---
-const THINGSPEAK_CHANNEL_ID = '254870'; // Placeholder Channel ID - **MUST BE CORRECTED BY USER**
-const THINGSPEAK_READ_API_KEY = '6OXH3SUQ4VNSOJX1';
+// --- THINGSPEAK CONFIGURATION (USING USER'S KEY 6OXH3SUQ4VNSOJX1) ---
+const THINGSPEAK_CHANNEL_ID = '254870'; 
+const THINGSPEAK_READ_API_KEY = '6OXH3SUQ4VNSOJX1'; 
 const THINGSPEAK_URL = `https://api.thingspeak.com/channels/${THINGSPEAK_CHANNEL_ID}/feeds.json?api_key=${THINGSPEAK_READ_API_KEY}&results=1`;
 
+// --- DOM References ---
 const STATUS_ELEMENT = document.getElementById('status');
 const LAST_PHOTO_STATUS = document.getElementById('lastPhotoStatus');
 
-// --- GLOBAL CONSTANTS & DATA STRUCTURES ---
-const FIELD_SIZE = 4;
+// --- Map and Field Constants ---
+const FIELD_SIZE = 4; // Field is 4m x 4m
 const MAP_CANVAS = document.getElementById('roverMap');
 const CTX = MAP_CANVAS.getContext('2d');
-const MAP_SIZE = 450;
+const MAP_SIZE = 450; // Canvas pixel size
 const PIXELS_PER_METER = MAP_SIZE / FIELD_SIZE;
 const MAX_MOISTURE = 100;
 
+// --- Plant Grid Definitions (16 Zones) ---
 const PLANT_LOCATIONS_M = [];
-for(let r=0; r<FIELD_SIZE; r++) for(let c=0; c<FIELD_SIZE; c++) PLANT_LOCATIONS_M.push({x: c + 0.5, y: r + 0.5, id: (r * FIELD_SIZE) + c + 1});
+for(let r=0; r<FIELD_SIZE; r++) {
+    for(let c=0; c<FIELD_SIZE; c++) {
+        // Center of each 1m x 1m grid square
+        PLANT_LOCATIONS_M.push({x: c + 0.5, y: r + 0.5, id: (r * FIELD_SIZE) + c + 1});
+    }
+}
 
-let loggedData = [];
-let photoData = {};
-let stockPhotoData = {};
-let selectedZone = 0;
+// --- Global State Variables ---
+let loggedData = [];     // Stores all soil probe readings (x, y, moisture, npk, health)
+let photoData = {};      // Stores photo references by zone ID (Zone ID -> Base64 Image string)
+let stockPhotoData = {}; // Stores simulated gallery images
+let selectedZone = 0;    // Tracks the currently selected photo zone for upload
 let trialHistory = JSON.parse(localStorage.getItem('trialHistory') || '[]');
 let currentTrialNumber = trialHistory.length + 1;
 document.getElementById('currentTrialNumber').innerText = currentTrialNumber;
@@ -308,22 +526,28 @@ let currentRoverData = {
     latitude: '40.7128',
     longitude: '-74.0060',
     heading: 0,
-    x_m: 2.0,
-    y_m: 2.0
+    x_m: 2.0, // Start at center
+    y_m: 2.0  // Start at center
 };
 
-// --- SIMULATED LIBRARY: TOMATO DIAGNOSTIC RULES (CRITICAL: DARK SPOTS PRIORITY) ---
+// --- 10.2: FUSED AI DIAGNOSTIC KNOWLEDGE BASE ---
+// This is the core logic for health assessment, prioritizing critical visual symptoms.
 const TOMATO_DIAGNOSTIC_LIBRARY = {
     DISEASE_TIERS: [
-        { name: "Mottling/Mosaic Pattern (Viral)", severity: 95, probability: 0.10, class: 'rec-critical', recommendation: "***ISOLATION REQUIRED***: Strong indicator of Tobacco Mosaic Virus (TMV) or similar. Incurable. Remove plant immediately to prevent field-wide contamination."
+        { name: "Mottling/Mosaic Pattern (Viral)", severity: 95, probability: 0.10, class: 'rec-critical', 
+          recommendation: "***ISOLATION REQUIRED***: Strong indicator of Tobacco Mosaic Virus (TMV) or similar. Incurable. Remove plant immediately to prevent field-wide contamination."
         },
-        { name: "Dark Spots & Lesions (Fungal/Bact)", severity: 85, probability: 0.15, class: 'rec-critical', recommendation: "***DARK SPOT DETECTION (AI DETERMINANT)***: High probability of Early Blight or Bacterial Spot. Apply broad-spectrum fungicide and improve air circulation/reduce leaf wetness."
+        { name: "Dark Spots & Lesions (Fungal/Bact)", severity: 85, probability: 0.15, class: 'rec-critical', 
+          recommendation: "***DARK SPOT DETECTION (AI DETERMINANT)***: High probability of Early Blight or Bacterial Spot. Apply broad-spectrum fungicide and improve air circulation/reduce leaf wetness."
         },
-        { name: "Leaf Curl & Wilting (Stress/Viral)", severity: 75, probability: 0.10, class: 'rec-critical', recommendation: "WILTING: Could be severe water stress, root rot, or Tomato Yellow Leaf Curl Virus (TYLCV). Check moisture urgently. If moisture is good, isolate for potential virus."
+        { name: "Leaf Curl & Wilting (Stress/Viral)", severity: 75, probability: 0.10, class: 'rec-critical', 
+          recommendation: "WILTING: Check moisture urgently. If moisture is good, isolate for potential virus (e.g., TYLCV)."
         },
-        { name: "General Yellowing (Chlorosis)", severity: 50, probability: 0.25, class: 'rec-action', recommendation: "GENERAL YELLOWING: A common sign of nutrient deficiency (N, Mg, Fe) or pH imbalance. Check NPK data for confirmation."
+        { name: "General Yellowing (Chlorosis)", severity: 50, probability: 0.25, class: 'rec-action', 
+          recommendation: "GENERAL YELLOWING: A common sign of nutrient deficiency (N, Mg, Fe) or pH imbalance. Check NPK data for confirmation."
         },
-        { name: "Healthy, Deep Green", severity: 0, probability: 0.40, class: 'rec-optimal', recommendation: "OPTIMAL: No visual symptoms detected. Continue regular monitoring."
+        { name: "Healthy, Deep Green", severity: 0, probability: 0.40, class: 'rec-optimal', 
+          recommendation: "OPTIMAL: No visual symptoms detected. Continue regular monitoring."
         }
     ],
     NPK_GUIDELINES: {
@@ -334,32 +558,38 @@ const TOMATO_DIAGNOSTIC_LIBRARY = {
     }
 };
 
-// --- UTILITY FUNCTIONS ---
-function simpleStringHash(str) {
-    let hash = 0;
-    for (let i = 0; i < Math.min(str.length, 1000); i++) {
-        const char = str.charCodeAt(i);
-        hash = (hash << 5) - hash + char;
-        hash |= 0;
-    }
-    return Math.abs(hash);
+// --- 10.3: UTILITY & HELPER FUNCTIONS ---
+
+/** Generates a simple, deterministic hash from a string for repeatable mock data. **/
+function simpleStringHash(str) { 
+    let hash = 0; 
+    for (let i = 0; i < Math.min(str.length, 1000); i++) { 
+        const char = str.charCodeAt(i); 
+        hash = (hash << 5) - hash + char; 
+        hash |= 0; 
+    } 
+    return Math.abs(hash); 
 }
-function deterministicPseudoRandom(seed) {
-    const a = 1664525;
-    const c = 1013904223;
-    const m = 4294967296;
-    let state = (Math.abs(Math.floor(seed)) * 101) % m;
-    state = (a * state + c) % m;
-    return state / m;
+
+/** Provides a pseudo-random number based on a seed for deterministic testing. **/
+function deterministicPseudoRandom(seed) { 
+    const a = 1664525; const c = 1013904223; const m = 4294967296; 
+    let state = (Math.abs(Math.floor(seed)) * 101) % m; 
+    state = (a * state + c) % m; 
+    return state / m; 
 }
+
+/** Maps a simple health status string to a 3D color hex value. **/
 function getHealthColorHex(status) {
     switch (status) {
-        case 'Good': return 0x6AA84F;
-        case 'Caution': return 0xFFC000;
-        case 'Bad': return 0xC55050;
+        case 'Good': return 0x6AA84F; 
+        case 'Caution': return 0xFFC000; 
+        case 'Bad': return 0xC55050; 
         default: return 0x5a5a5a;
     }
 }
+
+/** Maps a simple health status string to a CSS variable color. **/
 function getHealthColor(status) {
     if (status === 'Good') return 'var(--color-status-good)';
     if (status === 'Caution') return 'var(--color-status-caution)';
@@ -367,28 +597,60 @@ function getHealthColor(status) {
     return '#888888';
 }
 
-// --- CORE ROVER & DATA FETCH FUNCTIONS ---
+/** Updates the Rover's GPS and Sensor readouts in the Control Panel. **/
+function updateRoverPositionUI(moisture = null, npk_n = null, npk_p = null, npk_k = null, heading = null) {
+    document.getElementById('latitudeData').innerText = currentRoverData.latitude;
+    document.getElementById('longitudeData').innerText = currentRoverData.longitude;
+    document.getElementById('headingData').innerText = (heading !== null ? heading.toFixed(0) : currentRoverData.heading.toFixed(0)) + ' deg';
+    if (moisture !== null) {
+        document.getElementById('moistureData').innerText = moisture.toFixed(1) + '%';
+        document.getElementById('npkData').innerText = `N:${npk_n}, P:${npk_p}, K:${npk_k}`;
+    }
+}
 
+/** Finds the nearest plant zone to the Rover's current location (x, y). **/
 function getNearestPlant(x, y) {
-    let nearest = null;
+    let nearest = null; 
     let minDistSq = Infinity;
     PLANT_LOCATIONS_M.forEach(plant => {
-        let dx = plant.x - x;
-        let dy = plant.y - y;
+        let dx = plant.x - x; 
+        let dy = plant.y - y; 
         let distSq = dx * dx + dy * dy;
-        if (distSq < 1 * 1 && distSq < minDistSq) {
-            minDistSq = distSq;
-            nearest = plant;
+        // Search radius is less than 1m
+        if (distSq < 1 * 1 && distSq < minDistSq) { 
+            minDistSq = distSq; 
+            nearest = plant; 
         }
     });
     return nearest;
 }
 
+/** Performs a basic soil health check based on NPK/Moisture against guidelines. **/
+function analyzeHealth(moisture, npk_n, npk_p, npk_k) {
+    let issues = 0; 
+    const GUIDELINES = TOMATO_DIAGNOSTIC_LIBRARY.NPK_GUIDELINES;
+    if (moisture < GUIDELINES.moisture.low_crit || moisture > GUIDELINES.moisture.high_crit) issues++;
+    if (npk_n < GUIDELINES.N.low_crit || npk_n > GUIDELINES.N.high_crit) issues++;
+    if (npk_p < GUIDELINES.P.low_crit || npk_p > GUIDELINES.P.high_crit) issues++;
+    if (npk_k < GUIDELINES.K.low_crit || npk_k > GUIDELINES.K.high_crit) issues++;
+    
+    if (issues >= 2) return 'Bad'; 
+    if (issues === 1) return 'Caution'; 
+    return 'Good';
+}
+
+
+// --- 10.4: ROVER COMMAND & API SIMULATION FUNCTIONS ---
+
+/** * Sends a command to the simulated ESP32/Rover unit. 
+ * This function handles both mock movement and simulated API calls for probing/capture.
+ **/
 function sendCommand(command) {
+    // Determine the target URL for the physical rover (if connected)
     let url = (command === 'capture') ? `${ESP32_URL_BASE}/capture` : `${ESP32_URL_BASE}/move?dir=${command}`;
     STATUS_ELEMENT.innerText = `Sending command: ${command}...`;
 
-    // --- Mock Movement for UI Update ---
+    // 1. Handle Mock Movement (Client-side simulation)
     if (['forward', 'backward', 'left', 'right'].includes(command)) {
         const step = 0.5;
         const rad = currentRoverData.heading * Math.PI / 180;
@@ -401,62 +663,67 @@ function sendCommand(command) {
         else if (command === 'left') { newHeading = (newHeading - 45 + 360) % 360; }
         else if (command === 'right') { newHeading = (newHeading + 45) % 360; }
 
+        // Enforce boundary limits (0.05m buffer from the 4m x 4m edge)
         currentRoverData.x_m = Math.min(FIELD_SIZE - 0.05, Math.max(0.05, newX)).toFixed(2);
         currentRoverData.y_m = Math.min(FIELD_SIZE - 0.05, Math.max(0.05, newY)).toFixed(2);
         currentRoverData.heading = newHeading;
+        
         updateRoverPositionUI();
         drawMap();
         updateRover3DPosition();
-        STATUS_ELEMENT.innerText = `Command '${command}' Success (Mock Movement).`;
-        return; // Skip API call for mock movement
+        STATUS_ELEMENT.innerText = `Command '${command}' Success (Mock Movement Applied).`;
+        return;
     }
 
-    // --- API Call Simulation for Probe/Capture ---
-    fetch(url) // Actual call to ESP32 (will likely fail in this browser context)
-        .then(response => {
-            if (!response.ok) { throw new Error(`HTTP Error: ${response.status}`); }
-            return response.text();
+    // 2. Handle API Call Simulation (Probe/Capture)
+    fetch(url) 
+        .then(response => { 
+            if (!response.ok) { throw new Error(`HTTP Error: ${response.status}`); } 
+            return response.text(); 
         })
         .then(data => {
             if (command === 'probe') {
-                STATUS_ELEMENT.innerText = `Probe command sent. Awaiting ThingSpeak data update...`;
-                // Wait for the ESP32 to push data to ThingSpeak
+                STATUS_ELEMENT.innerText = `Probe command sent to ${ESP32_IP}. Awaiting ThingSpeak data update...`;
                 setTimeout(() => fetchData(command), 1000);
             } else if (command === 'capture') {
-                LAST_PHOTO_STATUS.innerText = 'Photo captured and sent to server (simulated).';
+                // In a real scenario, this 'data' would be a photo URL or confirmation.
+                LAST_PHOTO_STATUS.innerText = 'Photo captured and server upload confirmed (simulated).';
                 const nearestPlant = getNearestPlant(currentRoverData.x_m, currentRoverData.y_m);
                 if (nearestPlant) {
-                    photoData[nearestPlant.id] = `data:image/jpeg;base64,mocked_rover_capture_zone_${nearestPlant.id}_diag:Healthy_${Date.now()}`;
-                    renderPhotoInCell(nearestPlant.id, photoData[nearestPlant.id]);
-                    fetchAIResults();
-                    STATUS_ELEMENT.innerText = `Photo captured and assigned to Zone ${nearestPlant.id}.`;
-                }
-            } else {
-                 STATUS_ELEMENT.innerText = `Command '${command}' Success. Rover response: ${data.substring(0, 30)}...`;
-            }
-        })
-        .catch(error => {
-            // Treat as successful for the sake of the demo if it's probe/capture, but log error
-            console.error('Error sending command (API failed, continuing with demo):', error);
-            if (command === 'probe') {
-                STATUS_ELEMENT.innerText = `Probe command simulated. Fetching ThingSpeak data now...`;
-                setTimeout(() => fetchData(command), 500);
-            } else if (command === 'capture') {
-                // Mock success for capture
-                LAST_PHOTO_STATUS.innerText = 'Photo captured and sent to server (mocked success).';
-                const nearestPlant = getNearestPlant(currentRoverData.x_m, currentRoverData.y_m);
-                if (nearestPlant) {
-                    photoData[nearestPlant.id] = `data:image/jpeg;base64,mocked_rover_capture_zone_${nearestPlant.id}_diag:Dark_Spots_${Date.now()}`; // Mock a disease sometimes
+                    // Inject mock data with a Dark_Spots tag to ensure AI priority check works
+                    photoData[nearestPlant.id] = `data:image/jpeg;base64,mocked_rover_capture_zone_${nearestPlant.id}_diag:Dark_Spots_${Date.now()}`; 
                     renderPhotoInCell(nearestPlant.id, photoData[nearestPlant.id]);
                     fetchAIResults();
                     STATUS_ELEMENT.innerText = `Photo captured (mocked) and assigned to Zone ${nearestPlant.id}.`;
                 }
-            } else {
-                STATUS_ELEMENT.innerText = `ERROR: Command ${command} failed. Is ESP32 at ${ESP32_IP} online?`;
+            } else { 
+                STATUS_ELEMENT.innerText = `Command '${command}' Success. Rover response: ${data.substring(0, 30)}...`; 
+            }
+        })
+        .catch(error => {
+            // Fallback for demo when the physical ESP32 is offline/inaccessible
+            console.error('API Error (Continuing in Demo Mode):', error);
+            if (command === 'probe') {
+                STATUS_ELEMENT.innerText = `Probe command FAILED (API Error). Simulating data fetch from ThingSpeak...`;
+                setTimeout(() => fetchData(command), 500); // Fetch latest ThingSpeak data
+            } else if (command === 'capture') {
+                LAST_PHOTO_STATUS.innerText = 'Photo captured (Mocked success in Demo Mode).';
+                const nearestPlant = getNearestPlant(currentRoverData.x_m, currentRoverData.y_m);
+                if (nearestPlant) {
+                    photoData[nearestPlant.id] = `data:image/jpeg;base64,mocked_rover_capture_zone_${nearestPlant.id}_diag:Dark_Spots_${Date.now()}`;
+                    renderPhotoInCell(nearestPlant.id, photoData[nearestPlant.id]);
+                    fetchAIResults();
+                    STATUS_ELEMENT.innerText = `Photo captured (mocked) and assigned to Zone ${nearestPlant.id}.`;
+                }
+            } else { 
+                STATUS_ELEMENT.innerText = `ERROR: Command ${command} failed. Is ESP32 at ${ESP32_IP} online?`; 
             }
         });
 }
 
+/** * Fetches the latest sensor data from the ThingSpeak API using the specified API Key.
+ * Logs the data if the call was preceded by a 'probe' command.
+ **/
 async function fetchData(lastCommand = null) {
     STATUS_ELEMENT.innerText = "Fetching latest data from ThingSpeak...";
     try {
@@ -470,31 +737,26 @@ async function fetchData(lastCommand = null) {
             return;
         }
 
-        // --- Parse Data from ThingSpeak Fields (ASSUMED MAPPING) ---
+        // Parse fields (field 1-4 are sensors, 5-7 are GPS/Heading)
         const moistureVal = parseFloat(lastField.field1) || 0;
         const npk_n = parseInt(lastField.field2) || 0;
         const npk_p = parseInt(lastField.field3) || 0;
         const npk_k = parseInt(lastField.field4) || 0;
-        // Mock X/Y/Heading if not available or zero
         const x_m = parseFloat(lastField.field5) || currentRoverData.x_m;
         const y_m = parseFloat(lastField.field6) || currentRoverData.y_m;
         const heading = parseFloat(lastField.field7) || currentRoverData.heading;
 
-        // --- Update Rover Data (Navigation) ---
+        // Update current rover position state
         currentRoverData.heading = heading;
         currentRoverData.x_m = x_m.toFixed(2);
         currentRoverData.y_m = y_m.toFixed(2);
 
-        // Update UI
         updateRoverPositionUI(moistureVal, npk_n, npk_p, npk_k, heading);
 
-        // --- Log Data if command was 'probe' ---
         if (lastCommand === 'probe') {
             let healthStatus = analyzeHealth(moistureVal, npk_n, npk_p, npk_k);
-
-            const isNewLogPosition = !loggedData.some(d =>
-                Math.abs(d.x_m - x_m) < 0.2 && Math.abs(d.y_m - y_m) < 0.2
-            );
+            // Check if this position is already logged (prevent duplicate points from the same spot)
+            const isNewLogPosition = !loggedData.some(d => Math.abs(d.x_m - x_m) < 0.2 && Math.abs(d.y_m - y_m) < 0.2);
 
             const newLogEntry = {
                 x_m: x_m, y_m: y_m, healthStatus: healthStatus,
@@ -506,15 +768,13 @@ async function fetchData(lastCommand = null) {
                  loggedData.push(newLogEntry);
                 STATUS_ELEMENT.innerText = `New data point logged from ThingSpeak! Status: ${healthStatus}`;
             } else {
+                // If position exists, just update the log entry
                 const existingIndex = loggedData.findIndex(d => Math.abs(d.x_m - x_m) < 0.2 && Math.abs(d.y_m - y_m) < 0.2);
-                loggedData[existingIndex] = newLogEntry; // Overwrite existing log
+                loggedData[existingIndex] = newLogEntry;
                  STATUS_ELEMENT.innerText = `Data refreshed (Overwrite). Status: ${healthStatus}`;
             }
-
-            fetchAIResults();
-        } else {
-             STATUS_ELEMENT.innerText = "ThingSpeak data refreshed successfully.";
-        }
+            fetchAIResults(); // Re-run analysis after new data point
+        } else { STATUS_ELEMENT.innerText = "ThingSpeak data refreshed successfully."; }
 
         drawMap();
         draw3DMap();
@@ -525,182 +785,187 @@ async function fetchData(lastCommand = null) {
     }
 }
 
-function updateRoverPositionUI(moisture = null, npk_n = null, npk_p = null, npk_k = null, heading = null) {
-    document.getElementById('latitudeData').innerText = currentRoverData.latitude;
-    document.getElementById('longitudeData').innerText = currentRoverData.longitude;
-    document.getElementById('gpsFix').innerText = "3D Fix";
-    document.getElementById('headingData').innerText = (heading !== null ? heading.toFixed(0) : currentRoverData.heading.toFixed(0)) + ' deg';
-
-    if (moisture !== null) {
-        document.getElementById('moistureData').innerText = moisture.toFixed(1) + '%';
-        document.getElementById('npkData').innerText = `N:${npk_n}, P:${npk_p}, K:${npk_k}`;
-    }
-}
-
-function analyzeHealth(moisture, npk_n, npk_p, npk_k) {
-    let issues = 0;
-    const GUIDELINES = TOMATO_DIAGNOSTIC_LIBRARY.NPK_GUIDELINES;
-
-    if (moisture < GUIDELINES.moisture.low_crit || moisture > GUIDELINES.moisture.high_crit) issues++;
-    if (npk_n < GUIDELINES.N.low_crit || npk_n > GUIDELINES.N.high_crit) issues++;
-    if (npk_p < GUIDELINES.P.low_crit || npk_p > GUIDELINES.P.high_crit) issues++;
-    if (npk_k < GUIDELINES.K.low_crit || npk_k > GUIDELINES.K.high_crit) issues++;
-
-    if (issues >= 2) return 'Bad';
-    if (issues === 1) return 'Caution';
-    return 'Good';
-}
-
+/** Resets all logged data, photos, and optionally the rover's position. **/
 function clearMapData(resetRover = true) {
-    loggedData = [];
+    loggedData = []; 
     photoData = {};
-    if (resetRover) {
-        currentRoverData.x_m = 2.0;
-        currentRoverData.y_m = 2.0;
-        currentRoverData.heading = 0;
+    if (resetRover) { 
+        currentRoverData.x_m = 2.0; 
+        currentRoverData.y_m = 2.0; 
+        currentRoverData.heading = 0; 
     }
-    drawMap();
-    draw3DMap();
-    clearPhotoGrid();
-    fetchAIResults();
+    drawMap(); 
+    draw3DMap(); 
+    clearPhotoGrid(); 
+    fetchAIResults(); 
     updateRoverPositionUI();
     STATUS_ELEMENT.innerText = "Map data, rover logs, and photos cleared.";
 }
 
-// --- 2D Map Drawing ---
+// --- 10.5: 2D MAP DRAWING (Canvas) ---
+
+/** Draws the 4m x 4m grid, logged data points, and the rover's current position/heading. **/
 function drawMap() {
-    CTX.clearRect(0, 0, MAP_SIZE, MAP_SIZE);
-    CTX.strokeStyle = '#5a5a5a';
+    CTX.clearRect(0, 0, MAP_SIZE, MAP_SIZE); 
+    CTX.strokeStyle = '#5a5a5a'; 
     CTX.lineWidth = 1;
 
-    // Draw Grid Lines (1m x 1m)
+    // Draw the 1m grid lines
     for (let i = 0; i <= FIELD_SIZE; i++) {
         let p = i * PIXELS_PER_METER;
-        CTX.beginPath(); CTX.moveTo(p, 0); CTX.lineTo(p, MAP_SIZE); CTX.stroke();
-        CTX.beginPath(); CTX.moveTo(0, p); CTX.lineTo(MAP_SIZE, p); CTX.stroke();
+        CTX.beginPath(); CTX.moveTo(p, 0); CTX.lineTo(p, MAP_SIZE); CTX.stroke(); // Vertical lines
+        CTX.beginPath(); CTX.moveTo(0, p); CTX.lineTo(MAP_SIZE, p); CTX.stroke(); // Horizontal lines
     }
 
-    // Draw Logged Data Points (Health Status)
+    // Draw Logged Data Points (Circles)
     loggedData.forEach(data => {
         let x_px = data.x_m * PIXELS_PER_METER;
-        let y_px = MAP_SIZE - (data.y_m * PIXELS_PER_METER);
+        let y_px = MAP_SIZE - (data.y_m * PIXELS_PER_METER); // Y-axis is inverted on canvas
 
         CTX.beginPath();
         CTX.arc(x_px, y_px, 12, 0, 2 * Math.PI);
         CTX.fillStyle = getHealthColor(data.healthStatus);
-        CTX.fill();
-        CTX.strokeStyle = 'white';
-        CTX.lineWidth = 2;
+        CTX.fill(); 
+        CTX.strokeStyle = 'white'; 
+        CTX.lineWidth = 2; 
         CTX.stroke();
     });
 
-    // Draw Rover
+    // Draw Rover Position (Triangle)
     let rover_x_px = currentRoverData.x_m * PIXELS_PER_METER;
     let rover_y_px = MAP_SIZE - (currentRoverData.y_m * PIXELS_PER_METER);
-    // Convert heading (0=North/Y+) to map angle (0=East/X+)
     let heading_rad = (currentRoverData.heading - 90) * (Math.PI / 180);
     let size = 15;
 
     CTX.save();
-    CTX.translate(rover_x_px, rover_y_px);
+    CTX.translate(rover_x_px, rover_y_px); 
     CTX.rotate(heading_rad);
-
     CTX.beginPath();
-    CTX.moveTo(size, 0);
-    CTX.lineTo(-size * 0.5, -size * 0.7);
+    CTX.moveTo(size, 0); // Nose of the triangle
+    CTX.lineTo(-size * 0.5, -size * 0.7); 
     CTX.lineTo(-size * 0.5, size * 0.7);
     CTX.closePath();
-
-    CTX.fillStyle = 'var(--color-primary)';
-    CTX.fill();
-    CTX.strokeStyle = 'var(--color-text-highlight)';
-    CTX.lineWidth = 2;
+    CTX.fillStyle = 'var(--color-primary)'; 
+    CTX.fill(); 
+    CTX.strokeStyle = 'var(--color-text-highlight)'; 
+    CTX.lineWidth = 2; 
     CTX.stroke();
     CTX.restore();
 }
 
-// --- 3D Map Functions ---
+// --- 10.6: 3D MAP VISUALIZATION (Three.js) ---
+
 let scene, camera, renderer, rover3D, controls;
 let dataCubes = {};
 
+/** Initializes the Three.js scene, camera, renderer, and controls. **/
 function initThreeD() {
     const container = document.getElementById('threeDContainer');
-    scene = new THREE.Scene();
+    scene = new THREE.Scene(); 
     scene.background = new THREE.Color(0x1a1a1a);
-    camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 100);
-    camera.position.set(2, 6, 2);
-    renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(container.clientWidth, container.clientHeight);
-    container.innerHTML = '';
+    camera = new THREE.PerspectiveCamera(75, 450 / 450, 0.1, 100); 
+    camera.position.set(2, 6, 2); // Initial camera position (above the field)
+    renderer = new THREE.WebGLRenderer({ antialias: true }); 
+    renderer.setSize(450, 450);
+    container.innerHTML = ''; 
     container.appendChild(renderer.domElement);
+    
+    // Orbital Controls for user interaction
     controls = new THREE.OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
+    controls.enableDamping = true; 
     controls.maxPolarAngle = Math.PI / 2.2;
+
+    // Base grid for visual reference
     const gridHelper = new THREE.GridHelper(FIELD_SIZE, FIELD_SIZE, 0x444444, 0x444444);
-    gridHelper.position.set(FIELD_SIZE / 2, 0, FIELD_SIZE / 2);
+    gridHelper.position.set(FIELD_SIZE / 2, 0, FIELD_SIZE / 2); 
     scene.add(gridHelper);
 
+    // 3D Rover Model
     const roverGeometry = new THREE.BoxGeometry(0.2, 0.1, 0.2);
     const roverMaterial = new THREE.MeshPhongMaterial({ color: 0x569cd6 });
     rover3D = new THREE.Mesh(roverGeometry, roverMaterial);
-    rover3D.position.set(currentRoverData.x_m, 0.05, currentRoverData.y_m);
+    rover3D.position.set(currentRoverData.x_m, 0.05, currentRoverData.y_m); 
     scene.add(rover3D);
-    scene.add(new THREE.AmbientLight(0x404040, 2));
+    
+    // Lighting
+    scene.add(new THREE.AmbientLight(0x404040, 2)); 
     scene.add(new THREE.DirectionalLight(0xffffff, 1.5));
+    
     animate();
 }
 
+/** The main Three.js render loop. **/
 function animate() {
     requestAnimationFrame(animate);
-    if(controls) controls.update();
+    if(controls) controls.update(); // Only update controls if they exist
     renderer.render(scene, camera);
 }
 
+/** Updates the 3D rover model position and orientation to match the 2D map. **/
 function updateRover3DPosition() {
     if (rover3D) {
         rover3D.position.set(parseFloat(currentRoverData.x_m), 0.05, parseFloat(currentRoverData.y_m));
-        // Rotate the rover based on heading (0 deg in 3D points down -Y (North), 90 deg is -X (West))
+        // Note: Z-axis corresponds to Y-axis in 2D map, and rotation is adjusted for 3D space
         rover3D.rotation.y = -(currentRoverData.heading - 90) * (Math.PI / 180);
     }
 }
 
+/** Clears and redraws the 3D visualization using current logged data. **/
 function draw3DMap() {
-    Object.values(dataCubes).forEach(cube => { scene.remove(cube); cube.geometry.dispose(); cube.material.dispose(); });
+    // Clean up old cubes
+    Object.values(dataCubes).forEach(cube => { 
+        scene.remove(cube); 
+        cube.geometry.dispose(); 
+        cube.material.dispose(); 
+    });
     dataCubes = {};
 
+    // Create new cubes for each logged data point
     loggedData.forEach((data, index) => {
         const { x_m, y_m, moisture, healthStatus } = data;
-        // Map moisture (0-100) to height (0.01 - 3.0)
-        const cubeHeight = Math.max(0.01, moisture / MAX_MOISTURE * 3);
+        const cubeHeight = Math.max(0.01, moisture / MAX_MOISTURE * 3); // Scale moisture to max 3 units height
         const colorHex = getHealthColorHex(healthStatus);
+        
         const geometry = new THREE.BoxGeometry(0.5, cubeHeight, 0.5);
-        const material = new THREE.MeshPhongMaterial({ color: colorHex, opacity: 0.8, transparent: true });
+        const material = new THREE.MeshPhongMaterial({ 
+            color: colorHex, 
+            opacity: 0.8, 
+            transparent: true 
+        });
         const cube = new THREE.Mesh(geometry, material);
-        cube.position.set(x_m, cubeHeight / 2, y_m);
-        dataCubes[index] = cube;
+        
+        // Position cube correctly, half the height above the ground
+        cube.position.set(x_m, cubeHeight / 2, y_m); 
+        dataCubes[index] = cube; 
         scene.add(cube);
     });
     updateRover3DPosition();
 }
 
-// --- FUSED AI ANALYSIS LOGIC ---
+// --- 10.7: FUSED AI ANALYSIS LOGIC ---
+
+/** Finds the nearest sensor log entry (if within a 1m radius) for a specific plant zone. **/
 function getNearestSensorData(plantX, plantY) {
-    let nearestData = null;
+    let nearestData = null; 
     let min_dist_sq = Infinity;
     loggedData.forEach(data => {
-        let dx = data.x_m - plantX;
-        let dy = data.y_m - plantY;
+        let dx = data.x_m - plantX; 
+        let dy = data.y_m - plantY; 
         let dist_sq = dx * dx + dy * dy;
-        if (dist_sq < 0.707 * 0.707 && dist_sq < min_dist_sq) {
-            min_dist_sq = dist_sq;
-            nearestData = data;
+        // Check if data is within the 1m zone radius (sqrt(0.707^2 + 0.707^2) = 1m diagonal)
+        if (dist_sq < 0.707 * 0.707 && dist_sq < min_dist_sq) { 
+            min_dist_sq = dist_sq; 
+            nearestData = data; 
         }
     });
     return nearestData;
 }
 
+/** * Simulates AI image prediction by checking the image's embedded diagnostic tag.
+ * **Crucially, this function prioritizes critical fungal/viral markers (Dark Spots/Mottling).**
+ **/
 function getPhotoPrediction(base64Image) {
-    // Check for explicit disease tag (Simulated AI feature)
+    // 1. High Priority Check: Critical diseases (Fungal/Viral)
     if (base64Image.includes('_diag:Dark_Spots')) {
         return TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS.find(d => d.name.includes("Dark Spots"));
     }
@@ -708,317 +973,366 @@ function getPhotoPrediction(base64Image) {
         return TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS.find(d => d.name.includes("Mottling"));
     }
 
-    // Default probabilistic roll for other symptoms
+    // 2. Default Probabilistic Roll for other symptoms (simulated)
     const photoHash = simpleStringHash(base64Image);
     const randomRoll = deterministicPseudoRandom(photoHash);
     let cumulativeProb = 0;
-    let prediction = TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS[4];
+    let prediction = TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS[4]; // Default to healthy
 
     for (const disease of TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS) {
+        // Skip critical diseases already checked
         if (disease.name.includes("Dark Spots") || disease.name.includes("Mottling")) continue;
-
+        
         cumulativeProb += disease.probability;
-        if (randomRoll <= cumulativeProb) {
-            prediction = disease;
-            break;
+        if (randomRoll <= cumulativeProb) { 
+            prediction = disease; 
+            break; 
         }
     }
     return prediction;
 }
 
+/** * Combines sensor data and visual (photo) data to generate a final diagnosis and recommendation. 
+ * This is the FUSED AI component.
+ **/
 function analyzePlant(plant, sensorData, photoExists) {
-    let soilScore = 100;
+    let soilScore = 100; 
     let soilProblems = [];
-    let sensorDiagnosis = "Soil: Sensor Data Missing";
+    let sensorDiagnosis = "Soil: Sensor Data Missing"; 
     let visualDiagnosis = "Visual: No Photo Taken";
-    let prediction = TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS[4]; // Default to Healthy
-    let finalRecommendation = '';
+    let prediction = TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS[4]; // Default: Healthy
+    let finalRecommendation = ''; 
     let healthClass = 'rec-optimal';
 
-    // 1. Sensor Data Analysis
+    // 1. Process Sensor Data
     if (sensorData) {
         const { moisture, npk_n, npk_p, npk_k } = sensorData;
         const data = { moisture, N: npk_n, P: npk_p, K: npk_k };
-        const keys = ['moisture', 'N', 'P', 'K'];
+        const keys = ['moisture', 'N', 'P', 'K']; 
         const guid = TOMATO_DIAGNOSTIC_LIBRARY.NPK_GUIDELINES;
 
         keys.forEach(key => {
-            const guideline = guid[key];
-            const value = data[key];
+            const guideline = guid[key]; 
+            const value = data[key]; 
             let problem = '';
 
-            if (value < guideline.low_crit) { soilScore -= guideline.penalty_major; problem = `CRITICAL LOW ${key}`; }
-            else if (value < guideline.ideal_min) { soilScore -= guideline.penalty_minor; problem = `LOW ${key}`; }
-            else if (value > guideline.high_crit) { soilScore -= guideline.penalty_major; problem = `CRITICAL HIGH ${key}`; }
-            else if (value > guideline.ideal_max) { soilScore -= guideline.penalty_minor; problem = `HIGH ${key}`; }
+            // Assign penalties based on how far the reading is from the ideal range
+            if (value < guideline.low_crit || value > guideline.high_crit) { 
+                soilScore -= guideline.penalty_major; 
+                problem = `CRITICAL ${value < guideline.low_crit ? 'LOW' : 'HIGH'} ${key}`; 
+            }
+            else if (value < guideline.ideal_min || value > guideline.ideal_max) { 
+                soilScore -= guideline.penalty_minor; 
+                problem = `${value < guideline.ideal_min ? 'LOW' : 'HIGH'} ${key}`; 
+            }
 
             if (problem) {
-                let rec = (problem.includes('CRITICAL') ? "Urgent " : "") +
-                (value < guideline.low_crit ? guideline.low_rec : guideline.high_rec);
+                let rec = (problem.includes('CRITICAL') ? "Urgent " : "") + 
+                          (value < guideline.low_crit ? guideline.low_rec : guideline.high_rec);
                 soilProblems.push({ key, value, problem, rec });
             }
         });
         sensorDiagnosis = `Soil: M=${moisture}%, NPK=${npk_n}/${npk_p}/${npk_k}`;
     } else {
-        return { id: plant.id, score: 20, visualDiagnosis, sensorDiagnosis: "Soil: Sensor Data Missing", recommendation: "***CRITICAL ERROR: DATA GAP***. Rover has not probed this zone.", healthClass: 'rec-critical' };
+        // Critical data gap
+        return { 
+            id: plant.id, 
+            score: 20, 
+            visualDiagnosis, 
+            sensorDiagnosis: "Soil: Sensor Data Missing", 
+            recommendation: "***CRITICAL ERROR: DATA GAP***. Rover has not probed this zone.", 
+            healthClass: 'rec-critical' 
+        };
     }
 
-    // 2. Photo Analysis
+    // 2. Process Visual Data (AI Prediction)
     if (photoExists) {
         prediction = getPhotoPrediction(photoData[plant.id]);
         visualDiagnosis = `Visual: ${prediction.name}`;
     }
 
-    // 3. Fused Diagnosis (Logic retains dark spot priority)
+    // 3. Fused Recommendation Logic (Visual overrides minor soil issues)
     const isMottling = prediction.name.includes('Mottling');
     const isDarkSpots = prediction.name.includes('Dark Spots');
 
-    if (isMottling) {
-        finalRecommendation = prediction.recommendation;
-        healthClass = prediction.class;
-    } else if (isDarkSpots) {
+    if (isMottling || isDarkSpots) {
+        // If critical visual defect is found, use the visual recommendation immediately.
         finalRecommendation = prediction.recommendation;
         healthClass = prediction.class;
     } else if (soilProblems.length > 0) {
+        // If no critical visual defect, focus on the soil problems.
         const problemString = soilProblems.map(p => p.problem).join('; ');
         const recString = soilProblems.map(p => p.rec).join('; ');
 
         finalRecommendation = `CAUTION: Soil Imbalance (${problemString}). Recommended action: ${recString}`;
+        // Adjust health class based on severity of soil issues
         healthClass = soilScore <= 60 ? 'rec-action' : 'rec-optimal';
     } else {
+        // No major issues (Healthy or minor visual)
         finalRecommendation = prediction.recommendation;
         healthClass = prediction.class;
     }
 
+    // Calculate Final Score (Visual severity has a high weight)
     const finalScore = Math.max(0, Math.round(soilScore - prediction.severity * 0.3));
-    return { id: plant.id, score: finalScore.toFixed(0), visualDiagnosis, sensorDiagnosis, recommendation: finalRecommendation.trim(), healthClass };
+    
+    return { 
+        id: plant.id, 
+        score: finalScore.toFixed(0), 
+        visualDiagnosis, 
+        sensorDiagnosis, 
+        recommendation: finalRecommendation.trim(), 
+        healthClass 
+    };
 }
 
+/** Iterates through all 16 plant zones and updates the Analysis Grid with Fused AI results. **/
 function fetchAIResults() {
     const analysisGrid = document.getElementById('plantAnalysisGrid');
     analysisGrid.innerHTML = '';
+    
     PLANT_LOCATIONS_M.forEach(plant => {
         const sensorData = getNearestSensorData(plant.x, plant.y);
         const photoExists = !!photoData[plant.id];
         const analysis = analyzePlant(plant, sensorData, photoExists);
 
+        // Generate the HTML card for this zone's analysis
         const card = `
-        <div class="analysis-card ${analysis.healthClass}">
+        <div class="analysis-card">
         <div class="plant-id-label">Zone ${analysis.id}</div>
         <div class="data-row">
-            <strong>Score:</strong> <span class="data-value">${analysis.score}/100</span>
+            <strong>Overall Health Score:</strong> <span>${analysis.score}/100</span>
         </div>
         <div class="data-row">
-            <strong>Leaf:</strong> <span class="data-value">${analysis.visualDiagnosis}</span>
+            <strong>Leaf AI Diagnosis:</strong> <span>${analysis.visualDiagnosis}</span>
         </div>
         <div class="data-row">
-            <strong>Soil:</strong> <span class="data-value">${analysis.sensorDiagnosis.substring(0, 30)}...</span>
+            <strong>Soil Sensor Data:</strong> <span>${analysis.sensorDiagnosis}</span>
         </div>
-        <div style="margin-top: 5px;">
-            <span class="${analysis.healthClass}">${analysis.recommendation}</span>
+        <div style="margin-top: 10px;">
+            <strong>FUSED RECOMMENDATION:</strong> <span class="${analysis.healthClass}" style="margin-top: 5px;">${analysis.recommendation}</span>
         </div>
         </div>
         `;
         analysisGrid.insertAdjacentHTML('beforeend', card);
     });
-    draw3DMap();
+    draw3DMap(); // Redraw 3D map to reflect the updated health colors
 }
 
-// --- PHOTO & MODAL LOGIC ---
+// --- 10.8: PHOTO & MODAL LOGIC (for the 4x4 Photo Grid) ---
+
+/** Generates deterministic stock photos for the simulation gallery. **/
 function populateStockPhotos() {
     if (Object.keys(stockPhotoData).length === 16) return;
     const diseaseList = TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS;
     for (let i = 1; i <= 16; i++) {
         const diseaseIndex = i % diseaseList.length;
         const diagTag = diseaseList[diseaseIndex].name.replace(/\s/g, '_').replace(/\//g, '-');
+        // Base64 is mocked for display purposes, but the _diag tag is real for the AI logic
         const base64 = `data:image/svg+xml;base64,mocked_stock_photo_hash_${i}_diag:${diagTag}`;
         stockPhotoData[i] = base64;
     }
 }
+
+/** Opens the modal displaying simulated stock images. **/
 function openStockImageModal() {
     populateStockPhotos();
     const container = document.getElementById('stockImageGrid');
     container.innerHTML = '';
+    // Populate the grid with mock image previews
     for (let id = 1; id <= 16; id++) {
         const base64Image = stockPhotoData[id];
         const prediction = getPhotoPrediction(base64Image);
         const div = document.createElement('div');
         div.className = 'grid-cell';
         div.setAttribute('onclick', `assignStockPhotoToZone(${id})`);
-        div.style.margin = '5px';
-        div.innerHTML = `<img src="${base64Image}" alt="Stock Image ${id}" class="cell-photo" />
-            <span style="position:absolute; top:2px; right:2px; background:rgba(0,0,0,0.7); color:white; padding: 2px 5px; border-radius:3px; font-size: 0.7em;">ID ${id}</span>
+        div.style.maxWidth = '150px'; div.style.aspectRatio = '1/1';
+        div.innerHTML = `<img src="${base64Image.split('_diag:')[0]}" alt="Stock Image ${id}" class="cell-photo" />
             <span style="position:absolute; bottom:2px; left:2px; background:rgba(0,0,0,0.7); color:white; padding: 2px 5px; border-radius:3px; font-size: 0.7em;">${prediction.name.split('(')[0].trim()}</span>
         `;
         container.appendChild(div);
     }
-    document.getElementById('stockImageModal').style.display = "block";
+    document.getElementById('stockImageModal').style.display = "flex";
 }
 function closeStockImageModal() { document.getElementById('stockImageModal').style.display = "none"; }
+
+/** Assigns a selected stock photo to the plant zone currently selected for upload. **/
 function assignStockPhotoToZone(stockId) {
-    if (selectedZone === 0) {
-        STATUS_ELEMENT.innerText = "Error: Please click a Zone (1-16) on the main Photo Grid first.";
-        return;
+    if (selectedZone === 0) { 
+        STATUS_ELEMENT.innerText = "Error: Click a Zone (1-16) on the main Photo Grid first."; 
+        return; 
     }
     const photo = stockPhotoData[stockId];
-    photoData[selectedZone] = photo;
+    photoData[selectedZone] = photo; 
     renderPhotoInCell(selectedZone, photo);
     STATUS_ELEMENT.innerText = `Assigned Stock Photo ID ${stockId} to Zone ${selectedZone}.`;
-    closeStockImageModal();
-    selectedZone = 0;
-    fetchAIResults();
+    closeStockImageModal(); 
+    selectedZone = 0; 
+    fetchAIResults(); // Re-run analysis with new photo data
 }
+
+/** Dynamically generates the 4x4 photo grid structure. **/
 function generatePhotoGrid() {
     const grid = document.getElementById('photoGrid');
     for (let i = 1; i <= 16; i++) {
         const cell = document.createElement('div');
-        cell.className = 'grid-cell';
+        cell.className = 'grid-cell'; 
         cell.id = `zone-${i}`;
-        cell.innerHTML = `<span class="cell-label">${i}</span>
-        <button class="delete-photo-btn" onclick="event.stopPropagation(); deletePhoto(${i})">X</button>
-        `;
-        cell.setAttribute('onclick', `preparePhotoUpload(${i})`);
+        cell.innerHTML = `<span class="cell-label">${i}</span><button class="delete-photo-btn" onclick="event.stopPropagation(); deletePhoto(${i})">X</button>`;
+        cell.setAttribute('onclick', `preparePhotoUpload(${i})`); 
         grid.appendChild(cell);
     }
 }
-function preparePhotoUpload(zoneId) {
-    selectedZone = zoneId;
-    document.getElementById('fileInput').click();
+
+/** Sets the zone ID and triggers the native file upload dialog. **/
+function preparePhotoUpload(zoneId) { 
+    selectedZone = zoneId; 
+    document.getElementById('fileInput').click(); 
 }
+
+/** Handles the user selecting a custom image file. **/
 function handleFileSelect(event) {
     const file = event.target.files[0];
     if (file && selectedZone !== 0) {
         const reader = new FileReader();
         reader.onload = function(e) {
-            // Append a default 'Healthy' tag for user uploads
-            photoData[selectedZone] = e.target.result + "_diag:Healthy";
-            renderPhotoInCell(selectedZone, e.target.result + "_diag:Healthy");
+            // Append a user-upload tag for AI logic
+            photoData[selectedZone] = e.target.result + "_diag:User_Upload";
+            renderPhotoInCell(selectedZone, e.target.result + "_diag:User_Upload");
             STATUS_ELEMENT.innerText = `Custom photo uploaded and assigned to Zone ${selectedZone}.`;
-            selectedZone = 0;
-            event.target.value = ''; // Clear input
+            selectedZone = 0; 
+            event.target.value = ''; 
             fetchAIResults();
         };
         reader.readAsDataURL(file);
     }
 }
+
+/** Renders a photo within a specific grid cell. **/
 function renderPhotoInCell(zoneId, base64Image) {
-    const cell = document.getElementById(`zone-${zoneId}`);
+    const cell = document.getElementById(`zone-${zoneId}`); 
     if (!cell) return;
-
-    // Clear existing content except the delete button
     cell.querySelectorAll('.cell-photo').forEach(el => el.remove());
-    const zoneLabel = cell.querySelector('.cell-label');
+    
+    const zoneLabel = cell.querySelector('.cell-label'); 
     const deleteBtn = cell.querySelector('.delete-photo-btn');
-
+    
     if (base64Image) {
-        // Extract base64 part only if it contains the mock tag
-        const displayImage = base64Image.split('_diag:')[0];
-        const img = document.createElement('img');
-        img.src = displayImage;
+        // Use only the image data part for display
+        const displayImage = base64Image.split('_diag:')[0]; 
+        const img = document.createElement('img'); 
+        img.src = displayImage; 
         img.className = 'cell-photo';
-        img.style.width = '100%';
-        img.style.height = '100%';
-        img.style.objectFit = 'cover';
         cell.appendChild(img);
-        zoneLabel.style.display = 'none';
-        deleteBtn.style.display = 'block';
+        if (zoneLabel) zoneLabel.style.display = 'none'; 
+        if (deleteBtn) deleteBtn.style.display = 'block';
     } else {
-        zoneLabel.style.display = 'block';
-        deleteBtn.style.display = 'none';
-    }
-}
-function deletePhoto(zoneId) {
-    delete photoData[zoneId];
-    renderPhotoInCell(zoneId, null);
-    fetchAIResults();
-}
-function loadCurrentPhotoData() {
-    for (let i = 1; i <= 16; i++) {
-        renderPhotoInCell(i, photoData[i] || null);
-    }
-}
-function clearPhotoGrid() {
-    for (let i = 1; i <= 16; i++) {
-        renderPhotoInCell(i, null);
+        if (zoneLabel) zoneLabel.style.display = 'block'; 
+        if (deleteBtn) deleteBtn.style.display = 'none';
     }
 }
 
+/** Deletes a photo assignment from a zone. **/
+function deletePhoto(zoneId) { 
+    delete photoData[zoneId]; 
+    renderPhotoInCell(zoneId, null); 
+    fetchAIResults(); 
+}
 
-// --- HISTORY LOGIC ---
+/** Loads current photo data into the grid upon history load. **/
+function loadCurrentPhotoData() { 
+    for (let i = 1; i <= 16; i++) { 
+        renderPhotoInCell(i, photoData[i] || null); 
+    } 
+}
+function clearPhotoGrid() { 
+    for (let i = 1; i <= 16; i++) { 
+        renderPhotoInCell(i, null); 
+    } 
+}
+
+// --- 10.9: HISTORY LOGIC (Uses localStorage) ---
+
+/** Saves the current state as a new trial entry. **/
 function saveCurrentTrial() {
-    populateStockPhotos();
+    populateStockPhotos(); // Ensure stock photos are defined before saving
     const trialId = trialHistory.length + 1;
     const trialData = {
-        id: trialId,
-        date: new Date().toLocaleString(),
+        id: trialId, 
+        date: new Date().toLocaleString(), 
         roverData: { ...currentRoverData },
-        loggedData: [...loggedData],
-        photoData: { ...photoData },
+        loggedData: [...loggedData], 
+        photoData: { ...photoData }, 
         stockPhotoData: { ...stockPhotoData },
-        aiData: {
-            analysisGrid: document.getElementById('plantAnalysisGrid').innerHTML
-        }
+        // Save the final rendered HTML of the analysis grid
+        aiData: { analysisGrid: document.getElementById('plantAnalysisGrid').innerHTML } 
     };
     trialHistory.push(trialData);
     localStorage.setItem('trialHistory', JSON.stringify(trialHistory));
+    
     currentTrialNumber = trialId + 1;
     document.getElementById('currentTrialNumber').innerText = currentTrialNumber;
     STATUS_ELEMENT.innerText = `Trial ${trialId} saved successfully! Starting new trial...`;
-
-    // Reset for new trial
-    loggedData = [];
-    photoData = {};
+    
+    // Reset data for the new trial
+    loggedData = []; 
+    photoData = {}; 
     clearMapData(false);
 }
 
+/** Opens the history modal and populates the list of saved trials. **/
 function openHistoryModal() {
-    const modal = document.getElementById('historyModal');
+    const modal = document.getElementById('historyModal'); 
     const list = document.getElementById('trialHistoryList');
     list.innerHTML = '';
-
-    if (trialHistory.length === 0) {
-        list.innerHTML = '<p style="color:#FFC000; font-weight:bold;">No trial data saved yet.</p>';
+    
+    if (trialHistory.length === 0) { 
+        list.innerHTML = '<p>No trial data saved yet.</p>'; 
     } else {
-        [...trialHistory].reverse().forEach(trial => {
+        [...trialHistory].reverse().forEach(trial => { // Show most recent first
             const item = document.createElement('div');
             item.className = 'trial-item';
-            item.style.padding = '10px';
-            item.style.borderBottom = '1px solid #3C3C3C';
             item.innerHTML = `<span><strong>Trial ${trial.id}:</strong> ${trial.date} (${trial.loggedData.length} readings)</span>
-                <button onclick="loadPastTrial(${trial.id})" style="float:right; background-color:#4EC9B0; color:black;">Load</button>`;
+                <button onclick="loadPastTrial(${trial.id})" style="float:right; background-color:#FF8C00; color:white;">Load</button>`;
             list.appendChild(item);
         });
     }
-    modal.style.display = "block";
+    modal.style.display = "flex";
 }
 function closeHistoryModal() { document.getElementById('historyModal').style.display = "none"; }
-function loadPastTrial(trialId) {
-    const trial = trialHistory.find(t => t.id === trialId);
-    if (!trial) return;
 
+/** Loads the saved state of a specific trial into the dashboard. **/
+function loadPastTrial(trialId) {
+    const trial = trialHistory.find(t => t.id === trialId); 
+    if (!trial) return;
+    
+    // Restore Rover and GPS State
     currentRoverData = trial.roverData;
     document.getElementById('latitudeData').innerText = trial.roverData.latitude;
     document.getElementById('longitudeData').innerText = trial.roverData.longitude;
     document.getElementById('headingData').innerText = trial.roverData.heading + ' deg';
-    document.getElementById('gpsFix').innerText = 'Historical';
 
-    loggedData = trial.loggedData;
-    photoData = trial.photoData;
+    // Restore Logged and Photo Data
+    loggedData = trial.loggedData; 
+    photoData = trial.photoData; 
     stockPhotoData = trial.stockPhotoData || {};
+    
+    // Restore Visuals
     document.getElementById('plantAnalysisGrid').innerHTML = trial.aiData.analysisGrid;
-
-    drawMap();
-    draw3DMap();
+    drawMap(); 
+    draw3DMap(); 
     loadCurrentPhotoData();
 
     STATUS_ELEMENT.innerText = `Loaded data for Trial ${trialId}.`;
     document.getElementById('currentTrialNumber').innerText = `${trialHistory.length + 1} (Viewing Trial ${trialId})`;
     closeHistoryModal();
 }
+
+/** Clears the entire local storage history. **/
 function clearAllHistory() {
     if (confirm("Are you sure you want to clear ALL saved trial history? This cannot be undone.")) {
         localStorage.removeItem('trialHistory');
-        trialHistory = [];
+        trialHistory = []; 
         currentTrialNumber = 1;
         document.getElementById('currentTrialNumber').innerText = currentTrialNumber;
         closeHistoryModal();
@@ -1026,17 +1340,21 @@ function clearAllHistory() {
     }
 }
 
-// --- Initialization ---
+// --- 10.10: INITIALIZATION (Run on page load) ---
 window.onload = function() {
-    initThreeD();
-    drawMap();
-    generatePhotoGrid();
-    populateStockPhotos();
-    // Attempt an initial data fetch to update the live display
-    fetchData();
-    // Run AI analysis based on any restored data or empty state
-    fetchAIResults();
-    updateRoverPositionUI();
+    initThreeD(); // Step 1: Initialize 3D renderer and scene
+    drawMap(); // Step 2: Draw the 2D field map
+    generatePhotoGrid(); // Step 3: Build the 4x4 photo upload grid
+    populateStockPhotos(); // Step 4: Prepare the simulation photo library
+    
+    // Initial Data Sync (may fail if rover is off, continues in demo mode)
+    fetchData(); 
+    
+    // Step 5: Run the first analysis, which will populate the grid/3D map
+    fetchAIResults(); 
+    updateRoverPositionUI(); // Step 6: Ensure GPS/Heading placeholders are set
+    
+    STATUS_ELEMENT.innerText = "System Ready. Awaiting commands.";
 };
 </script>
 </body>
