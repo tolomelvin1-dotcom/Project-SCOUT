@@ -37,7 +37,7 @@
         #ai-analysis { margin-top: 15px; padding: 15px; border: 2px solid #ff007f; border-radius: 6px; background-color: #3e2d30; }
         #ai-analysis strong { color: #f28b82; }
 
-        /* --- NEW: 4x4 PHOTO GRID STYLES --- */
+        /* 4x4 PHOTO GRID STYLES */
         #photoGrid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -92,21 +92,21 @@
 
         <div id="ai-analysis">
             <h2>Comprehensive Analysis 🧠</h2>
-            <p><strong>Last Update Time:</strong> <span id="ai-time">Fetching...</span></p>
+            <p><strong>Last Update Time:</strong> <span id="ai-time">N/A</span></p>
             
             <h3>Image Analysis</h3>
-            <p><strong>Crop Health Score:</strong> <span id="ai-health">Fetching...</span></p>
+            <p><strong>Crop Health Score:</strong> <span id="ai-health">N/A</span></p>
             
             <h3>Soil Moisture Analysis</h3>
-            <p><strong>Moisture Status:</strong> <span id="ai-moisture-status">Fetching...</span></p>
+            <p><strong>Moisture Status:</strong> <span id="ai-moisture-status">N/A</span></p>
             <p><strong>Moisture Reading:</strong> <span id="ai-moisture-value">N/A</span></p>
 
             <h3>NPK Analysis</h3>
-            <p><strong>Nutrient Balance:</strong> <span id="ai-npk-status">Fetching...</span></p>
+            <p><strong>Nutrient Balance:</strong> <span id="ai-npk-status">N/A</span></p>
             <p><strong>NPK Reading:</strong> <span id="ai-npk-value">N/A</span></p>
 
             <h3 style="border-bottom: none;">Overall Recommendation</h3>
-            <p><strong>Action Required:</strong> <span id="ai-recommendation">Fetching...</span></p>
+            <p><strong>Action Required:</strong> <span id="ai-recommendation">N/A</span></p>
         </div>
 
         <div class="move-controls">
@@ -173,8 +173,8 @@
     // JAVASCRIPT LOGIC
     
     // !!! CONFIGURE YOUR IPs HERE !!!
-    const ESP32_IP = '192.168.1.50'; // IP of the ESP32 server
-    const DELL_WYSE_IP = 'http://192.168.X.X:5000'; // IP of your Dell Wyse Flask server
+    const ESP32_IP = '192.168.1.50'; 
+    const DELL_WYSE_IP = 'http://192.168.X.X:5000'; 
     
     const ESP32_URL_BASE = `http://${ESP32_IP}`;
     const STATUS_ELEMENT = document.getElementById('status');
@@ -183,11 +183,11 @@
     // Update the server IP display on the page
     document.getElementById('server-ip').innerText = DELL_WYSE_IP.replace('http://', ''); 
 
-    // --- MAP CONSTANTS (UPDATED FOR 4m x 4m) ---
+    // --- MAP CONSTANTS (4m x 4m) ---
     const MAP_CANVAS = document.getElementById('roverMap');
     const CTX = MAP_CANVAS.getContext('2d');
     const MAP_SIZE = 450; 
-    const FIELD_SIZE = 4; // *** UPDATED: 4 meters ***
+    const FIELD_SIZE = 4; // 4 meters
     const PIXELS_PER_METER = MAP_SIZE / FIELD_SIZE;
     
     // Plant locations in meters (16 total for a 4x4 grid)
@@ -199,18 +199,18 @@
     ];
 
     let loggedData = []; 
-    let selectedZone = 0; // Tracks which zone (1-16) was clicked for upload
+    let selectedZone = 0; 
 
     let currentRoverData = {
-        latitude: 0, 
-        longitude: 0, 
+        latitude: 'N/A', 
+        longitude: 'N/A', 
         heading: 0, 
-        x_m: 2.0, // Center of 4m field
+        x_m: 2.0, 
         y_m: 2.0 
     };
     
     // ------------------------------------
-    // --- NEW: PHOTO GRID FUNCTIONS ---
+    // --- PHOTO GRID FUNCTIONS ---
     // ------------------------------------
     
     function generatePhotoGrid() {
@@ -221,14 +221,13 @@
             cell.id = 'zone-' + i;
             cell.innerHTML = '<span class="cell-label">' + i + '</span>';
             
-            // Add event listener for manual photo upload
             cell.addEventListener('click', function() {
                 selectedZone = i;
-                document.getElementById('fileInput').click(); // Trigger the hidden file dialog
+                document.getElementById('fileInput').click(); 
             });
             
             grid.appendChild(cell);
-            loadPhoto(i); // Load any stored photo
+            loadPhoto(i); 
         }
     }
 
@@ -239,12 +238,11 @@
         const reader = new FileReader();
         reader.onload = function(e) {
             const base64Image = e.target.result;
-            // Store the image in the browser's local storage (Dell Wyse Cache)
             localStorage.setItem('zonePhoto' + selectedZone, base64Image);
             loadPhoto(selectedZone, base64Image);
-            selectedZone = 0; // Reset selected zone
+            selectedZone = 0; 
         };
-        reader.readAsDataURL(file); // Convert file to Base64 string
+        reader.readAsDataURL(file); 
     }
 
     function loadPhoto(zoneId, base64Image) {
@@ -270,6 +268,7 @@
     // --- AI AND COMMUNICATION FUNCTIONS ---
     // ------------------------------------
     
+    // Note: AI results still show N/A by default in HTML
     function fetchAIResults() {
         fetch(DELL_WYSE_IP + '/ai_results')
             .then(response => {
@@ -279,15 +278,19 @@
             .then(data => {
                 document.getElementById('ai-time').innerText = data.last_analysis_time || 'N/A';
                 document.getElementById('ai-health').innerText = data.image_health_score || 'N/A';
-                document.getElementById('ai-recommendation').innerText = data.overall_recommendation || 'No Recommendation';
+                document.getElementById('ai-recommendation').innerText = data.overall_recommendation || 'N/A';
                 document.getElementById('ai-moisture-status').innerText = data.moisture_status || 'N/A';
                 document.getElementById('ai-moisture-value').innerText = data.moisture_value || 'N/A';
                 document.getElementById('ai-npk-status').innerText = data.npk_status || 'N/A';
                 document.getElementById('ai-npk-value').innerText = data.npk_value || 'N/A';
             })
             .catch(error => {
+                // If fetch fails, explicitly set values back to ERROR/N/A
                 document.getElementById('ai-time').innerText = 'ERROR';
+                document.getElementById('ai-health').innerText = 'ERROR';
                 document.getElementById('ai-recommendation').innerText = 'Cannot connect to Dell Wyse AI server.';
+                document.getElementById('ai-moisture-status').innerText = 'ERROR';
+                document.getElementById('ai-npk-status').innerText = 'ERROR';
                 console.error('Fetch AI error:', error);
             });
     }
@@ -308,6 +311,8 @@
                 if (command === 'capture') {
                     LAST_PHOTO_STATUS.innerText = 'Photo command sent. Awaiting Wyse confirmation (poll AI results).';
                 }
+                
+                // Only run mock data/logging if a read command was sent
                 if (command.startsWith('read_') || command === 'probe') {
                     setTimeout(() => fetchData(command), 500); 
                     setTimeout(() => fetchAIResults(), 1000); 
@@ -320,25 +325,21 @@
             });
     }
     
-    // --- SIMULATED/MOCK DATA FETCH ---
+    // --- MOCK/SIMULATED DATA FETCH (Only runs on manual command for now) ---
     function fetchData(lastCommand = null) {
         
         STATUS_ELEMENT.innerText = "Fetching latest data...";
         
-        // This is a mock function since a full ESP32 server isn't provided here.
-        // It simulates data updates and rover movement.
         setTimeout(() => {
             // Simulate GPS/Nav Data
-             currentRoverData.latitude = "40.7128";
-             currentRoverData.longitude = "-74.0060";
              let headingStr = (Math.random() * 360).toFixed(1) + ' deg';
              currentRoverData.heading = parseFloat(headingStr.split(' ')[0]) || 0; 
-             document.getElementById('latitudeData').innerText = currentRoverData.latitude;
-             document.getElementById('longitudeData').innerText = currentRoverData.longitude;
+             document.getElementById('latitudeData').innerText = "40.7128"; // Mock data starts here
+             document.getElementById('longitudeData').innerText = "-74.0060";
              document.getElementById('gpsFix').innerText = "3D Fix";
              document.getElementById('headingData').innerText = headingStr;
 
-             // Simulate Rover Movement within 4m bounds
+             // Simulate Rover Movement (random walk)
              if (lastCommand !== 'read_nav' && lastCommand !== 'stop') {
                  currentRoverData.x_m = Math.min(FIELD_SIZE, Math.max(0, parseFloat(currentRoverData.x_m) + (Math.random() - 0.5) * 0.1)).toFixed(2);
                  currentRoverData.y_m = Math.min(FIELD_SIZE, Math.max(0, parseFloat(currentRoverData.y_m) + (Math.random() - 0.5) * 0.1)).toFixed(2);
@@ -372,7 +373,7 @@
 
              // Draw the map with the new data
              drawMap();
-             STATUS_ELEMENT.innerText = "Data updated successfully.";
+             STATUS_ELEMENT.innerText = "Data update complete.";
 
         }, 500); // Simulate network delay
     }
@@ -523,11 +524,13 @@
     // --- Initialization ---
     window.onload = function() {
         drawMap(); 
-        generatePhotoGrid(); // Initialize the new photo grid (Zones 1-16)
-        fetchData(); 
-        fetchAIResults();
-        setInterval(fetchData, 3000); 
-        setInterval(fetchAIResults, 5000); 
+        generatePhotoGrid(); 
+        // We SKIP the initial fetchData() call here to ensure data fields start as N/A.
+        // The data fields will only update/show mock data when a 'read' or 'probe' command is manually sent.
+        
+        fetchAIResults(); // Still check the AI server status, even if no data is available.
+        // We SKIP the setInterval(fetchData, 3000) call to prevent automatic mock data updates.
+        setInterval(fetchAIResults, 5000); // Polling for AI analysis results remains active.
         LAST_PHOTO_STATUS.innerText = 'No photos taken yet.';
     };
 </script>
