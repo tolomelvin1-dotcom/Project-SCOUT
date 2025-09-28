@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>S.C.O.U.T. Rover Full-Spectrum Data Fusion & Control Console (V14.0 - FIDELITY UPDATE)</title>
+<title>S.C.O.U.T. Rover Full-Spectrum Data Fusion & Control Console (V14.1 - UX FIX)</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script async src="https://docs.opencv.org/4.x/opencv.js" onload="onOpenCvReady();"></script>
@@ -205,7 +205,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 <body>
 <div class="container">
 <div class="controls-panel">
-    <h1>S.C.O.U.T. Rover Control & Telemetry Bridge (V14.0)</h1>
+    <h1>S.C.O.U.T. Rover Control & Telemetry Bridge (V14.1)</h1>
     <p>System Diagnostic Status: <span id="status">AWAITING SYSTEM BOOT SEQUENCE COMPLETION...</span></p>
 
     <div class="data-display history-controls">
@@ -262,7 +262,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 <div class="photo-panel">
     <div class="camera-control data-display">
         <h2>Image Capture & Stock Library</h2>
-        <p>TO UPLOAD: **Click any Zone (1-16)** to open the file dialog.</p>
+        <p>TO UPLOAD: **Click any Zone (1-16)** to select it, then click to upload or use the stock library.</p>
         <button onclick="dispatchRoverMovementCommand('capture')" class="photo-controls"> 📸 TRIGGER CAMERA CAPTURE</button>
         <button onclick="openStockImageGalleryModal()" class="photo-controls"> 🖼️ VIEW STOCK PHOTOS (50 Presets)</button>
         <p>Current Target Zone: **Zone <span id="currentZoneSelection">N/A</span>**</p>
@@ -302,7 +302,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
     <div class="modal-content">
         <span class="close-btn" onclick="closeStockImageGalleryModal()">&times;</span>
         <h2>Stock Photo Gallery (50 Pre-Diagnosed Leaf Presets - Click to Assign)</h2>
-        <p>Select a photo to assign it to your currently selected plant zone for CV analysis.</p>
+        <p>Target Zone: **Zone <span id="modalCurrentZoneSelection">N/A</span>** (Click a cell to select a photo)</p>
         <div id="stockImageGrid">
             </div>
     </div>
@@ -314,7 +314,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 // ----------------------------------------------------------------------------------
 /**
  * @fileoverview S.C.O.U.T. Rover Control System JavaScript Core.
- * Version 14.0: Enhanced Diagnostic Fidelity (Score Cap and Split Recommendations).
+ * Version 14.1: Enhanced Diagnostic Fidelity (Score Cap and Split Recommendations) with UX fix.
  */
 
 // --- 0.2.1 HARDWARE AND NETWORK CONFIGURATION (CRITICAL SYSTEM IDENTIFIERS) ---
@@ -375,10 +375,10 @@ for(let r=0; r<FIELD_GRID_SIZE_M; r++) {
 function transmitSensorDataViaESP32ToThingSpeak(dataPacket) {
     const apiEndpointUrl = "https://api.thingspeak.com/update";
     document.getElementById('thingspeakStatus').innerText = 'TRANSMITTING...';
-    // The data structure here simulates the fields being sent to ThingSpeak (field1-4)
+    // The data structure here simulates the fields being sent to ThingSpeak (field1-7)
     const urlPayload = `${apiEndpointUrl}?api_key=${THINGSPEAK_API_KEY}` +
                 `&field1=${dataPacket.moisture}&field2=${dataPacket.N}&field3=${dataPacket.P}&field4=${dataPacket.K}` +
-                `&field5=${dataPacket.latitude}&field6=${dataPacket.longitude}&field7=${dataPacket.heading}`; // Adding GPS/IMU fields
+                `&field5=${dataPacket.latitude}&field6=${dataPacket.longitude}&field7=${dataPacket.heading}`; 
     
     fetch(urlPayload, { method: 'GET', mode: 'no-cors' })
         .then(() => {
@@ -405,6 +405,11 @@ function dispatchRoverMovementCommand(commandIdentifier) {
             const mockDiagnosis = (zoneID % 3 === 0) ? 'Dark Spots & Lesions/Blackening of Leaf (Fungal/Bacterial)' : 'Healthy, Deep Green Foliage';
             currentPhotoAssignmentData[zoneID] = `data:image/jpeg;base64,mocked_rover_capture_zone_${zoneID}_diag:${mockDiagnosis.replace(/\s/g, '_').replace(/[()]/g, '')}`;
             renderPhotoInPhotoGridCell(zoneID, currentPhotoAssignmentData[zoneID]);
+            
+            // Set the zone selection explicitly after capture
+            currentlySelectedPlantZone = zoneID;
+            CURRENT_ZONE_SELECTION_DISPLAY.innerText = zoneID;
+            
             STATUS_ELEMENT.innerText = `Photo captured and assigned to nearest Zone ${zoneID}. Triggering Analysis.`;
             triggerComprehensiveAnalysisCycle();
         } else {
@@ -484,13 +489,12 @@ function executeDataAcquisition(acquisitionType) {
 
 
 // ==================================================================================
-// SECTION 2.0: DIAGNOSTIC KNOWLEDGE BASE & FUSED ANALYSIS CORE (V14.0 UPDATES)
+// SECTION 2.0: DIAGNOSTIC KNOWLEDGE BASE & FUSED ANALYSIS CORE (V14.1)
 // ----------------------------------------------------------------------------------
 
 const TOMATO_DIAGNOSTIC_KB = {
     DISEASE_TIERS: [
         { name: "Mottling/Mosaic Pattern (Viral-TMV)", severity_score: 95, class: 'rec-critical', recommendation: "CRITICAL ISOLATION REQUIRED: Strong indicator of Tobacco Mosaic Virus (TMV). **IMMEDIATELY REMOVE AND DESTROY** the plant to prevent field-wide contamination. No chemical cure exists." },
-        // UPDATED: Included Blackening of Leaf explicitly
         { name: "Dark Spots & Lesions/Blackening of Leaf (Fungal/Bacterial)", severity_score: 90, class: 'rec-critical', recommendation: "FUNGICIDE/BACTERICIDE APPLICATION: Likely Early Blight, Bacterial Spot, or Black Mold. Apply broad-spectrum copper-based fungicide and focus on improving air circulation and reducing leaf wetness." },
         { name: "General Severe Yellowing (Chlorosis-N)", severity_score: 50, class: 'rec-action', recommendation: "NPK DEFICIENCY LIKELY: Severe yellowing often indicates primary Nitrogen (N) deficiency. Review current sensor data and adjust fertilizer immediately." },
         { name: "Edging Burn/Tip Necrosis (K/Salt)", severity_score: 65, class: 'rec-action', recommendation: "POTASSIUM/SALINITY ALERT: Symptoms point to Potassium (K) deficiency or high salt buildup. Test K levels and consider a soil flush with plain water." },
@@ -694,7 +698,7 @@ function executePhotoPrediction(base64Image) {
 
 
 // ==================================================================================
-// SECTION 3.0: USER INTERFACE, RENDERING, AND INITIALIZATION (V14.0 FIXES APPLIED)
+// SECTION 3.0: USER INTERFACE, RENDERING, AND INITIALIZATION (V14.1 FIXES APPLIED)
 // ----------------------------------------------------------------------------------
 
 /**
@@ -833,7 +837,8 @@ function renderAnalysisCard(analysisResult) {
 }
 
 /**
- * CRITICAL V13.0 FIX: The change handler for the transparent file input.
+ * CRITICAL V14.1 FIX: The change handler for the transparent file input.
+ * Relies on currentlySelectedPlantZone being set by the cell's onclick handler.
  */
 function handleFileSelect(event) {
     const file = event.target.files[0];
@@ -841,8 +846,7 @@ function handleFileSelect(event) {
     
     // Check if the input used was one of the dynamic ones
     if (!file || targetZoneId === 0) {
-        // We expect selectedZone to be set by the inline input's onchange listener
-        STATUS_ELEMENT.innerText = "NOTICE: File selection canceled or target zone lost. Ready to select again.";
+        STATUS_ELEMENT.innerText = "NOTICE: File selection canceled or target zone lost. Please click a Zone cell first.";
         return;
     }
 
@@ -860,10 +864,7 @@ function handleFileSelect(event) {
             // Clear the file input value so the same file can be selected again
             event.target.value = ''; 
             
-            // CRITICAL CLEANUP: Reset the selection and trigger analysis
-            currentlySelectedPlantZone = 0; 
-            CURRENT_ZONE_SELECTION_DISPLAY.innerText = 'N/A';
-            
+            // Analysis is triggered
             triggerComprehensiveAnalysisCycle(); 
         };
         
@@ -993,7 +994,7 @@ function executeTrialSaveOperation() {
 }
 
 /**
- * CRITICAL V13.0 FIX: Grid cell click is now handled by the embedded file input.
+ * CRITICAL V14.1 FIX: Handles zone selection via a simple click on the cell.
  */
 function generatePhotoGrid() {
     const grid = document.getElementById('photoGrid');
@@ -1003,15 +1004,22 @@ function generatePhotoGrid() {
         const cell = document.createElement('div');
         cell.className = 'grid-cell';
         cell.id = `zone-cell-${i}`;
-        cell.style.position = 'relative'; // Make the cell a positioning context
+        cell.style.position = 'relative'; 
         
-        // --- The Fix: Embed Transparent File Input directly in the cell ---
+        // 1. Set Zone Selection on simple click (NEW/FIXED LOGIC)
+        cell.onclick = function() {
+            currentlySelectedPlantZone = i;
+            CURRENT_ZONE_SELECTION_DISPLAY.innerText = i;
+            document.getElementById('modalCurrentZoneSelection').innerText = i;
+            STATUS_ELEMENT.innerText = `Zone ${i} selected as the target. Click the Zone cell again to upload a photo, or use the Stock Gallery.`;
+        };
+        
+        // 2. Embedded File Input (ONLY triggers file selection, relies on zone being set by cell.onclick)
         const fileInput = document.createElement('input');
         fileInput.type = 'file';
         fileInput.accept = 'image/*';
-        fileInput.id = `fileInput-${i}`; // Unique ID for each input
+        fileInput.id = `fileInput-${i}`; 
         
-        // **KEY FIX:** Make it invisible but physically clickable
         fileInput.style.cssText = `
             position: absolute;
             top: 0;
@@ -1020,26 +1028,19 @@ function generatePhotoGrid() {
             height: 100%;
             opacity: 0; 
             cursor: pointer;
-            z-index: 5; /* Ensure it is above the background, but below the delete button */
+            z-index: 5; 
         `;
         
-        // Assign the correct zone and call the original handler when a file is selected
-        fileInput.onchange = function(event) {
-            currentlySelectedPlantZone = i; // Set the global variable for the handler
-            CURRENT_ZONE_SELECTION_DISPLAY.innerText = i;
-            handleFileSelect(event);
-        };
-        // ------------------------------------------------------------------
-
-        // Add label and delete button
+        // **IMPORTANT:** The handler assumes `currentlySelectedPlantZone` is already set.
+        fileInput.onchange = handleFileSelect;
+        
+        // 3. Add UI Elements (Label and Delete Button)
         cell.innerHTML = `
         <span class="cell-label">Zone ${i}</span>
         <button class="delete-photo-btn" onclick="event.stopPropagation(); deletePhoto(${i})">X</button>
         `;
         
-        // Append the transparent, clickable input
         cell.appendChild(fileInput);
-
         grid.appendChild(cell);
         
         if (currentPhotoAssignmentData[i]) {
@@ -1113,17 +1114,22 @@ function populateStockPhotos() {
     }
 }
 
+/**
+ * CRITICAL V14.1 FIX: Removed the restrictive check.
+ */
 function openStockImageGalleryModal() {
-    // Requires a zone to be pre-selected for assignment
-    if (currentlySelectedPlantZone === 0) {
-        STATUS_ELEMENT.innerText = "ERROR: Please click one of the 16 Plant Zones first to set the assignment target.";
-        return;
-    }
-    
     populateStockPhotos();
     renderStockImageGrid();
     STOCK_MODAL.style.display = "block";
-    STATUS_ELEMENT.innerText = `Stock Photo Gallery opened. Select a photo to assign to target Zone ${currentlySelectedPlantZone}.`;
+    
+    const zoneText = currentlySelectedPlantZone !== 0 ? currentlySelectedPlantZone : "N/A";
+    document.getElementById('modalCurrentZoneSelection').innerText = zoneText;
+    
+    if (currentlySelectedPlantZone === 0) {
+        STATUS_ELEMENT.innerText = "Stock Photo Gallery opened. **Please select a Zone on the main control panel** before choosing a stock photo.";
+    } else {
+        STATUS_ELEMENT.innerText = `Stock Photo Gallery opened. Select a photo to assign to target Zone ${currentlySelectedPlantZone}.`;
+    }
 }
 
 function closeStockImageGalleryModal() {
@@ -1166,7 +1172,7 @@ function renderStockImageGrid() {
 
 function assignStockPhotoToZone(stockId) {
     if (currentlySelectedPlantZone === 0) {
-        STATUS_ELEMENT.innerText = "ERROR: Target zone lost. Re-click the cell and try again.";
+        alert("ERROR: Please click one of the 16 Plant Zones on the main screen first to set the assignment target.");
         return;
     }
     
@@ -1178,8 +1184,6 @@ function assignStockPhotoToZone(stockId) {
     
     STATUS_ELEMENT.innerText = `Stock Photo ID ${stockId} assigned to Zone ${targetZoneId}. Triggering Fused Analysis.`;
     
-    currentlySelectedPlantZone = 0;
-    CURRENT_ZONE_SELECTION_DISPLAY.innerText = 'N/A';
     closeStockImageGalleryModal();
     triggerComprehensiveAnalysisCycle();
 }
@@ -1223,6 +1227,9 @@ function resetSensorAndMapData(fullReset = true) {
         document.getElementById('headingData').innerText = 'N/A';
         document.getElementById('gpsFix').innerText = 'N/A';
         document.getElementById('thingspeakStatus').innerText = 'Awaiting Connection';
+        
+        currentlySelectedPlantZone = 0;
+        CURRENT_ZONE_SELECTION_DISPLAY.innerText = 'N/A';
     }
     currentRoverKinematicState.x_position_m = 2.0;
     currentRoverKinematicState.y_position_m = 2.0;
@@ -1234,7 +1241,6 @@ function resetSensorAndMapData(fullReset = true) {
     if (fullReset) {
         generatePhotoGrid();
         historyIsBeingViewed = false;
-        currentlySelectedPlantZone = 0;
         CURRENT_ZONE_SELECTION_DISPLAY.innerText = 'N/A';
     }
 }
