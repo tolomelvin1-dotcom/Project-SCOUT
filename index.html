@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>S.C.O.U.T. Rover Full-Spectrum Data Fusion & Control Console (V13.0 - INVISIBLE INLINE INPUT FIX)</title>
+<title>S.C.O.U.T. Rover Full-Spectrum Data Fusion & Control Console (V14.0 - FIDELITY UPDATE)</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script async src="https://docs.opencv.org/4.x/opencv.js" onload="onOpenCvReady();"></script>
@@ -205,7 +205,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 <body>
 <div class="container">
 <div class="controls-panel">
-    <h1>S.C.O.U.T. Rover Control & Telemetry Bridge (V13.0)</h1>
+    <h1>S.C.O.U.T. Rover Control & Telemetry Bridge (V14.0)</h1>
     <p>System Diagnostic Status: <span id="status">AWAITING SYSTEM BOOT SEQUENCE COMPLETION...</span></p>
 
     <div class="data-display history-controls">
@@ -314,12 +314,12 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 // ----------------------------------------------------------------------------------
 /**
  * @fileoverview S.C.O.U.T. Rover Control System JavaScript Core.
- * Version 13.0: The Invisible Inline Input Hack - Guarantees file upload by direct user click.
+ * Version 14.0: Enhanced Diagnostic Fidelity (Score Cap and Split Recommendations).
  */
 
 // --- 0.2.1 HARDWARE AND NETWORK CONFIGURATION (CRITICAL SYSTEM IDENTIFIERS) ---
 const HARDWARE_ESP32_IP_ADDRESS = '192.168.1.50';
-const THINGSPEAK_API_KEY = '6OXH3SUQ4VNSOJX1'; 
+const THINGSPEAK_API_KEY = '6OXH3SUQ4VNSOJX1'; // CONFIRMED: Key retained for ThingSpeak data transmission
 const MAX_HISTORY_TRIALS = 50; 
 
 // --- 0.2.2 PHYSICAL SYSTEM AND UI CONSTANTS (STRICT ADHERENCE TO SPECIFICATIONS) ---
@@ -327,6 +327,7 @@ const FIELD_GRID_SIZE_M = 4;
 const MAP_CANVAS_PIXELS = 480; 
 const MAX_STOCK_PHOTOS = 50; 
 const PLANT_CIRCLE_RADIUS = 5; 
+const SCORE_CAP_ON_PARTIAL_DATA = 50; // New constraint applied here
 
 // --- 0.2.3 DOM ELEMENT REFERENCES (MAPPING CORE UI COMPONENTS) ---
 const STATUS_ELEMENT = document.getElementById('status');
@@ -374,9 +375,11 @@ for(let r=0; r<FIELD_GRID_SIZE_M; r++) {
 function transmitSensorDataViaESP32ToThingSpeak(dataPacket) {
     const apiEndpointUrl = "https://api.thingspeak.com/update";
     document.getElementById('thingspeakStatus').innerText = 'TRANSMITTING...';
+    // The data structure here simulates the fields being sent to ThingSpeak (field1-4)
     const urlPayload = `${apiEndpointUrl}?api_key=${THINGSPEAK_API_KEY}` +
-                `&field1=${dataPacket.moisture}&field2=${dataPacket.N}&field3=${dataPacket.P}&field4=${dataPacket.K}`;
-
+                `&field1=${dataPacket.moisture}&field2=${dataPacket.N}&field3=${dataPacket.P}&field4=${dataPacket.K}` +
+                `&field5=${dataPacket.latitude}&field6=${dataPacket.longitude}&field7=${dataPacket.heading}`; // Adding GPS/IMU fields
+    
     fetch(urlPayload, { method: 'GET', mode: 'no-cors' })
         .then(() => {
             document.getElementById('thingspeakStatus').innerText = `SUCCESS: Data pushed.`;
@@ -398,7 +401,9 @@ function dispatchRoverMovementCommand(commandIdentifier) {
         } else if (commandIdentifier === 'capture') {
             // Mock capture logic
             const zoneID = findNearestPlantZone(currentRoverKinematicState.x_position_m, currentRoverKinematicState.y_position_m)?.id || 1;
-            currentPhotoAssignmentData[zoneID] = `data:image/jpeg;base64,mocked_rover_capture_zone_${zoneID}_diag:General_Severe_Yellowing_(Chlorosis-N)`;
+            // Mocking a diagnosis based on the zone for testing purposes
+            const mockDiagnosis = (zoneID % 3 === 0) ? 'Dark Spots & Lesions/Blackening of Leaf (Fungal/Bacterial)' : 'Healthy, Deep Green Foliage';
+            currentPhotoAssignmentData[zoneID] = `data:image/jpeg;base64,mocked_rover_capture_zone_${zoneID}_diag:${mockDiagnosis.replace(/\s/g, '_').replace(/[()]/g, '')}`;
             renderPhotoInPhotoGridCell(zoneID, currentPhotoAssignmentData[zoneID]);
             STATUS_ELEMENT.innerText = `Photo captured and assigned to nearest Zone ${zoneID}. Triggering Analysis.`;
             triggerComprehensiveAnalysisCycle();
@@ -426,21 +431,39 @@ function dispatchRoverMovementCommand(commandIdentifier) {
 function executeDataAcquisition(acquisitionType) {
     STATUS_ELEMENT.innerText = "SENSOR READ: Acquiring raw data...";
     
-    const moistureVal = (Math.random() * 70 + 20).toFixed(1); 
-    const npk_n = Math.floor(Math.random() * 150 + 50);
-    const npk_p = Math.floor(Math.random() * 100 + 40);
-    const npk_k = Math.floor(Math.random() * 180 + 60);
+    // Simulate sensor data
+    const nearestPlant = findNearestPlantZone(currentRoverKinematicState.x_position_m, currentRoverKinematicState.y_position_m);
+    const plantID = nearestPlant ? nearestPlant.id : 1;
+    
+    let moistureVal = (Math.random() * 70 + 20).toFixed(1); 
+    let npk_n = Math.floor(Math.random() * 150 + 50);
+    let npk_p = Math.floor(Math.random() * 100 + 40);
+    let npk_k = Math.floor(Math.random() * 180 + 60);
+
+    // Simulate bad sensor data for zones that have a mocked disease
+    if (plantID % 3 === 0) {
+        moistureVal = (Math.random() * 15 + 5).toFixed(1); // Very low moisture
+        npk_n = Math.floor(Math.random() * 30 + 10); // Very low N
+    }
+
+    // Navigation Data
+    const heading = (Math.random() * 360).toFixed(1);
+    const latitude = `40.7128${(Math.random()*100).toFixed(0)}`;
+    const longitude = `-74.0060${(Math.random()*100).toFixed(0)}`;
+
 
     // Update Live Display Elements 
     document.getElementById('moistureData').innerText = `${moistureVal}%`;
     document.getElementById('npkData').innerText = `N:${npk_n}, P:${npk_p}, K:${npk_k}`;
-    document.getElementById('headingData').innerText = (Math.random() * 360).toFixed(1) + ' deg';
-    document.getElementById('latitudeData').innerText = `40.7128${(Math.random()*100).toFixed(0)}`;
-    document.getElementById('longitudeData').innerText = `-74.0060${(Math.random()*100).toFixed(0)}`;
+    document.getElementById('headingData').innerText = heading + ' deg';
+    document.getElementById('latitudeData').innerText = latitude;
+    document.getElementById('longitudeData').innerText = longitude;
     document.getElementById('gpsFix').innerText = '3D Fix Acquired';
 
+    // Transmit data to ThingSpeak
     transmitSensorDataViaESP32ToThingSpeak({ 
-        moisture: parseFloat(moistureVal), N: npk_n, P: npk_p, K: npk_k 
+        moisture: parseFloat(moistureVal), N: npk_n, P: npk_p, K: npk_k,
+        latitude: latitude, longitude: longitude, heading: heading // Sending full data packet
     });
 
     if (acquisitionType === 'probe' || acquisitionType === 'read_sensors') {
@@ -461,16 +484,17 @@ function executeDataAcquisition(acquisitionType) {
 
 
 // ==================================================================================
-// SECTION 2.0: DIAGNOSTIC KNOWLEDGE BASE & FUSED ANALYSIS CORE (Standard Logic)
+// SECTION 2.0: DIAGNOSTIC KNOWLEDGE BASE & FUSED ANALYSIS CORE (V14.0 UPDATES)
 // ----------------------------------------------------------------------------------
 
 const TOMATO_DIAGNOSTIC_KB = {
     DISEASE_TIERS: [
         { name: "Mottling/Mosaic Pattern (Viral-TMV)", severity_score: 95, class: 'rec-critical', recommendation: "CRITICAL ISOLATION REQUIRED: Strong indicator of Tobacco Mosaic Virus (TMV). **IMMEDIATELY REMOVE AND DESTROY** the plant to prevent field-wide contamination. No chemical cure exists." },
-        { name: "Dark Spots & Lesions (Fungal/Bacterial)", severity_score: 85, class: 'rec-critical', recommendation: "FUNGICIDE/BACTERICIDE APPLICATION: Likely Early Blight or Bacterial Spot. Apply broad-spectrum copper-based fungicide and focus on improving air circulation to reduce humidity." },
-        { name: "General Severe Yellowing (Chlorosis-N)", severity_score: 50, class: 'rec-action', recommendation: "NPK DEFICIENCY LIKELY: Check current NPK data for confirmation. Severe yellowing often indicates primary Nitrogen (N) deficiency. Adjust fertilizer immediately." },
-        { name: "Edging Burn/Tip Necrosis (K/Salt)", severity_score: 65, class: 'rec-action', recommendation: "POTASSIUM/SALINITY ALERT: Symptoms point to Potassium (K) deficiency or high salt buildup. Test K levels and consider a soil flush." },
-        { name: "Healthy, Deep Green Foliage", severity_score: 0, class: 'rec-optimal', recommendation: "OPTIMAL: No visual symptoms detected. Continue regular monitoring. The overall system health looks excellent based on visual inspection." }
+        // UPDATED: Included Blackening of Leaf explicitly
+        { name: "Dark Spots & Lesions/Blackening of Leaf (Fungal/Bacterial)", severity_score: 90, class: 'rec-critical', recommendation: "FUNGICIDE/BACTERICIDE APPLICATION: Likely Early Blight, Bacterial Spot, or Black Mold. Apply broad-spectrum copper-based fungicide and focus on improving air circulation and reducing leaf wetness." },
+        { name: "General Severe Yellowing (Chlorosis-N)", severity_score: 50, class: 'rec-action', recommendation: "NPK DEFICIENCY LIKELY: Severe yellowing often indicates primary Nitrogen (N) deficiency. Review current sensor data and adjust fertilizer immediately." },
+        { name: "Edging Burn/Tip Necrosis (K/Salt)", severity_score: 65, class: 'rec-action', recommendation: "POTASSIUM/SALINITY ALERT: Symptoms point to Potassium (K) deficiency or high salt buildup. Test K levels and consider a soil flush with plain water." },
+        { name: "Healthy, Deep Green Foliage", severity_score: 0, class: 'rec-optimal', recommendation: "OPTIMAL: No visual symptoms detected. Continue regular monitoring. The overall visual health looks excellent." }
     ],
     NPK_GUIDELINES: {
         moisture: { ideal_min: 40, ideal_max: 60, low_crit: 25, high_crit: 75, penalty_minor: 10, penalty_major: 30, low_rec: "deep supplemental irrigation", high_rec: "review soil drainage/stop all irrigation" },
@@ -484,8 +508,8 @@ function getVisualPreAssessment(visualScore, diagnosedDiseaseName) {
     const diseaseBaseName = diagnosedDiseaseName.split('(')[0].trim();
     if (visualScore >= 90) return `Leaf condition: **Greenish/Excellent**. CV Score: ${visualScore}%.`;
     if (visualScore >= 80) return `Leaf is **Healthy**, showing only minor localized discoloration. CV Score: ${visualScore}%.`;
-    if (visualScore >= 60) return `Leaf shows **Notable Discoloration**. Assists health as ${diseaseBaseName} is likely. CV Score: ${visualScore}%.`;
-    return `**Critical Visual Alert**. Assists health: analysis suggests ${diseaseBaseName} is imminent. CV Score: ${visualScore}%.`;
+    if (visualScore >= 60) return `Leaf shows **Notable Discoloration**. Diagnosis: ${diseaseBaseName} is likely. CV Score: ${visualScore}%.`;
+    return `**Critical Visual Alert**. Diagnosis: Analysis suggests ${diseaseBaseName} is imminent. CV Score: ${visualScore}%.`;
 }
 
 function findNearestSensorDataPoint(plantX, plantY) {
@@ -507,12 +531,17 @@ function findNearestSensorDataPoint(plantX, plantY) {
 }
 
 function performFinalDataFusionAndDiagnosis(plant, sensorData, visualResult) {
+    const hasSensorData = !!sensorData;
+    const hasPhotoData = !!visualResult;
+    
     let fusedHealthScore = 100;
     let soilHealthPenalties = [];
     let sensorDataSummary = "Soil Data: Sensor Data Missing (N/A) - **HIGH PRIORITY GAP**";
     let visualPreAssessment = "Leaf Pre-Assessment: No Photo Taken.";
+    let partialRecommendationVisual = "N/A (Awaiting Photo)";
 
-    if (sensorData) {
+    // 1. Process Sensor Data and Calculate Soil Penalties
+    if (hasSensorData) {
         const { moisture, npk_n, npk_p, npk_k } = sensorData;
         const sensorReadings = { moisture, N: npk_n, P: npk_p, K: npk_k };
         sensorDataSummary = `Soil Readings: M=${moisture}%, NPK=${npk_n}/${npk_p}/${npk_k} (Logged at ${sensorData.x_m}m, ${sensorData.y_m}m)`;
@@ -539,61 +568,87 @@ function performFinalDataFusionAndDiagnosis(plant, sensorData, visualResult) {
         });
     }
 
+    // 2. Process Visual Data and Calculate Visual Penalties
     let visualPredictionTier = TOMATO_DIAGNOSTIC_KB.DISEASE_TIERS.find(d => d.name.includes("Healthy"));
-    if (visualResult) {
+    if (hasPhotoData) {
         visualPredictionTier = visualResult.prediction;
         const visualScore = visualResult.score;
         visualPreAssessment = getVisualPreAssessment(visualScore, visualResult.diagnosis);
+        partialRecommendationVisual = visualPredictionTier.recommendation;
         
+        // Apply visual penalty (20% weight) to the score
         const visualDeficit = 100 - visualScore;
         fusedHealthScore = Math.max(0, fusedHealthScore - (visualDeficit * 0.20)); 
     }
 
-    let finalActionRecommendation = 'Optimal health confirmed. Continue regular monitoring and data logging.';
-    let finalHealthClassification = 'rec-optimal';
-    
-    // --- SPECIAL CASE: NO DATA ---
-    const noSensor = sensorDataSummary.includes('Missing');
-    const noPhoto = visualPreAssessment.includes('No Photo');
-
-    if (noSensor && noPhoto) {
+    // --- CASE 1: NO DATA ---
+    if (!hasSensorData && !hasPhotoData) {
          return {
             id: plant.id,
             fusedScore: 'N/A',
             preAssessmentVisual: visualPreAssessment,
             preAssessmentSensor: sensorDataSummary,
+            partialRecommendation: "N/A (Awaiting Photo)",
             finalRecommendation: "Awaiting photo assignment or sensor log in this zone. Please collect data to generate a diagnosis.",
             healthClassification: 'rec-no-data'
         };
     }
-    // --- END SPECIAL CASE ---
     
-    const isMajorViral = visualPredictionTier.name.includes('Mottling');
+    // --- CASE 2: PHOTO ONLY (Partial Data Constraint) ---
+    if (hasPhotoData && !hasSensorData) {
+        // Apply score cap at 50 as per requirement
+        fusedHealthScore = Math.min(Math.round(fusedHealthScore), SCORE_CAP_ON_PARTIAL_DATA); 
+        
+        return {
+            id: plant.id,
+            fusedScore: fusedHealthScore.toFixed(0),
+            preAssessmentVisual: visualPreAssessment,
+            preAssessmentSensor: sensorDataSummary,
+            partialRecommendation: partialRecommendationVisual,
+            finalRecommendation: `PARTIAL DIAGNOSIS: Health is capped at ${SCORE_CAP_ON_PARTIAL_DATA}%. Sensor data is required for confirmation and final action plan. Current Visual Rec: ${visualPredictionTier.recommendation}`,
+            healthClassification: (fusedHealthScore <= 30) ? 'rec-action' : (fusedHealthScore <= 50 ? 'rec-optimal' : 'rec-no-data') 
+        };
+    }
+    
+    // --- CASE 3: FUSED DATA (Photo + Sensor) or SENSOR ONLY ---
+    
+    let finalActionRecommendation = 'Optimal health confirmed. Continue regular monitoring and data logging.';
+    let finalHealthClassification = 'rec-optimal';
+    
+    // Check for critical flags
+    const isMajorViral = hasPhotoData && visualPredictionTier.name.includes('Mottling');
     const hasCriticalSoilIssue = soilHealthPenalties.some(p => p.problemClassification.includes('CRITICAL'));
     
     if (isMajorViral) {
         finalActionRecommendation = visualPredictionTier.recommendation;
         finalHealthClassification = visualPredictionTier.class;
-        fusedHealthScore = Math.min(10, fusedHealthScore); 
+        fusedHealthScore = Math.min(10, fusedHealthScore); // Drastically reduce score for TMV
     } else if (hasCriticalSoilIssue) {
-        const criticalProblem = soilHealthPenalties.find(p => p.problemClassification.includes('CRITICAL'));
-        finalActionRecommendation = `CRITICAL SOIL ALERT: ${criticalProblem.problemClassification} detected. Urgent Action: ${criticalProblem.specificRec}.`;
+        const criticalProblems = soilHealthPenalties.filter(p => p.problemClassification.includes('CRITICAL'));
+        const recString = criticalProblems.map(p => `[${p.key}]: ${p.specificRec}`).join('; ');
+        finalActionRecommendation = `CRITICAL SOIL ALERT: Urgent Action Required. Deviations Detected: ${recString}`;
         finalHealthClassification = 'rec-critical';
     } else if (soilHealthPenalties.length > 0) {
         const recString = soilHealthPenalties.map(p => p.specificRec).join('; ');
         finalActionRecommendation = `CAUTION: Moderate Soil Imbalance. Recommended adjustments: ${recString}`;
         finalHealthClassification = fusedHealthScore <= 70 ? 'rec-action' : 'rec-optimal';
-    } else {
+    } else if (hasPhotoData) {
         // If soil is fine, defer to visual diagnosis
         finalActionRecommendation = visualPredictionTier.recommendation;
         finalHealthClassification = visualPredictionTier.class;
+    } else {
+        // Sensor only data, no visual issue found, and soil is healthy/optimal.
+        finalActionRecommendation = "Soil metrics are optimal/healthy. No visual data available. Recommend obtaining a photo for full spectrum analysis.";
+        finalHealthClassification = 'rec-optimal';
+        partialRecommendationVisual = "N/A (Awaiting Photo)";
     }
 
     return {
         id: plant.id,
-        fusedScore: (fusedHealthScore === 100 && finalHealthClassification === 'rec-optimal') ? 100 : Math.round(fusedHealthScore).toFixed(0),
+        fusedScore: Math.round(fusedHealthScore).toFixed(0),
         preAssessmentVisual: visualPreAssessment,
         preAssessmentSensor: sensorDataSummary,
+        partialRecommendation: partialRecommendationVisual,
         finalRecommendation: finalActionRecommendation.trim(),
         healthClassification: finalHealthClassification
     };
@@ -639,7 +694,7 @@ function executePhotoPrediction(base64Image) {
 
 
 // ==================================================================================
-// SECTION 3.0: USER INTERFACE, RENDERING, AND INITIALIZATION (V13.0 FIXES APPLIED)
+// SECTION 3.0: USER INTERFACE, RENDERING, AND INITIALIZATION (V14.0 FIXES APPLIED)
 // ----------------------------------------------------------------------------------
 
 /**
@@ -694,6 +749,7 @@ function renderNoDataCards() {
             fusedScore: 'N/A',
             preAssessmentVisual: "Leaf Pre-Assessment: No Photo Taken.",
             preAssessmentSensor: "Soil Data: Sensor Data Missing (N/A) - **HIGH PRIORITY GAP**",
+            partialRecommendation: "N/A (Awaiting Photo)",
             finalRecommendation: "Awaiting photo assignment or sensor log in this zone. Please collect data to generate a diagnosis.",
             healthClassification: 'rec-no-data'
         };
@@ -719,10 +775,10 @@ function renderNoDataCards() {
     });
 }
 
-
 function renderAnalysisCard(analysisResult) {
     const analysisGridContainer = document.getElementById('plantAnalysisGrid');
     
+    // Check if both sensor and photo data are missing
     if (analysisResult.healthClassification === 'rec-no-data') {
         const noDataCardHTML = `
         <div class="analysis-card" style="border: 2px solid #58a6ff;">
@@ -744,6 +800,13 @@ function renderAnalysisCard(analysisResult) {
         analysisGridContainer.insertAdjacentHTML('beforeend', noDataCardHTML);
         return;
     }
+    
+    const isPartial = analysisResult.preAssessmentSensor.includes('Missing');
+    
+    const partialRecHtml = (analysisResult.partialRecommendation && analysisResult.partialRecommendation !== "N/A (Awaiting Photo)") ? 
+        `<h4 style="color: #79c0ff; margin-top: 15px;">Partial Recommendation (Visual Only):</h4><p>${analysisResult.partialRecommendation}</p>` : 
+        `<p style="color: #f08047;">Partial Recommendation Awaiting Photo.</p>`;
+
 
     const cardHTML = `
     <div class="analysis-card">
@@ -751,6 +814,7 @@ function renderAnalysisCard(analysisResult) {
         <div class="assessment-section pre-assessment">
             <strong>1. Leaf Pre-Assessment (CV Engine - Visual Health)</strong>
             <p>${analysisResult.preAssessmentVisual}</p>
+            ${partialRecHtml}
         </div>
         <div class="assessment-section pre-assessment">
             <strong>2. Soil Sensor Pre-Assessment (Arduino R3 Data Log)</strong>
@@ -758,7 +822,7 @@ function renderAnalysisCard(analysisResult) {
         </div>
         <hr style="border-top: 2px solid #30363d; margin: 25px 0;">
         <div class="assessment-section final-recommendation">
-            <strong>3. FINAL COMPOSITE HEALTH SCORE (FUSED):</strong> 
+            <strong>3. FINAL COMPOSITE HEALTH SCORE (${isPartial ? 'PARTIAL - MAX 50%' : 'FUSED'}):</strong> 
             <span class="${analysisResult.healthClassification}">${analysisResult.fusedScore}/100</span>
             <h4 style="color: #c9d1d9; margin-top: 20px;">Final Action Recommendation (Priority Action):</h4>
             <span class="${analysisResult.healthClassification}">${analysisResult.finalRecommendation}</span>
@@ -885,7 +949,7 @@ function loadTrialFromHistory(trialId) {
         document.getElementById('npkData').innerText = 'N/A';
     }
 
-    // Restore GPS/Kinematics display
+    // Restore GPS/Kinematics display (using state values if available, otherwise 'N/A' from init)
     document.getElementById('latitudeData').innerText = currentRoverKinematicState.latitude;
     document.getElementById('longitudeData').innerText = currentRoverKinematicState.longitude;
     document.getElementById('headingData').innerText = currentRoverKinematicState.heading + ' deg';
