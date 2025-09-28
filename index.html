@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>S.C.O.U.T. Rover Mapping & Control (3D Fix & Delete)</title>
+    <title>S.C.O.U.T. Rover Mapping & Control (Enhanced 3D View)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script> 
     <style>
@@ -46,8 +46,14 @@
             margin: 20px auto 0;
             display: block;
         }
+        .three-d-controls { 
+            margin-top: 10px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+        }
 
-        /* 4x4 PHOTO GRID STYLES */
+        /* 4x4 PHOTO GRID STYLES (No changes needed here) */
         #photoGrid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -90,7 +96,6 @@
             top: 0;
             left: 0;
         }
-        /* NEW: Delete Button on Photo Cells */
         .delete-photo-btn {
             position: absolute;
             bottom: 2px;
@@ -104,10 +109,10 @@
             cursor: pointer;
             z-index: 20;
             line-height: 1;
-            display: none; /* Hidden by default */
+            display: none; 
         }
         .grid-cell:has(.cell-photo) .delete-photo-btn {
-            display: block; /* Show if photo is present */
+            display: block; 
         }
         
         /* MODAL (History Viewer) STYLES */
@@ -197,9 +202,15 @@
     </div>
 
     <div class="map-3d-panel">
-        <h2>3D Photo Map Viewer (Requires Mouse Drag)</h2>
+        <h2>3D Photo Map Viewer (Enhanced View)</h2>
         <div id="threeDContainer"></div>
-        <p>Drag mouse to rotate. Scroll to zoom. Photos mapped to grid planes.</p>
+        <div class="three-d-controls">
+            <label>
+                <input type="checkbox" id="planeToggle" checked onchange="togglePhotoPlanes()">
+                Show Photo Planes
+            </label>
+            <span style="margin-left: 20px;">| Drag mouse to rotate. Scroll to zoom.</span>
+        </div>
     </div>
 
     <div class="photo-panel">
@@ -270,6 +281,7 @@
     for(let i=1; i<=16; i++) {
         let row = Math.floor((i - 1) / FIELD_SIZE);
         let col = (i - 1) % FIELD_SIZE;
+        // The center coordinate of a 1x1m square
         ZONE_COORDS[i] = { x: col + 0.5, z: row + 0.5 }; 
     }
 
@@ -284,6 +296,7 @@
     // --- 3D RENDERING SETUP (THREE.JS) ---
     let scene, camera, renderer, rover3D, controls;
     let photoPlanes = {}; 
+    const PHOTO_PLANE_HEIGHT = 0.5; // NEW: Elevate planes 0.5m above the ground (z=0)
 
     function initThreeD() {
         const container = document.getElementById('threeDContainer');
@@ -301,8 +314,7 @@
         renderer.setSize(width, height);
         container.appendChild(renderer.domElement);
         
-        // --- FIX: Initialize OrbitControls correctly ---
-        // OrbitControls is now available globally due to the script import
+        // FIX: Initialize OrbitControls correctly
         controls = new THREE.OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true; 
         controls.dampingFactor = 0.05;
@@ -359,6 +371,15 @@
         });
         photoPlanes = {};
     }
+
+    // NEW: Toggle Photo Plane Visibility
+    function togglePhotoPlanes() {
+        const isVisible = document.getElementById('planeToggle').checked;
+        Object.values(photoPlanes).forEach(plane => {
+            plane.visible = isVisible;
+        });
+        STATUS_ELEMENT.innerText = `3D Photo Planes are now ${isVisible ? 'visible' : 'hidden'}.`;
+    }
     
     function addPhotoTo3DMap(zoneId, base64Image) {
         if (!scene || !base64Image) return;
@@ -374,17 +395,25 @@
 
         // Create a new texture from the base64 image
         const img = new Image();
-        img.crossOrigin = "anonymous"; // Needed for texture loading from data URLs sometimes
+        img.crossOrigin = "anonymous"; 
         img.onload = () => {
             const texture = new THREE.Texture(img);
             texture.needsUpdate = true;
 
             const material = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide });
-            const geometry = new THREE.PlaneGeometry(1, 1); 
+            // Plane geometry dimensions (1m wide, 0.5m high) 
+            // We use a standing plane to give the illusion of a clearer 3D view
+            const geometry = new THREE.PlaneGeometry(1, 0.5); 
             const plane = new THREE.Mesh(geometry, material);
 
-            plane.rotation.x = -Math.PI / 2; 
-            plane.position.set(x, 0.001, z);
+            // Rotation is 0 on X and Y, making it stand upright.
+            // Position: x and z define the center of the zone. Y (up) is half the height of the plane, plus the desired elevation.
+            plane.position.set(
+                x, 
+                PHOTO_PLANE_HEIGHT / 2, // Half the height of the plane for the pivot point
+                z
+            );
+            plane.visible = document.getElementById('planeToggle').checked; // Respect current toggle state
 
             photoPlanes[zoneId] = plane;
             scene.add(plane);
@@ -398,7 +427,6 @@
     // ------------------------------------
     
     function loadStockPhotos() {
-        // Simple stock image generation
         for (let i = 1; i <= 16; i++) {
             const color = '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0');
             const stockImage = `<svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="${color}"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="20" fill="#fff">Zone ${i}</text></svg>`;
@@ -603,7 +631,6 @@
     // ------------------------------------
     
     function fetchAIResults() {
-        // Mock update on failure for this example
         document.getElementById('ai-time').innerText = 'N/A';
         document.getElementById('ai-health').innerText = 'N/A';
         document.getElementById('ai-recommendation').innerText = 'Awaiting data from Dell Wyse.';
