@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>S.C.O.U.T. Rover Mapping & Control (Data-Driven 3D) - V2.2</title>
+<title>S.C.O.U.T. Rover Mapping & Control (Data-Driven 3D)</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <style>
@@ -160,96 +160,79 @@ button { padding: 10px 15px; margin: 8px 5px; cursor: pointer; border: none; bor
 </head>
 <body>
 <div class="container">
-<div class="controls-panel">
-    <h1>S.C.O.U.T. Rover Control</h1>
-    <p>System Status: <span id="status">Connecting...</span></p>
-    <div class="data-display history-controls">
-        <h2>Trial Management   💾  </h2>
-        <div class="data-row"><strong>Current Trial:</strong> <span id="currentTrialNumber">1</span></div>
-        <p>
-            <button onclick="saveCurrentTrial()">  💾   Save Trial Data</button>
-            <button onclick="openHistoryModal()">  📅   View History</button>
-        </p>
-        <p><small>Saved trials are stored in your browser's local storage.</small></p>
+    <div class="controls-panel">
+        <h1>S.C.O.U.T. Rover Control</h1>
+        <p>System Status: <span id="status">Connecting...</span></p>
+        <div class="data-display history-controls">
+            <h2>Trial Management   💾  </h2>
+            <div class="data-row"><strong>Current Trial:</strong> <span id="currentTrialNumber">1</span></div>
+            <p>
+                <button onclick="saveCurrentTrial()">  💾   Save Trial Data</button>
+                <button onclick="openHistoryModal()">  📅   View History</button>
+            </p>
+            <p><small>Saved trials are stored in your browser's local storage.</small></p>
+        </div>
+        <div class="move-controls">
+            <h2>Rover Movement</h2>
+            <button onclick="sendCommand('forward')">Forward (↑)</button>
+            <button onclick="sendCommand('stop')">  🛑   STOP</button>
+            <button onclick="sendCommand('backward')">Backward (↓)</button><br>
+            <button onclick="sendCommand('left')">Left (←)</button>
+            <button onclick="sendCommand('right')">Right (→)</button>
+        </div>
+        <hr style="border-top: 1px solid #3c3c3c;">
+        <div class="arm-controls">
+            <h2>Data Acquisition</h2>
+            <button onclick="sendCommand('probe')">  🔬   Probe Soil (Arm Down)</button>
+            <button onclick="sendCommand('read_sensors')">  💧   Read Soil Data</button>
+            <button onclick="sendCommand('read_nav')">  🧭   Get GPS/Heading</button>
+        </div>
+        <hr style="border-top: 1px solid #3c3c3c;">
+        <div class="data-display">
+            <h2>Live Sensor Data</h2>
+            <h3>Navigation Data</h3>
+            <div class="data-row"><strong>Latitude:</strong> <span id="latitudeData">N/A</span></div>
+            <div class="data-row"><strong>Longitude:</strong> <span id="longitudeData">N/A</span></div>
+            <div class="data-row"><strong>GPS Fix:</strong> <span id="gpsFix">No Fix</span></div>
+            <div class="data-row"><strong>Heading:</strong> <span id="headingData">N/A</span></div>
+            <h3>Soil Data</h3>
+            <div class="data-row"><strong>Moisture:</strong> <span id="moistureData">N/A</span></div>
+            <div class="data-row"><strong>NPK (N, P, K):</strong> <span id="npkData">N/A</span></div>
+        </div>
     </div>
-    <div class="move-controls">
-        <h2>Rover Movement</h2>
-        <button onclick="sendCommand('forward')">Forward (↑)</button>
-        <button onclick="sendCommand('stop')">  🛑   STOP</button>
-        <button onclick="sendCommand('backward')">Backward (↓)</button><br>
-        <button onclick="sendCommand('left')">Left (←)</button>
-        <button onclick="sendCommand('right')">Right (→)</button>
+    <div class="map-panel">
+        <h2>2D Field Map ($\mathbf{4\text{m} \times 4\text{m}}$ Grid)</h2>
+        <canvas id="roverMap" width="450" height="450"></canvas>
+        <p>Map Key: $\text{Grid} = 1 \text{m} \times 1 \text{m}$. $\text{Circles} = \text{Health}$. $\text{Triangle} = \text{Rover}$.</p>
+        <button onclick="clearMapData()">  🗑  ️ Clear Map Data</button>
     </div>
-    <hr style="border-top: 1px solid #3c3c3c;">
-    <div class="arm-controls">
-        <h2>Data Acquisition</h2>
-        <button onclick="sendCommand('probe')">  🔬   Probe Soil (Arm Down)</button>
-        <button onclick="sendCommand('read_sensors')">  💧   Read Soil Data</button>
-        <button onclick="sendCommand('read_nav')">  🧭   Get GPS/Heading</button>
-        <p><small>Sensor data relay is simulated via ThingSpeak.</small></p>
+    <div class="map-3d-panel">
+        <h2>3D Soil Metric Visualization   📊  </h2>
+        <div id="threeDContainer"></div>
+        <div class="three-d-controls">
+            <p>Bar Height = Soil Moisture %. Bar Color = Plant Health (Green/Yellow/Red).</p>
+        </div>
     </div>
-    <hr style="border-top: 1px solid #3c3c3c;">
-    <div class="data-display">
-        <h2>Live Sensor Data</h2>
-        <h3>Navigation Data</h3>
-        <div class="data-row"><strong>Latitude:</strong> <span id="latitudeData">N/A</span></div>
-        <div class="data-row"><strong>Longitude:</strong> <span id="longitudeData">N/A</span></div>
-        <div class="data-row"><strong>GPS Fix:</strong> <span id="gpsFix">No Fix</span></div>
-        <div class="data-row"><strong>Heading:</strong> <span id="headingData">N/A</span></div>
-        <h3>Soil Data</h3>
-        <div class="data-row"><strong>Moisture:</strong> <span id="moistureData">N/A</span></div>
-        <div class="data-row"><strong>NPK (N, P, K):</strong> <span id="npkData">N/A</span></div>
+    <div class="photo-panel">
+        <div class="camera-control">
+            <h2>Image Capture & Gallery</h2>
+            <button onclick="sendCommand('capture')">  📸   Take Photo (to Dell Wyse)</button>
+            <button onclick="openStockImageModal()">  🖼  ️ View/Load Stock Photos</button>
+            <p>Last photo status: <span id="lastPhotoStatus">N/A</span>. Sent to Dell Wyse server at <span id="server-ip">192.168.X.X:5000</span>.</p>
+        </div>
+        <hr style="border-top: 1px solid #3c3c3c;">
+        <h2>Plant Zone Photo Assignments (Zones 1-16)</h2>
+        <p>Click a zone to upload a photo. Photos assigned here are used for the AI analysis.</p>
+        <div id="photoGrid">
+        </div>
+        <input type="file" id="fileInput" accept="image/*" style="display:none;" onchange="handleFileSelect(event)">
     </div>
-</div>
-<div class="map-panel">
-    <h2>2D Field Map ($\mathbf{4\text{m} \times 4\text{m}}$ Grid)</h2>
-    <canvas id="roverMap" width="450" height="450"></canvas>
-    <p>Map Key: $\text{Grid} = 1 \text{m} \times 1 \text{m}$. $\text{Circles} = \text{Health}$. $\text{Triangle} = \text{Rover}$.</p>
-    <button onclick="clearMapData()">  🗑  ️ Clear Map Data</button>
-</div>
-<div class="map-3d-panel">
-    <h2>3D Soil Metric Visualization   📊  </h2>
-    <div id="threeDContainer"></div>
-    <div class="three-d-controls">
-        <p>Bar Height = Soil Moisture %. Bar Color = Plant Health (Green/Yellow/Red).</p>
+    <div class="plant-analysis-panel">
+        <h2>Plant-Specific AI Analysis (16 Zones)  🔬 </h2>
+        <p>This grid shows the fused analysis of **Leaf Photo (Simulated $\text{AI}$)** + **Local Soil Data ($\text{NPK}$/Moisture)** for all plant zones.</p>
+        <div id="plantAnalysisGrid">
+        </div>
     </div>
-</div>
-<div class="photo-panel">
-    <div class="camera-control">
-        <h2>Image Capture & Gallery</h2>
-        <button onclick="sendCommand('capture')">  📸   Take Photo (to Dell Wyse)</button>
-        <button onclick="openStockImageModal()">  🖼  ️ View/Load Stock Photos</button>
-        <p>Last photo status: <span id="lastPhotoStatus">N/A</span>. Sent to Dell Wyse server at <span id="server-ip">192.168.X.X:5000</span>.</p>
-    </div>
-    <hr style="border-top: 1px solid #3c3c3c;">
-    <h2>Plant Zone Photo Assignments (Zones 1-16)</h2>
-    <p>Click a zone to upload a photo. Photos assigned here are used for the AI analysis.</p>
-    <div id="photoGrid">
-    </div>
-    <input type="file" id="fileInput" accept="image/*" style="display:none;" onchange="handleFileSelect(event)">
-</div>
-<div class="plant-analysis-panel">
-    <h2>Plant-Specific AI Analysis (16 Zones)  🔬 </h2>
-    <p>This grid shows the fused analysis of <b>Leaf Photo (Simulated AI)</b> + <b>Local Soil Data (NPK/Moisture)</b> for all plant zones.</p>
-
-    <div class="analysis-card" style="margin-bottom: 20px; border-left: 5px solid #4ec9b0;">
-        <h3>How the CNN Analyzes Tomato Health 🍅</h3>
-        <p style="font-size: 0.9em;">
-            The system simulates a **Convolutional Neural Network (CNN)** trained on a large dataset of tomato leaves (e.g., PlantVillage) to classify key disease states.
-            The CNN processes the leaf image to look for visual symptoms such as:
-            <ul style="margin: 5px 0 0 15px; padding: 0;">
-                <li>**Mottling/Mosaic Patterns** (Viral diseases, high severity)</li>
-                <li>**Dark Lesions/Spots** (Fungal/Bacterial diseases, high severity)</li>
-                <li>**General Chlorosis/Yellowing** (Nutrient deficiency, medium severity)</li>
-                <li>**Wilting/Curling** (General stress or specific viruses)</li>
-                <li>**Healthy/Optimal** (Low severity)</li>
-            </ul>
-            The final diagnosis (Visual) is **fused** with the Rover's **Soil Data** (NPK/Moisture). For example: **General Yellowing** (Visual) combined with **Low NPK Nitrogen** (Sensor) results in a confirmed **N-Deficiency Recommendation**. **High-severity pathogen results (like viral mottling) automatically override soil data.**
-        </p>
-    </div>
-    <div id="plantAnalysisGrid">
-    </div>
-</div>
 </div>
 <div id="historyModal" class="modal">
     <div class="modal-content">
@@ -272,32 +255,26 @@ button { padding: 10px 15px; margin: 8px 5px; cursor: pointer; border: none; bor
     </div>
 </div>
 <script>
-// ===============================================
-// === GLOBAL CONFIGURATION & CONSTANTS ===
-// ===============================================
+// JAVASCRIPT LOGIC
+// !!! CONFIGURE YOUR IPs HERE !!!
 const ESP32_IP = '192.168.1.50';
 const DELL_WYSE_IP = 'http://192.168.X.X:5000';
 const ESP32_URL_BASE = `http://${ESP32_IP}`;
-const THINGSPEAK_API_KEY = 'YOUR_THINGSPEAK_API_KEY'; // Placeholder
-const THINGSPEAK_CHANNEL_ID = 'YOUR_CHANNEL_ID'; // Placeholder
-
 const STATUS_ELEMENT = document.getElementById('status');
 const LAST_PHOTO_STATUS = document.getElementById('lastPhotoStatus');
 document.getElementById('server-ip').innerText = DELL_WYSE_IP.replace('http://', '');
-
+// --- GLOBAL CONSTANTS ---
 const FIELD_SIZE = 4;
 const MAP_CANVAS = document.getElementById('roverMap');
 const CTX = MAP_CANVAS.getContext('2d');
 const MAP_SIZE = 450;
 const PIXELS_PER_METER = MAP_SIZE / FIELD_SIZE;
 const MAX_MOISTURE = 100;
+// Plant locations in meters (16 zones)
 const PLANT_LOCATIONS_M = [];
 for(let r=0; r<FIELD_SIZE; r++) for(let c=0; c<FIELD_SIZE; c++) PLANT_LOCATIONS_M.push({x: c + 0.5, y: r + 0.5, id: (r * FIELD_SIZE) + c + 1});
-
-// ===============================================
-// === GLOBAL DATA STRUCTURES ===
-// ===============================================
-let loggedData = []; // Stores {x_m, y_m, moisture, npk_n, npk_p, npk_k, healthStatus}
+// Global Data Structures
+let loggedData = [];
 let photoData = {}; // Stores {zoneId: base64Image} - ASSIGNED PHOTOS
 let stockPhotoData = {}; // Stores {stockId: base64Image} - GALLERY OF STOCK PHOTOS
 let selectedZone = 0;
@@ -311,10 +288,7 @@ let currentRoverData = {
     x_m: 2.0,
     y_m: 2.0
 };
-
-// ===============================================
-// === TOMATO DIAGNOSTIC LIBRARY (Scientific Calibration) ===
-// ===============================================
+// --- SIMULATED LIBRARY: TOMATO DIAGNOSTIC RULES (SCIENTIFICALLY PRIORITIZED) ---
 const TOMATO_DIAGNOSTIC_LIBRARY = {
     // Disease Tiers (Prioritized by Severity)
     DISEASE_TIERS: [
@@ -329,18 +303,15 @@ const TOMATO_DIAGNOSTIC_LIBRARY = {
         { name: "Healthy, Deep Green", severity: 0, probability: 0.40, class: 'rec-optimal', recommendation: "OPTIMAL: No visual symptoms detected. Continue regular monitoring."
         }
     ],
-    // NPK Guidelines for Scoring
+    // NPK Guidelines for Scoring (used in analyzePlant)
     NPK_GUIDELINES: {
-        moisture: { unit: '%', ideal_min: 40, ideal_max: 60, low_crit: 25, high_crit: 75, penalty_minor: 10, penalty_major: 30, low_rec: "deep watering", high_rec: "review soil drainage/stop irrigation" },
-        N: { unit: 'ppm', ideal_min: 60, ideal_max: 100, low_crit: 30, high_crit: 150, penalty_minor: 15, penalty_major: 40, low_rec: "high-Nitrogen (N) liquid feed", high_rec: "stop all N-fertilizer, flush soil" },
-        P: { unit: 'ppm', ideal_min: 50, ideal_max: 80, low_crit: 20, high_crit: 120, penalty_minor: 10, penalty_major: 25, low_rec: "Phosphorus (P) booster for root development", high_rec: "check fertilizer blend for P excess" },
-        K: { unit: 'ppm', ideal_min: 70, ideal_max: 120, low_crit: 40, high_crit: 180, penalty_minor: 10, penalty_major: 25, low_rec: "Potassium (K) to boost resistance/fruit set", high_rec: "check for K salt toxicity" },
+        moisture: { ideal_min: 40, ideal_max: 60, low_crit: 25, high_crit: 75, penalty_minor: 10, penalty_major: 30, low_rec: "deep watering", high_rec: "review soil drainage/stop irrigation" },
+        N: { ideal_min: 60, ideal_max: 100, low_crit: 30, high_crit: 150, penalty_minor: 15, penalty_major: 40, low_rec: "high-Nitrogen (N) liquid feed", high_rec: "stop all N-fertilizer, flush soil" },
+        P: { ideal_min: 50, ideal_max: 80, low_crit: 20, high_crit: 120, penalty_minor: 10, penalty_major: 25, low_rec: "Phosphorus (P) booster for root development", high_rec: "check fertilizer blend for P excess" },
+        K: { ideal_min: 70, ideal_max: 120, low_crit: 40, high_crit: 180, penalty_minor: 10, penalty_major: 25, low_rec: "Potassium (K) to boost resistance/fruit set", high_rec: "check for K salt toxicity" },
     }
 };
-
-// ===============================================
-// === UTILITY FUNCTIONS (Hashing and PRNG for Simulation) ===
-// ===============================================
+// --- HASHING AND PRNG FOR ACCURACY/CONSISTENCY ---
 function simpleStringHash(str) {
     let hash = 0;
     for (let i = 0; i < Math.min(str.length, 1000); i++) {
@@ -358,13 +329,9 @@ function deterministicPseudoRandom(seed) {
     state = (a * state + c) % m;
     return state / m;
 }
-
-// ===============================================
-// === 3D RENDERING SETUP (THREE.JS) ===
-// ===============================================
+// --- 3D RENDERING SETUP (THREE.JS) ---
 let scene, camera, renderer, rover3D, controls;
 let dataCubes = {};
-
 function initThreeD() {
     const container = document.getElementById('threeDContainer');
     const width = container.clientWidth;
@@ -438,14 +405,12 @@ function draw3DMap() {
         const cubeDepth = 0.5;
         const cubeHeight = Math.max(0.01, moisture / MAX_MOISTURE);
         const colorHex = getHealthColorHex(healthStatus);
-
         const geometry = new THREE.BoxGeometry(cubeWidth, cubeHeight, cubeDepth);
         const material = new THREE.MeshPhongMaterial({
             color: colorHex,
             opacity: 0.8,
             transparent: true
         });
-
         const cube = new THREE.Mesh(geometry, material);
         cube.position.set(
             x_m,
@@ -458,14 +423,14 @@ function draw3DMap() {
     });
     updateRover3DPosition();
 }
-
-// ===============================================
-// === PHOTO GRID & MODAL FUNCTIONS ===
-// ===============================================
+// ------------------------------------
+// --- PHOTO GRID & MODAL FUNCTIONS ---
+// ------------------------------------
 function populateStockPhotos() {
     if (Object.keys(stockPhotoData).length === 16) return;
     const diseaseList = TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS;
     for (let i = 1; i <= 16; i++) {
+        // Use hash to get a specific disease from the list deterministically
         const diseaseIndex = i % diseaseList.length;
         const base64 = `data:image/svg+xml;base64,mocked_stock_photo_hash_${i}_diag:${diseaseList[diseaseIndex].name.replace(/\s/g, '_')}`;
         stockPhotoData[i] = base64;
@@ -477,20 +442,17 @@ function openStockImageModal() {
     document.getElementById('stockImageModal').style.display = "block";
 
     if (selectedZone === 0) {
-        STATUS_ELEMENT.innerText = "Please click a zone (1-16) in the main photo grid *first*, then re-open this modal and select a stock photo.";
-    } else {
-        STATUS_ELEMENT.innerText = `Zone ${selectedZone} is selected. Click a stock photo to assign it.`;
+        STATUS_ELEMENT.innerText = "Select a stock photo, then click a zone (1-16) in the main photo grid to assign it.";
     }
 }
 function closeStockImageModal() {
     document.getElementById('stockImageModal').style.display = "none";
 }
 function getPhotoPrediction(base64Image) {
-    // This is the simulated CNN analysis using a deterministic hash.
     const photoHash = simpleStringHash(base64Image);
     const randomRoll = deterministicPseudoRandom(photoHash);
     let cumulativeProb = 0;
-    let prediction = TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS.find(d => d.name.includes("Healthy"));
+    let prediction = TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS[4]; // Default to Healthy
 
     for (const disease of TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS) {
         cumulativeProb += disease.probability;
@@ -540,7 +502,8 @@ function assignStockPhotoToZone(stockId) {
     const base64Image = stockPhotoData[stockId];
     photoData[selectedZone] = base64Image;
     renderPhotoInCell(selectedZone, base64Image);
-    STATUS_ELEMENT.innerText = `Stock Photo ID ${stockId} assigned to Zone ${selectedZone}. Running AI analysis...`;
+    STATUS_ELEMENT.innerText = `Stock Photo ID ${stockId} assigned to Zone ${selectedZone}.`;
+    closeStockImageModal();
     selectedZone = 0;
     fetchAIResults();
 }
@@ -548,7 +511,7 @@ function deletePhoto(zoneId) {
     if (!photoData[zoneId]) return;
     delete photoData[zoneId];
     renderPhotoInCell(zoneId, null);
-    STATUS_ELEMENT.innerText = `Photo deleted from Zone ${zoneId}. Running AI analysis...`;
+    STATUS_ELEMENT.innerText = `Photo deleted from Zone ${zoneId}.`;
     fetchAIResults();
 }
 function generatePhotoGrid() {
@@ -579,9 +542,10 @@ function handleFileSelect(event) {
         const base64Image = e.target.result;
         photoData[selectedZone] = base64Image;
         renderPhotoInCell(selectedZone, base64Image);
-        STATUS_ELEMENT.innerText = `Photo uploaded to Zone ${selectedZone}. Running AI analysis...`;
         selectedZone = 0;
+
         event.target.value = '';
+
         fetchAIResults();
     };
     reader.readAsDataURL(file);
@@ -591,9 +555,6 @@ function renderPhotoInCell(zoneId, base64Image) {
     if (!cell) return;
     const existingPhoto = cell.querySelector('.cell-photo');
     if (existingPhoto) existingPhoto.remove();
-    // Reset selection styles if any
-    document.querySelectorAll('.grid-cell').forEach(c => c.style.border = '1px solid #4ec9b0');
-
     if (base64Image) {
         const img = document.createElement('img');
         img.src = base64Image;
@@ -612,10 +573,9 @@ function loadCurrentPhotoData() {
         renderPhotoInCell(parseInt(zoneId), base64Image);
     }
 }
-
-// ===============================================
-// === COMBINED AI ANALYSIS LOGIC (CRITICAL FUSION) ===
-// ===============================================
+// ------------------------------------
+// --- COMBINED AI ANALYSIS LOGIC (CRITICAL FUSION) ---
+// ------------------------------------
 function getNearestSensorData(plantX, plantY) {
     let nearestData = null;
     let min_dist_sq = Infinity;
@@ -631,18 +591,15 @@ function getNearestSensorData(plantX, plantY) {
     });
     return nearestData;
 }
-
 function analyzePlant(plant, sensorData, photoExists) {
     let soilScore = 100;
     let soilProblems = [];
-    let sensorDiagnosis = "Soil: N/A";
 
     // --- 1. Sensor Data Analysis ---
     if (sensorData) {
         const { moisture, npk_n, npk_p, npk_k } = sensorData;
         const data = { moisture, N: npk_n, P: npk_p, K: npk_k };
         const keys = ['moisture', 'N', 'P', 'K'];
-
         keys.forEach(key => {
             const guideline = TOMATO_DIAGNOSTIC_LIBRARY.NPK_GUIDELINES[key];
             const value = data[key];
@@ -675,7 +632,7 @@ function analyzePlant(plant, sensorData, photoExists) {
         return {
             id: plant.id,
             score: 20,
-            visualDiagnosis: photoExists ? getPhotoPrediction(photoData[plant.id]).name : "Visual: No Photo",
+            visualDiagnosis: "Visual: N/A (Data Missing)",
             sensorDiagnosis: "Soil: Sensor Data Missing (Cannot Analyze)",
             recommendation: "***CRITICAL ERROR: DATA GAP***. Conduct soil probe at Zone " + plant.id + " immediately to enable fused analysis.",
             healthClass: 'rec-critical'
@@ -693,24 +650,29 @@ function analyzePlant(plant, sensorData, photoExists) {
         visualDiagnosis = `Visual: ${prediction.name}`;
     }
 
-    // --- 3. Fused Diagnosis (Tiers 1-7, based on severity) ---
-
-    // Define indicators from both sources
+    // --- 3. Fused Diagnosis (Scientific Priority Tiers) ---
+    // Convenience lookups
     const isYellow = prediction.name.includes('Yellowing');
     const isLesions = prediction.name.includes('Dark Spots');
     const isMottling = prediction.name.includes('Mottling');
     const isWilting = prediction.name.includes('Leaf Curl');
-    const isLowN = soilProblems.some(p => p.problem.includes('CRITICAL LOW N') || p.problem.includes('LOW N'));
-    const isLowK = soilProblems.some(p => p.problem.includes('CRITICAL LOW K') || p.problem.includes('LOW K'));
+    const isLowN = soilProblems.some(p => p.problem.includes('CRITICAL LOW N'));
+    const isLowP = soilProblems.some(p => p.problem.includes('CRITICAL LOW P'));
+    const isLowK = soilProblems.some(p => p.problem.includes('CRITICAL LOW K'));
     const isCritMoisture = soilProblems.some(p => p.problem.includes('CRITICAL LOW moisture') || p.problem.includes('CRITICAL HIGH moisture'));
-    const isMajorViral = isMottling || isWilting;
-    const isMajorPathogen = isLesions;
 
-    // TIER 1 & 2: PATHOGEN OVERRIDES (Viral/Bacterial/Fungal)
-    if (isMajorViral || isMajorPathogen) {
-        finalRecommendation = prediction.recommendation;
+
+    // TIER 1: INCURABLE PATHOGEN OVERRIDE (Highest Severity)
+    if (isMottling || isWilting) {
+        finalRecommendation = prediction.recommendation; // Use the fixed viral recommendation
         healthClass = prediction.class;
-        soilScore = Math.min(20, soilScore); // Severely penalize score
+        soilScore = 5; // Force minimum score
+    }
+    // TIER 2: FUNGUS/BACTERIA OVERRIDE
+    else if (isLesions) {
+        finalRecommendation = prediction.recommendation; // Use the fixed fungal recommendation
+        healthClass = prediction.class;
+        soilScore = Math.min(25, soilScore); // Penalize severely
     }
     // TIER 3: CRITICAL MOISTURE STRESS
     else if (isCritMoisture) {
@@ -719,34 +681,49 @@ function analyzePlant(plant, sensorData, photoExists) {
         healthClass = 'rec-critical';
         soilScore = Math.min(35, soilScore);
     }
-    // TIER 4: N-DEFICIENCY CONFIRMATION (Visual Yellowing + Soil Low N)
+    // TIER 4: N-DEFICIENCY CONFIRMATION (Visual Yellowing + Critical Low N)
     else if (isYellow && isLowN) {
         const critN = soilProblems.find(p => p.key === 'N');
-        finalRecommendation = `CONFIRMED N-DEFICIENCY: Yellowing is caused by ${critN.problem} (${critN.value} ppm). Apply ${critN.rec}.`;
+        finalRecommendation = `***CONFIRMED PRIMARY N-DEFICIENCY***: Visual yellowing (Chlorosis) is strongly correlated with critical low Nitrogen (${critN.value} ppm). Action: Apply ${critN.rec}.`;
         healthClass = 'rec-action';
+        soilScore = Math.min(50, soilScore); // Strong penalty
     }
-    // TIER 5: K-DEFICIENCY CONFIRMATION (Visual Yellowing + Soil Low K)
+    // TIER 5: P-DEFICIENCY CONFIRMATION (Critical Low P - Soil primary indicator)
+    else if (isLowP) {
+        const critP = soilProblems.find(p => p.key === 'P');
+        finalRecommendation = `CRITICAL P-DEFICIENCY ALERT: Soil data shows critically low Phosphorus (${critP.value} ppm). This limits energy transfer and root growth. Action: Apply ${critP.rec}.`;
+        healthClass = 'rec-action';
+        soilScore = Math.min(55, soilScore);
+    }
+    // TIER 6: K-DEFICIENCY CONFIRMATION (Visual Yellowing + Critical Low K)
     else if (isYellow && isLowK) {
         const critK = soilProblems.find(p => p.key === 'K');
-        finalRecommendation = `INFERENCE: Yellowing present. Low Potassium (${critK.value} ppm) suggests K-deficiency. Supplement Potassium to boost immunity/fruit health.`;
+        finalRecommendation = `CONFIRMED K-DEFICIENCY: Yellowing present. Critically low Potassium (${critK.value} ppm) is compromising fruit quality and disease resistance. Action: Apply ${critK.rec}.`;
         healthClass = 'rec-action';
+        soilScore = Math.min(50, soilScore); // Strong penalty
     }
-    // TIER 6: SOIL PROBLEMS ONLY (No Major Visual Symptoms)
+    // TIER 7: ONLY VISUAL ALERT (CNN detects Yellowing, but soil NPK is optimal)
+    else if (isYellow) {
+        finalRecommendation = `VISUAL ALERT (UNCONFIRMED): ${prediction.name}. Soil NPK is optimal. This suggests a **micro-nutrient deficiency** (Mg, Fe) or pH issue not measured. Consider supplementing micronutrients.`;
+        healthClass = 'rec-action';
+        soilScore = Math.min(75, soilScore);
+    }
+    // TIER 8: SOIL PROBLEMS ONLY (No Major Visual)
     else if (soilProblems.length > 0) {
-        const problemString = soilProblems.map(p => `${p.problem} (${p.value}${TOMATO_DIAGNOSTIC_LIBRARY.NPK_GUIDELINES[p.key].unit})`).join(', ');
+        const problemString = soilProblems.map(p => `${p.problem} (${p.value}%)`).join(', ');
         const recString = soilProblems.map(p => p.rec).join('; ');
 
-        finalRecommendation = `CAUTION: Soil Imbalance Detected: ${problemString}. Recommended action: ${recString}`;
-        healthClass = soilScore <= 60 ? 'rec-action' : 'rec-optimal';
+        finalRecommendation = `CAUTION: Soil Imbalance Detected (No Major Visual Symptoms): ${problemString}. Recommended action: ${recString}`;
+        healthClass = soilScore <= 65 ? 'rec-action' : 'rec-optimal';
     }
-    // TIER 7: OPTIMAL / No Major Issues
+    // TIER 9: OPTIMAL
     else {
-        finalRecommendation = prediction.recommendation;
+        finalRecommendation = prediction.recommendation; // "Optimal: Continue monitoring"
         healthClass = prediction.class;
     }
 
-    // Final Score Calculation (Ensures score aligns with health class)
-    const finalScore = Math.max(0, Math.round(soilScore - prediction.severity * 0.3));
+    // Final Score Calculation (Ensures score aligns with health class, giving visual severity slightly less dominance)
+    const finalScore = Math.max(0, Math.round(soilScore - prediction.severity * 0.2));
 
     return {
         id: plant.id,
@@ -757,7 +734,6 @@ function analyzePlant(plant, sensorData, photoExists) {
         healthClass: healthClass
     };
 }
-
 function fetchAIResults() {
     const analysisGrid = document.getElementById('plantAnalysisGrid');
     analysisGrid.innerHTML = '';
@@ -789,113 +765,37 @@ function fetchAIResults() {
     });
     STATUS_ELEMENT.innerText = `AI Analysis Complete: ${PLANT_LOCATIONS_M.length} plants analyzed.`;
 }
-
-// ===============================================
-// === COMMUNICATION & DATA HANDLING (THINGSPACE SIMULATION) ===
-// ===============================================
-
-// Simulates the Rover sending data (e.g., to ThingSpeak)
-function sendDataToThingSpeak(data) {
-    STATUS_ELEMENT.innerText = "Data being RELAYED to ThingSpeak...";
-    console.log("Simulating POST to ThingSpeak API:", data);
-    // Actual implementation would use fetch() to ThingSpeak API (write key required)
-    return new Promise(resolve => setTimeout(() => {
-        STATUS_ELEMENT.innerText = "Data RELAY successful. Ready to fetch data.";
-        resolve({ success: true, message: "Data received by Cloud" });
-    }, 500));
-}
-
-// Simulates the website fetching the latest data from ThingSpeak (acting as the HMI client)
-function fetchDataFromThingSpeak(lastCommand = null) {
-    STATUS_ELEMENT.innerText = "Fetching latest data from ThingSpeak...";
-    
-    // --- Simulate Sensor Data Generation ---
-    const moistureVal = (Math.random() * 80 + 10); // numerical
-    const npk_n = Math.floor(Math.random() * 100); // numerical
-    const npk_p = Math.floor(Math.random() * 100); // numerical
-    const npk_k = Math.floor(Math.random() * 100); // numerical
-
-    // --- Simulate GPS/Nav Data ---
-    const headingVal = (Math.random() * 360).toFixed(1);
-    currentRoverData.heading = parseFloat(headingVal) || 0;
-    currentRoverData.latitude = "40.7128";
-    currentRoverData.longitude = "-74.0060";
-    
-    // Simulate movement only if a movement command was sent
-    if (lastCommand !== 'read_nav' && lastCommand !== 'stop') {
-        currentRoverData.x_m = Math.min(FIELD_SIZE, Math.max(0, parseFloat(currentRoverData.x_m) + (Math.random() - 0.5) * 0.1)).toFixed(2);
-        currentRoverData.y_m = Math.min(FIELD_SIZE, Math.max(0, parseFloat(currentRoverData.y_m) + (Math.random() - 0.5) * 0.1)).toFixed(2);
-    }
-
-    // --- Update UI with new data ---
-    document.getElementById('latitudeData').innerText = currentRoverData.latitude;
-    document.getElementById('longitudeData').innerText = currentRoverData.longitude;
-    document.getElementById('gpsFix').innerText = "3D Fix";
-    document.getElementById('headingData').innerText = headingVal + ' deg';
-    document.getElementById('moistureData').innerText = moistureVal.toFixed(1) + '%';
-    document.getElementById('npkData').innerText = `N:${npk_n}, P:${npk_p}, K:${npk_k}`;
-
-    if (lastCommand === 'probe' || lastCommand === 'read_sensors') {
-        let healthStatus = analyzeOverallHealth(moistureVal, npk_n, npk_p, npk_k);
-        const dataPoint = {
-            x_m: parseFloat(currentRoverData.x_m),
-            y_m: parseFloat(currentRoverData.y_m),
-            healthStatus: healthStatus,
-            moisture: moistureVal,
-            npk_n: npk_n,
-            npk_p: npk_p,
-            npk_k: npk_k
-        };
-        loggedData.push(dataPoint);
-        STATUS_ELEMENT.innerText = `Data fetched! Status: ${healthStatus}. Running AI analysis...`;
-        
-        // Simulates the immediate relaying of the new data back to the cloud/database (optional step)
-        // sendDataToThingSpeak(dataPoint); 
-    }
-    
-    drawMap();
-    draw3DMap();
-    fetchAIResults();
-}
-
+// ------------------------------------
+// --- COMMUNICATION, MAP, AND HISTORY FUNCTIONS (Minor Changes) ---
+// ------------------------------------
 function sendCommand(command) {
     let url = (command === 'capture') ? `${ESP32_URL_BASE}/capture` : `${ESP32_URL_BASE}/move?dir=${command}`;
-    STATUS_ELEMENT.innerText = `Sending command: ${command} to Rover...`;
-    
-    // Simulate API call to the ESP32 (Rover)
-    const simulatedSuccess = Math.random() < 0.95; // 95% success rate for simulation
-
-    setTimeout(() => {
-        if (simulatedSuccess) {
-            STATUS_ELEMENT.innerText = `Command '${command}' Success. Rover executing...`;
-            
-            if (command.startsWith('read_') || command === 'probe') {
-                // Simulate Rover reading data and sending it to ThingSpeak
-                sendDataToThingSpeak({ command: command, rover_pos: `${currentRoverData.x_m},${currentRoverData.y_m}` })
-                    .then(() => {
-                        // Once data is sent to ThingSpeak, the HMI fetches it
-                        fetchDataFromThingSpeak(command);
-                    });
-            } else if (command === 'capture') {
-                LAST_PHOTO_STATUS.innerText = 'Photo captured and sent to Dell Wyse server.';
-                const nearestPlant = getNearestPlant(parseFloat(currentRoverData.x_m), parseFloat(currentRoverData.y_m));
-                if (nearestPlant) {
-                    photoData[nearestPlant.id] = `data:image/jpeg;base64,mocked_rover_capture_zone_${nearestPlant.id}_${Date.now()}`;
-                    renderPhotoInCell(nearestPlant.id, photoData[nearestPlant.id]);
-                    STATUS_ELEMENT.innerText = `New photo assigned to Zone ${nearestPlant.id}. Running AI analysis...`;
-                }
-                fetchAIResults();
-            } else {
-                // Movement command completed, update position slightly then fetch nav data
-                fetchDataFromThingSpeak(command);
+    STATUS_ELEMENT.innerText = `Sending command: ${command}...`;
+    fetch(url)
+    .then(response => {
+        if (!response.ok) { throw new Error(`HTTP Error: ${response.status}`); }
+        return response.text();
+    })
+    .then(data => {
+        STATUS_ELEMENT.innerText = `Command '${command}' Success.`;
+        if (command.startsWith('read_') || command === 'probe') {
+            setTimeout(() => fetchData(command), 500);
+        } else if (command === 'capture') {
+            LAST_PHOTO_STATUS.innerText = 'Photo captured and sent to server.';
+            const nearestPlant = getNearestPlant(currentRoverData.x_m, currentRoverData.y_m);
+            if (nearestPlant) {
+                // Mock capture creates a unique hash for consistency
+                photoData[nearestPlant.id] = `data:image/jpeg;base64,mocked_rover_capture_zone_${nearestPlant.id}_${Date.now()}`;
+                renderPhotoInCell(nearestPlant.id, photoData[nearestPlant.id]);
             }
-        } else {
-            STATUS_ELEMENT.innerText = `ERROR: Command ${command} failed. Connection issue with ESP32 at ${ESP32_IP}.`;
-            console.error('Simulated Error: Command failed.');
+            setTimeout(() => fetchAIResults(), 1000);
         }
-    }, 800);
+    })
+    .catch(error => {
+        STATUS_ELEMENT.innerText = `ERROR: Command ${command} failed. Is ESP32 at ${ESP32_IP} online?`;
+        console.error('Error sending command:', error);
+    });
 }
-
 function getNearestPlant(x, y) {
     let nearest = null;
     let minDistSq = Infinity;
@@ -910,8 +810,50 @@ function getNearestPlant(x, y) {
     });
     return nearest;
 }
+function fetchData(lastCommand = null) {
+    STATUS_ELEMENT.innerText = "Fetching latest data...";
+    setTimeout(() => {
+        // --- Simulate GPS/Nav Data ---
+        let headingStr = (Math.random() * 360).toFixed(1) + ' deg';
+        currentRoverData.heading = parseFloat(headingStr.split(' ')[0]) || 0;
+        currentRoverData.latitude = "40.7128";
+        currentRoverData.longitude = "-74.0060";
+        document.getElementById('latitudeData').innerText = currentRoverData.latitude;
+        document.getElementById('longitudeData').innerText = currentRoverData.longitude;
+        document.getElementById('gpsFix').innerText = "3D Fix";
+        document.getElementById('headingData').innerText = headingStr;
+        if (lastCommand !== 'read_nav' && lastCommand !== 'stop') {
+            currentRoverData.x_m = Math.min(FIELD_SIZE, Math.max(0, parseFloat(currentRoverData.x_m) + (Math.random() - 0.5) * 0.1)).toFixed(2);
+            currentRoverData.y_m = Math.min(FIELD_SIZE, Math.max(0, parseFloat(currentRoverData.y_m) + (Math.random() - 0.5) * 0.1)).toFixed(2);
+        }
+        // --- Simulate Soil Data ---
+        let moistureVal = (Math.random() * 80 + 10).toFixed(1);
+        let npk_n = Math.floor(Math.random() * 100);
+        let npk_p = Math.floor(Math.random() * 100);
+        let npk_k = Math.floor(Math.random() * 100);
+        let moistureStr = moistureVal + '%';
+        let npkStr = `N:${npk_n}, P:${npk_p}, K:${npk_k}`;
+        document.getElementById('moistureData').innerText = moistureStr;
+        document.getElementById('npkData').innerText = npkStr;
+        if (lastCommand === 'probe' || lastCommand === 'read_sensors') {
+            let healthStatus = analyzeHealth(parseFloat(moistureVal), npk_n, npk_p, npk_k);
 
-function analyzeOverallHealth(moisture, npk_n, npk_p, npk_k) {
+            loggedData.push({
+                x_m: parseFloat(currentRoverData.x_m),
+                y_m: parseFloat(currentRoverData.y_m),
+                healthStatus: healthStatus,
+                moisture: parseFloat(moistureVal),
+                npk_n: npk_n, npk_p: npk_p, npk_k: npk_k
+            });
+            STATUS_ELEMENT.innerText = `Data logged! Status: ${healthStatus}`;
+            fetchAIResults();
+        }
+        drawMap();
+        draw3DMap();
+        STATUS_ELEMENT.innerText = "Data update complete.";
+    }, 500);
+}
+function analyzeHealth(moisture, npk_n, npk_p, npk_k) {
     let issues = 0;
     const MIN_MOISTURE = 30;
     const IDEAL_NPK_SUM = 150;
@@ -919,12 +861,10 @@ function analyzeOverallHealth(moisture, npk_n, npk_p, npk_k) {
     if (moisture < MIN_MOISTURE || moisture > 80) { issues++; }
     let npk_sum = npk_n + npk_p + npk_k;
     if (Math.abs(npk_sum - IDEAL_NPK_SUM) > NPK_TOLERANCE) { issues++; }
-    if (npk_n < 30) { issues++; } // Critical N-deficiency adds an issue
     if (issues >= 2) return 'Bad';
     if (issues === 1) return 'Caution';
     return 'Good';
 }
-
 function clearMapData(resetRover = true) {
     loggedData = [];
     photoData = {};
@@ -939,15 +879,10 @@ function clearMapData(resetRover = true) {
     fetchAIResults();
     STATUS_ELEMENT.innerText = "Map and photo data cleared.";
 }
-
-// ===============================================
-// === MAP RENDERING FUNCTIONS ===
-// ===============================================
 function drawMap() {
     CTX.clearRect(0, 0, MAP_SIZE, MAP_SIZE);
     CTX.strokeStyle = '#5a5a5a';
     CTX.lineWidth = 1;
-    // Draw Grid Lines
     for (let i = 1; i < FIELD_SIZE; i++) {
         let px = i * PIXELS_PER_METER;
         CTX.beginPath(); CTX.moveTo(px, 0); CTX.lineTo(px, MAP_SIZE); CTX.stroke();
@@ -955,7 +890,6 @@ function drawMap() {
     }
 
     const GRID_SIZE_M = 1.0;
-    // Draw Colored Grid Squares (based on nearest sensor data)
     for (let row = 0; row < FIELD_SIZE; row++) {
         for (let col = 0; col < FIELD_SIZE; col++) {
             let center_x_m = col * GRID_SIZE_M + 0.5;
@@ -963,9 +897,9 @@ function drawMap() {
             let nearestData = getNearestSensorData(center_x_m, center_y_m);
             if (nearestData) {
                 let moistureColor;
-                if (nearestData.moisture < 20) { moistureColor = '#0070e040'; } // Blue for dry
-                else if (nearestData.moisture > 70) { moistureColor = '#80008040'; } // Purple for wet
-                else { moistureColor = '#6a995540'; } // Green for optimal
+                if (nearestData.moisture < 20) { moistureColor = '#0070e040'; }
+                else if (nearestData.moisture > 70) { moistureColor = '#80008040'; }
+                else { moistureColor = '#6a995540'; }
                 CTX.fillStyle = moistureColor;
                 CTX.fillRect(
                     col * PIXELS_PER_METER,
@@ -976,7 +910,6 @@ function drawMap() {
             }
         }
     }
-    // Draw Plant Circles
     PLANT_LOCATIONS_M.forEach((plant, index) => {
         let px = plant.x * PIXELS_PER_METER;
         let py = MAP_SIZE - (plant.y * PIXELS_PER_METER);
@@ -992,7 +925,6 @@ function drawMap() {
             CTX.fillText(nearestData.healthStatus.charAt(0), px - 3, py + 3);
         }
     });
-    // Draw Rover (Triangle)
     let rover_x_px = currentRoverData.x_m * PIXELS_PER_METER;
     let rover_y_px = MAP_SIZE - (currentRoverData.y_m * PIXELS_PER_METER);
     let heading_rad = (currentRoverData.heading - 90) * (Math.PI / 180);
@@ -1020,10 +952,9 @@ function getHealthColor(status) {
         default: return '#5a5a5a';
     }
 }
-
-// ===============================================
-// === HISTORY & DATA SAVING FUNCTIONS ===
-// ===============================================
+// ------------------------------------
+// --- HISTORY & DATA SAVING FUNCTIONS ---
+// ------------------------------------
 function saveCurrentTrial() {
     populateStockPhotos();
     const trialData = {
@@ -1051,25 +982,26 @@ function saveCurrentTrial() {
     updateRover3DPosition();
 }
 function openHistoryModal() {
+    const modal = document.getElementById('historyModal');
     const list = document.getElementById('trialHistoryList');
     list.innerHTML = '';
     if (trialHistory.length === 0) {
-        list.innerHTML = '<p style="color: #ff9900;">No trials saved yet.</p>';
+        list.innerHTML = '<p>No trials saved yet.</p>';
     } else {
-        trialHistory.slice().reverse().forEach(trial => {
+        trialHistory.forEach(trial => {
             const item = document.createElement('div');
             item.className = 'trial-item';
-            item.innerText = `Trial ${trial.id} - ${trial.date} (${trial.loggedData.length} data points)`;
-            item.onclick = () => loadTrial(trial.id);
+            item.innerHTML = `<strong>Trial ${trial.id}:</strong> ${trial.date} (${trial.loggedData.length} readings)`;
+            item.onclick = () => loadPastTrial(trial.id);
             list.appendChild(item);
         });
     }
-    document.getElementById('historyModal').style.display = "block";
+    modal.style.display = "block";
 }
 function closeHistoryModal() {
     document.getElementById('historyModal').style.display = "none";
 }
-function loadTrial(trialId) {
+function loadPastTrial(trialId) {
     const trial = trialHistory.find(t => t.id === trialId);
     if (!trial) return;
 
@@ -1099,7 +1031,6 @@ function clearAllHistory() {
         STATUS_ELEMENT.innerText = "All trial history cleared.";
     }
 }
-
 // --- Initialization ---
 window.onload = function() {
     initThreeD();
