@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>S.C.O.U.T. Rover Mapping & Control (Enhanced 3D View)</title>
+    <title>S.C.O.U.T. Rover Mapping & Control (Data-Driven 3D)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script> 
     <style>
@@ -53,7 +53,7 @@
             justify-content: center;
         }
 
-        /* 4x4 PHOTO GRID STYLES (No changes needed here) */
+        /* 4x4 PHOTO GRID STYLES */
         #photoGrid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -202,14 +202,10 @@
     </div>
 
     <div class="map-3d-panel">
-        <h2>3D Photo Map Viewer (Enhanced View)</h2>
+        <h2>3D Soil Metric Visualization 📊</h2>
         <div id="threeDContainer"></div>
         <div class="three-d-controls">
-            <label>
-                <input type="checkbox" id="planeToggle" checked onchange="togglePhotoPlanes()">
-                Show Photo Planes
-            </label>
-            <span style="margin-left: 20px;">| Drag mouse to rotate. Scroll to zoom.</span>
+            <p>Bar Height = Soil Moisture %. Bar Color = Plant Health (Green/Yellow/Red).</p>
         </div>
     </div>
 
@@ -267,7 +263,7 @@
     for(let r=0; r<FIELD_SIZE; r++) for(let c=0; c<FIELD_SIZE; c++) PLANT_LOCATIONS_M.push({x: c + 0.5, y: r + 0.5});
 
     // Global Data Structures
-    let loggedData = []; 
+    let loggedData = []; // Stores {x_m, y_m, healthStatus, moisture, npk_n, npk_p, npk_k}
     let selectedZone = 0; 
     let photoData = {}; 
     let trialHistory = JSON.parse(localStorage.getItem('trialHistory') || '[]');
@@ -295,8 +291,8 @@
 
     // --- 3D RENDERING SETUP (THREE.JS) ---
     let scene, camera, renderer, rover3D, controls;
-    let photoPlanes = {}; 
-    const PHOTO_PLANE_HEIGHT = 0.5; // NEW: Elevate planes 0.5m above the ground (z=0)
+    let dataCubes = {}; // Holds the 3D cubes for data visualization
+    const MAX_MOISTURE = 100; // Assuming 100% is max for scaling height to 1m
 
     function initThreeD() {
         const container = document.getElementById('threeDContainer');
@@ -314,7 +310,7 @@
         renderer.setSize(width, height);
         container.appendChild(renderer.domElement);
         
-        // FIX: Initialize OrbitControls correctly
+        // OrbitControls for interaction
         controls = new THREE.OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true; 
         controls.dampingFactor = 0.05;
@@ -363,62 +359,66 @@
         }
     }
 
-    function clear3DPhotos() {
-        Object.values(photoPlanes).forEach(plane => {
-            scene.remove(plane);
-            plane.geometry.dispose();
-            plane.material.dispose();
+    function clear3DDataCubes() {
+        Object.values(dataCubes).forEach(cube => {
+            scene.remove(cube);
+            cube.geometry.dispose();
+            cube.material.dispose();
         });
-        photoPlanes = {};
+        dataCubes = {};
     }
 
-    // NEW: Toggle Photo Plane Visibility
-    function togglePhotoPlanes() {
-        const isVisible = document.getElementById('planeToggle').checked;
-        Object.values(photoPlanes).forEach(plane => {
-            plane.visible = isVisible;
-        });
-        STATUS_ELEMENT.innerText = `3D Photo Planes are now ${isVisible ? 'visible' : 'hidden'}.`;
-    }
-    
-    function addPhotoTo3DMap(zoneId, base64Image) {
-        if (!scene || !base64Image) return;
-
-        const { x, z } = ZONE_COORDS[zoneId];
-        
-        // Remove old plane
-        if (photoPlanes[zoneId]) {
-            scene.remove(photoPlanes[zoneId]);
-            photoPlanes[zoneId].geometry.dispose();
-            photoPlanes[zoneId].material.dispose();
+    function getHealthColorHex(status) {
+        switch (status) {
+            case 'Good': return 0x28a745; // Green
+            case 'Caution': return 0xffc107; // Yellow
+            case 'Bad': return 0xdc3545; // Red
+            default: return 0x5a5a5a; 
         }
+    }
 
-        // Create a new texture from the base64 image
-        const img = new Image();
-        img.crossOrigin = "anonymous"; 
-        img.onload = () => {
-            const texture = new THREE.Texture(img);
-            texture.needsUpdate = true;
+    // NEW: Function to draw 3D data visualization
+    function draw3DMap() {
+        clear3DDataCubes();
+        
+        loggedData.forEach((data, index) => {
+            const { x_m, y_m, moisture, healthStatus } = data;
+            
+            // 1. Determine size and color
+            const cubeWidth = 0.5; // Fixed size for visual consistency
+            const cubeDepth = 0.5;
+            
+            // Scale moisture (0-100) to height (0-1 meter)
+            const cubeHeight = Math.max(0.01, moisture / MAX_MOISTURE); 
 
-            const material = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide });
-            // Plane geometry dimensions (1m wide, 0.5m high) 
-            // We use a standing plane to give the illusion of a clearer 3D view
-            const geometry = new THREE.PlaneGeometry(1, 0.5); 
-            const plane = new THREE.Mesh(geometry, material);
+            const colorHex = getHealthColorHex(healthStatus);
 
-            // Rotation is 0 on X and Y, making it stand upright.
-            // Position: x and z define the center of the zone. Y (up) is half the height of the plane, plus the desired elevation.
-            plane.position.set(
-                x, 
-                PHOTO_PLANE_HEIGHT / 2, // Half the height of the plane for the pivot point
-                z
+            // 2. Create Geometry and Material
+            const geometry = new THREE.BoxGeometry(cubeWidth, cubeHeight, cubeDepth);
+            const material = new THREE.MeshPhongMaterial({ 
+                color: colorHex, 
+                opacity: 0.8,
+                transparent: true 
+            });
+
+            const cube = new THREE.Mesh(geometry, material);
+
+            // 3. Position the cube 
+            // The cube pivots from its center, so its y-position is half its height
+            cube.position.set(
+                x_m, 
+                cubeHeight / 2, 
+                y_m 
             );
-            plane.visible = document.getElementById('planeToggle').checked; // Respect current toggle state
 
-            photoPlanes[zoneId] = plane;
-            scene.add(plane);
-        };
-        img.src = base64Image;
+            // Give it a unique name for identification/deletion later
+            cube.name = `data-cube-${index}`; 
+            dataCubes[index] = cube;
+            scene.add(cube);
+        });
+        
+        // This will update the cubes and the rover position
+        updateRover3DPosition();
     }
 
 
@@ -427,6 +427,7 @@
     // ------------------------------------
     
     function loadStockPhotos() {
+        // Simple stock image generation (for 2D display only)
         for (let i = 1; i <= 16; i++) {
             const color = '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0');
             const stockImage = `<svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="${color}"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="20" fill="#fff">Zone ${i}</text></svg>`;
@@ -434,7 +435,7 @@
             
             photoData[i] = base64StockImage;
             renderPhotoInCell(i, base64StockImage);
-            addPhotoTo3DMap(i, base64StockImage);
+            // Note: We no longer call addPhotoTo3DMap here.
         }
         LAST_PHOTO_STATUS.innerText = '16 stock photos loaded.';
     }
@@ -448,13 +449,8 @@
         // 2. Remove from 2D grid
         renderPhotoInCell(zoneId, null); // Render with null clears the image
 
-        // 3. Remove from 3D map
-        if (photoPlanes[zoneId]) {
-            scene.remove(photoPlanes[zoneId]);
-            photoPlanes[zoneId].geometry.dispose();
-            photoPlanes[zoneId].material.dispose();
-            delete photoPlanes[zoneId];
-        }
+        // 3. (No 3D component to delete, as 3D now shows data)
+
         STATUS_ELEMENT.innerText = `Photo deleted from Zone ${zoneId}.`;
     }
 
@@ -491,7 +487,7 @@
             const base64Image = e.target.result;
             photoData[selectedZone] = base64Image; 
             renderPhotoInCell(selectedZone, base64Image);
-            addPhotoTo3DMap(selectedZone, base64Image); 
+            // We no longer update the 3D map with a photo
             selectedZone = 0; 
         };
         reader.readAsDataURL(file); 
@@ -520,10 +516,8 @@
     
     function loadCurrentPhotoData() {
         clearPhotoGrid();
-        clear3DPhotos();
         for (const [zoneId, base64Image] of Object.entries(photoData)) {
             renderPhotoInCell(parseInt(zoneId), base64Image);
-            addPhotoTo3DMap(parseInt(zoneId), base64Image);
         }
     }
 
@@ -557,7 +551,7 @@
         document.getElementById('currentTrialNumber').innerText = currentTrialNumber;
         clearMapData(false); 
         clearPhotoGrid(); 
-        clear3DPhotos(); 
+        clear3DDataCubes(); // Clear 3D cubes
         updateRover3DPosition(); 
     }
 
@@ -595,10 +589,10 @@
         document.getElementById('headingData').innerText = trial.roverData.heading + ' deg';
         document.getElementById('gpsFix').innerText = 'Historical';
 
-        // 2. Load Logged Data & Map
+        // 2. Load Logged Data & Maps
         loggedData = trial.loggedData;
         drawMap();
-        updateRover3DPosition();
+        draw3DMap(); // Draw 3D cubes from historical data
         
         // 3. Load Photo Data
         photoData = trial.photoData;
@@ -683,14 +677,15 @@
              }
 
              // --- Simulate Soil Data ---
-             let moistureStr = (Math.random() * 80 + 10).toFixed(1) + '%';
+             let moistureVal = (Math.random() * 80 + 10).toFixed(1);
+             let moistureStr = moistureVal + '%';
              let npkStr = `N:${Math.floor(Math.random() * 100)}, P:${Math.floor(Math.random() * 100)}, K:${Math.floor(Math.random() * 100)}`;
              document.getElementById('moistureData').innerText = moistureStr;
              document.getElementById('npkData').innerText = npkStr;
             
              if (lastCommand === 'probe' || lastCommand === 'read_sensors') {
                 
-                 let moisture = parseFloat(moistureStr.split('%')[0]) || 0;
+                 let moisture = parseFloat(moistureVal) || 0;
                  let npk_values = npkStr.match(/N:(\d+), P:(\d+), K:(\d+)/);
                  let npk_n = npk_values ? parseInt(npk_values[1]) : 0;
                  let npk_p = npk_values ? parseInt(npk_values[2]) : 0;
@@ -709,7 +704,7 @@
              }
 
              drawMap();
-             updateRover3DPosition();
+             draw3DMap(); // Update the new 3D data visualization
              STATUS_ELEMENT.innerText = "Data update complete.";
 
         }, 500); 
@@ -743,7 +738,7 @@
             currentRoverData.heading = 0;
         }
         drawMap();
-        updateRover3DPosition();
+        draw3DMap(); // Clear the 3D cubes as well
         STATUS_ELEMENT.innerText = "Map data cleared.";
     }
 
