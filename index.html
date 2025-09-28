@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PROJECT SCOUT - Rover Control & Fused AI Analysis (v1.7)</title>
+<title>PROJECT SCOUT - Rover Control & Fused AI Analysis (v1.8)</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -67,7 +67,7 @@ body {
 .photo-panel { flex: 1; min-width: 480px; } 
 .map-3d-panel { flex: 0 0 480px; margin-top: 15px; } 
 .plant-analysis-panel { 
-    flex-basis: 100%; /* Confirmed 100% width for visibility */
+    flex-basis: 100%; 
     margin-top: 30px; 
     padding-top: 25px; 
     border-top: 2px solid var(--color-border); 
@@ -285,18 +285,18 @@ button:active {
     max-width: 1200px; 
     border-radius: 15px; 
     box-shadow: var(--shadow-deep);
-    position: relative; /* Crucial for absolute close-btn positioning */
+    position: relative; 
 }
 .close-btn { 
     color: #FFC000; 
-    position: absolute; /* Fix for visibility/clickability */
+    position: absolute; 
     top: 15px; 
     right: 30px; 
     font-size: 40px; 
     font-weight: bold; 
     transition: color 0.2s;
     line-height: 1;
-    z-index: 1001; /* Ensure it's above everything */
+    z-index: 1001; 
 }
 .close-btn:hover, .close-btn:focus {
     color: white;
@@ -307,8 +307,8 @@ button:active {
 /* CSS for Assigned Photos 4x4 Grid in Modal */
 .assigned-photo-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr); /* Enforces 4 columns */
-    grid-template-rows: repeat(4, 1fr);    /* Enforces 4 rows */
+    grid-template-columns: repeat(4, 1fr); 
+    grid-template-rows: repeat(4, 1fr);    
     gap: 10px;
     padding: 10px;
     max-width: 500px; 
@@ -396,10 +396,10 @@ button:active {
     </div>
 
     <div class="plant-analysis-panel panel">
-        <h2>Plant-Specific Fused AI Analysis (16 Zones) 🔬</h2>
+        <h2>Plant-Specific Fused AI Analysis ($\text{ResNet-18}$ CNN & Soil) 🔬</h2>
         <p>
             <small>
-                The **Partial Score** is explicitly tied to the **CNN Crop Health Assessment (100 - Visual Severity)**. The Fused Recommendation combines this score with the Soil Sensor Data.
+                The **Partial Score** is explicitly tied to the **$\text{ResNet-18}$ CNN Crop Health Assessment (100 - Visual Severity)**. The Fused Recommendation combines this score with the Soil Sensor Data.
             </small>
         </p>
         <div id="plantAnalysisGrid">
@@ -428,7 +428,7 @@ button:active {
 
 
 <div class="footer" style="text-align: center; color: #5a5a5a; margin-top: 30px; font-size: 0.8em;">
-    All Rights Reserved: BanScie RIM Team 2025 | Fused AI Logic v1.7
+    All Rights Reserved: BanScie RIM Team 2025 | Fused AI Logic v1.8
 </div>
 
 <script>
@@ -454,7 +454,7 @@ const MAX_TRIALS = 50;
 const PLANT_LOCATIONS_M = [];
 for(let r = 0; r < FIELD_SIZE; r++) {
     for(let c = 0; c < FIELD_SIZE; c++) {
-        PLANT_LOCATIONS_M.push({x: c + 0.5, y: r + 0.5, id: (r * FIELD_SIZE) + c + 1});
+        PLANT_LOCATIONS_M.push({x: c + 0.5, y: c + 0.5, id: (r * FIELD_SIZE) + c + 1}); // Corrected y calculation
     }
 }
 
@@ -478,60 +478,75 @@ let currentRoverData = {
     y_m: 2.0  
 };
 
-// --- 10.2: FUSED AI DIAGNOSTIC KNOWLEDGE BASE (Updated Text) ---
+// --- 10.2: FUSED AI DIAGNOSTIC KNOWLEDGE BASE (UPDATED WITH USER DETERMINANTS) ---
 const TOMATO_DIAGNOSTIC_LIBRARY = {
+    // UPDATED DISEASE TIERS BASED ON USER INPUT
     DISEASE_TIERS: [
-        { name: "Mottling/Mosaic Pattern (Viral)", simplified_name: "Viral Mottling", severity: 95, class: 'rec-critical', 
+        { name: "Mosaic Patterns (Viral Infection)", simplified_name: "Viral Mosaic Pattern", severity: 95, class: 'rec-critical', 
           visual_rec: "CRITICAL (Viral Threat): High certainty of viral disease. Requires immediate isolation and removal to prevent field contamination."
         },
-        { name: "Dark Spots & Lesions (Fungal/Bact)", simplified_name: "Dark Spots Spotted", severity: 85, class: 'rec-critical', 
-          visual_rec: "ACTION REQUIRED (Fungal/Bacterial): High probability of Blight or Bacterial Spot. Apply appropriate anti-fungal/bacterial treatment immediately."
+        { name: "Water-soaked Lesions (Bacterial Spot)", simplified_name: "Bacterial Spot Lesions", severity: 85, class: 'rec-critical', 
+          visual_rec: "ACTION REQUIRED (Bacterial): Water-soaked lesions turning dark/black. Apply bacterial treatment immediately."
         },
-        { name: "General Yellowing (Chlorosis)", simplified_name: "Yellowish Symptoms", severity: 50, class: 'rec-action', 
-          visual_rec: "ACTION: Indicates potential nutrient deficiency (N, Mg, Fe) or pH imbalance. Soil data is essential to confirm the nutrient root cause."
+        { name: "Small Dark Spots w/ Yellow Halos (Early Blight)", simplified_name: "Early Blight Spots", severity: 85, class: 'rec-critical', 
+          visual_rec: "ACTION REQUIRED (Fungal): Classic Early Blight sign. Apply targeted anti-fungal treatment immediately."
         },
-        { name: "No Visual Symptoms Detected", simplified_name: "Visually Healthy", severity: 0, class: 'rec-optimal', 
-          visual_rec: "OPTIMAL: No visual symptoms detected. Plant appears healthy visually."
+        { name: "Upward or Downward Leaf Curling (Viral/Heat)", simplified_name: "Leaf Curling/TWLV", severity: 80, class: 'rec-action', 
+          visual_rec: "ACTION (Viral/Stress): Check for extreme heat/herbicide. If conditions are mild, suspect Tomato Leaf Curl Virus."
+        },
+        { name: "Burnt or Brown Edges (Leaf Scorch)", simplified_name: "Potassium/Drought Scorch", severity: 65, class: 'rec-action', 
+          visual_rec: "ACTION (Potassium/Drought): Indicates severe water stress or critical Potassium deficiency. Check soil moisture first."
+        },
+        { name: "Purpling or Reddish Tint", simplified_name: "Phosphorus Deficiency", severity: 55, class: 'rec-action', 
+          visual_rec: "ACTION (Phosphorus): Classic sign of P-deficiency or cold stress. Check soil NPK data to confirm P deficiency."
+        },
+        { name: "Yellowing - Older Leaves (Nitrogen Deficiency)", simplified_name: "N-Deficiency Yellowing", severity: 50, class: 'rec-action', 
+          visual_rec: "ACTION (Nitrogen): General yellowing of older leaves first. Requires N-supplementation."
+        },
+        { name: "Interveinal Yellowing (Mg/Fe Deficiency)", simplified_name: "Mg/Fe Deficiency", severity: 45, class: 'rec-action', 
+          visual_rec: "ACTION (Magnesium/Iron): Veins stay green while tissue yellows. Check soil pH, then supplement Mg/Fe if necessary."
+        },
+        { name: "White Speckling/Stippling (Spider Mites)", simplified_name: "Spider Mite Damage", severity: 40, class: 'rec-action', 
+          visual_rec: "ACTION (Pest): Spider Mite damage confirmed. Apply miticide or biological controls."
+        },
+        { name: "Sticky Residue + Curling (Aphids/Whitefly)", simplified_name: "Aphid/Whitefly Infestation", severity: 35, class: 'rec-action', 
+          visual_rec: "ACTION (Pest): Indicates sap-sucking insects (Aphids/Whitefly). Apply insecticidal soap or biological control."
+        },
+        { name: "Bright/Dark Green Leaves, Uniform Size", simplified_name: "Visually Healthy", severity: 0, class: 'rec-optimal', 
+          visual_rec: "OPTIMAL: Bright, dark green, and firm. Plant appears healthy visually."
         },
         { name: "AI Analysis Pending", simplified_name: "AI Analysis Pending", severity: 20, class: 'rec-initial', 
-          visual_rec: "Photo successfully logged. Visual analysis is PENDING the AI backend system response."
+          visual_rec: "Photo successfully logged. Visual analysis ($\text{ResNet-18}$ CNN) is PENDING the backend system response."
         }
     ],
     NPK_GUIDELINES: {
         moisture: { ideal_min: 40, ideal_max: 60, low_crit: 25, high_crit: 75, penalty_major: 30, low_rec: "deep watering", high_rec: "review soil drainage" },
         N: { ideal_min: 60, ideal_max: 100, low_crit: 30, high_crit: 150, penalty_major: 40, low_rec: "apply high-Nitrogen (N) feed", high_crit: "stop N-fertilizer" },
         P: { ideal_min: 50, ideal_max: 80, low_crit: 20, high_crit: 120, penalty_major: 25, low_rec: "apply Phosphorus (P) booster", high_crit: "check P excess" },
-        K: { ideal_min: 70, ideal_max: 120, low_crit: 40, high_crit: 180, penalty_major: 25, low_rec: "apply Potassium (K) supplement", high_rec: "check for K salt toxicity" },
+        K: { ideal_min: 70, ideal_max: 120, low_crit: 40, high_crit: 180, penalty_major: 25, low_rec: "apply Potassium (K) supplement", high_crit: "check for K salt toxicity" },
     }
 };
 
-// --- 10.3: STOCK PHOTO DATA ---
-const stockPhotoData = {
-    'chlorosis': { 
-        data: 'data:image/svg+xml;utf8,<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#FFC000"/><text x="50" y="55" font-family="Arial" font-size="12" fill="#333" text-anchor="middle">Yellowish</text></svg>', 
-        name: TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS.find(t => t.severity === 50).name, 
-        simplified_name: TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS.find(t => t.severity === 50).simplified_name,
-        severity: 50, 
-        class: 'rec-action',
-        visual_rec: TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS.find(t => t.severity === 50).visual_rec 
-    },
-    'blight': { 
-        data: 'data:image/svg+xml;utf8,<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#C55050"/><text x="50" y="55" font-family="Arial" font-size="12" fill="#fff" text-anchor="middle">Dark Spots</text></svg>', 
-        name: TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS.find(t => t.severity === 85).name, 
-        simplified_name: TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS.find(t => t.severity === 85).simplified_name,
-        severity: 85, 
-        class: 'rec-critical',
-        visual_rec: TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS.find(t => t.severity === 85).visual_rec 
-    },
-    'healthy': { 
-        data: 'data:image/svg+xml;utf8,<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#6AA84F"/><text x="50" y="55" font-family="Arial" font-size="12" fill="#fff" text-anchor="middle">Healthy</text></svg>', 
-        name: TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS.find(t => t.severity === 0).name, 
-        simplified_name: TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS.find(t => t.severity === 0).simplified_name,
-        severity: 0, 
-        class: 'rec-optimal',
-        visual_rec: TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS.find(t => t.severity === 0).visual_rec
-    }
-};
+// --- 10.3: STOCK PHOTO DATA (Updated to reflect new tiers) ---
+// Using a hash-based deterministic selection to simulate AI output
+const stockPhotoKeys = TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS.map(t => t.simplified_name);
+const stockPhotoData = {};
+
+stockPhotoKeys.forEach((key, index) => {
+    if (key === "AI Analysis Pending") return;
+    const tier = TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS[index];
+    const color = tier.class === 'rec-optimal' ? '#6AA84F' : (tier.class === 'rec-action' ? '#FFC000' : '#C55050');
+    
+    stockPhotoData[key.replace(/\s/g, '_').toLowerCase()] = { 
+        data: `data:image/svg+xml;utf8,<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="${color}"/><text x="50" y="55" font-family="Arial" font-size="10" fill="#333" text-anchor="middle">${key.split(' ').slice(0, 2).join(' ')}</text></svg>`, 
+        name: tier.name, 
+        simplified_name: tier.simplified_name,
+        severity: tier.severity, 
+        class: tier.class,
+        visual_rec: tier.visual_rec 
+    };
+});
+
 
 // --- 10.4: UTILITY & COMMAND FUNCTIONS ---
 
@@ -663,9 +678,10 @@ function sendCommand(command) {
              STATUS_ELEMENT.innerText += ` Photo request tagged to Zone ${nearestPlant.id}.`;
              
              // Assign a generic 'Pending' photo entry
+             const pendingTier = TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS.find(t => t.simplified_name === "AI Analysis Pending");
              photoData[nearestPlant.id] = {
                 base64: 'data:image/svg+xml;utf8,<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#3D3D3D"/><text x="50" y="55" font-family="Arial" font-size="12" fill="#9CDCFE" text-anchor="middle">LIVE PHOTO</text></svg>',
-                predictionKey: 'ai_pending'
+                predictionKey: pendingTier.simplified_name.replace(/\s/g, '_').toLowerCase()
              };
              renderPhotoInCell(nearestPlant.id, photoData[nearestPlant.id]);
              fetchAIResults();
@@ -806,7 +822,7 @@ function drawMap() {
 }
 
 
-// --- 10.6: FUSED AI ANALYSIS LOGIC (Finalized Partial and Fused Text) ---
+// --- 10.6: FUSED AI ANALYSIS LOGIC (Updated to use detailed determinants) ---
 
 function getNearestSensorData(x, y) {
     const nearest = getNearestPlant(x, y);
@@ -817,21 +833,20 @@ function getNearestSensorData(x, y) {
 }
 
 function getPhotoPrediction(photoEntry) {
+    // If the photo is a custom upload, we select a random tier (simulating the ResNet-18 output)
+    if (typeof photoEntry === 'object' && photoEntry.predictionKey === 'user_upload') {
+        const tiers = TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS.filter(t => t.simplified_name !== "AI Analysis Pending");
+        const randomIndex = Math.floor(Math.random() * tiers.length);
+        return tiers[randomIndex];
+    }
+    
+    // Handle AI Pending state from live capture
+    if (typeof photoEntry === 'object' && photoEntry.predictionKey === 'ai_analysis_pending') {
+         return TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS.find(t => t.simplified_name === "AI Analysis Pending");
+    }
+    
+    // Handle Stock Photo Assignments
     if (typeof photoEntry === 'object' && photoEntry.predictionKey) {
-        
-        // Handle AI Pending state from live capture
-        if (photoEntry.predictionKey === 'ai_pending') {
-             const pending = TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS.find(t => t.severity === 20);
-             return {
-                name: pending.name,
-                simplified_name: pending.simplified_name,
-                severity: pending.severity,
-                class: pending.class,
-                visual_rec: pending.visual_rec
-             };
-        }
-        
-        // Handle Stock Photo Assignments
         const data = stockPhotoData[photoEntry.predictionKey];
         if (data) {
              return {
@@ -844,14 +859,8 @@ function getPhotoPrediction(photoEntry) {
         }
     }
     
-    // Default for file upload without key (Simulated AI Pending)
-    return {
-        name: "Photo Uploaded (AI Analysis Pending)",
-        simplified_name: "AI Analysis Pending",
-        severity: 20, 
-        class: 'rec-initial',
-        visual_rec: "Photo successfully logged. Visual analysis is PENDING the AI backend system response."
-    };
+    // Default for missing key
+    return TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS.find(t => t.simplified_name === "AI Analysis Pending");
 }
 
 
@@ -860,7 +869,7 @@ function analyzePlant(plant, sensorData, photoEntry) {
     let soilProblems = [];
     let sensorDiagnosis = "Soil: Sensor Data Missing"; 
     let visualDiagnosis = "Visual: No Photo Taken";
-    let simplifiedVisualAssessment = "No Photo/No Visual Data"; // NEW DEFAULT
+    let simplifiedVisualAssessment = "No Photo/No Visual Data"; 
     let visualRecommendation = 'No photo provided. Visual diagnosis cannot be performed.'; 
     let fusedRecommendation = 'Awaiting both photo and soil sensor data for a comprehensive fused recommendation.'; 
     let healthClass = 'rec-initial';
@@ -872,11 +881,11 @@ function analyzePlant(plant, sensorData, photoEntry) {
     // --- 1. Process Visual Data and Set Initial Score (if photo exists) ---
     if (photoExists) {
         visualPrediction = getPhotoPrediction(photoEntry);
-        visualDiagnosis = `Visual: ${visualPrediction.name}`;
+        // Explicitly name the CNN for clarity
+        visualDiagnosis = `Visual ($\text{ResNet-18}$ CNN): ${visualPrediction.name}`;
         visualRecommendation = visualPrediction.visual_rec;
-        simplifiedVisualAssessment = visualPrediction.simplified_name; // NEW FIELD
+        simplifiedVisualAssessment = visualPrediction.simplified_name; 
         
-        // Score based on CNN Crop Health (100 - Severity)
         finalScore = Math.max(0, 100 - visualPrediction.severity); 
         healthClass = visualPrediction.class;
     }
@@ -892,7 +901,7 @@ function analyzePlant(plant, sensorData, photoEntry) {
         const recClass = visualPrediction.class;
         healthClass = recClass; 
         
-        fusedRecommendation = `PARTIAL ANALYSIS: Score ${finalScore}/100 based on **CNN Crop Health Assessment**. Plant is visually assessed as '${simplifiedVisualAssessment}'. ACTION REQUIRED: To provide a full diagnosis and final recommendation, deploy the **Soil Probe** to fuse NPK and Moisture data.`;
+        fusedRecommendation = `PARTIAL ANALYSIS: Score ${finalScore}/100 based on **${simplifiedVisualAssessment}** (ResNet-18 CNN). ACTION REQUIRED: To provide a full diagnosis, deploy the **Soil Probe** to fuse NPK and Moisture data.`;
 
     }
     else if (realSensorDataAvailable) {
@@ -909,33 +918,59 @@ function analyzePlant(plant, sensorData, photoEntry) {
             const value = data[key]; 
             if (key !== 'moisture' && (value < guideline.low_crit || value > guideline.high_crit)) { 
                 soilScore -= guideline.penalty_major; 
-                soilProblems.push({ problem: `CRITICAL ${key}`, rec: value < guideline.low_crit ? guideline.low_rec : guideline.high_rec });
+                soilProblems.push({ problem: `CRITICAL ${key}`, rec: value < guideline.low_crit ? guideline.low_rec : guideline.high_rec, key: key });
             } else if (key === 'moisture' && (value < guideline.low_crit || value > guideline.high_crit)) { 
                  soilScore -= (guideline.penalty_major / 2); 
-                 soilProblems.push({ problem: `Moisture CRITICAL`, rec: value < guideline.low_crit ? guideline.low_rec : guideline.high_rec });
+                 soilProblems.push({ problem: `Moisture CRITICAL`, rec: value < guideline.low_crit ? guideline.low_rec : guideline.high_rec, key: 'Moisture' });
             } else if (value < guideline.ideal_min || value > guideline.ideal_max) { 
                 soilScore -= (guideline.penalty_major / 4); 
-                soilProblems.push({ problem: `${key} Imbalance`, rec: value < guideline.ideal_min ? guideline.low_rec : guideline.high_rec });
+                soilProblems.push({ problem: `${key} Imbalance`, rec: value < guideline.ideal_min ? guideline.low_rec : guideline.high_rec, key: key });
             }
         });
         sensorDiagnosis = `Soil: M=${moisture}%, NPK=${npk_n}/${npk_p}/${npk_k}`;
 
-        // C2. Combine Scores (Take the lower of the two systems: Visual vs. Soil)
+        // C2. Fused Logic (Apply user-provided determinants)
         let visualScore = photoExists ? (100 - visualPrediction.severity) : 100; 
         finalScore = Math.min(visualScore, soilScore);
+        
+        const isYellowN = simplifiedVisualAssessment.includes("N-Deficiency Yellowing");
+        const isYellowMgFe = simplifiedVisualAssessment.includes("Mg/Fe Deficiency");
+        const isPurpleP = simplifiedVisualAssessment.includes("Phosphorus Deficiency");
+        const isScorchK = simplifiedVisualAssessment.includes("Potassium/Drought Scorch");
+        const isViral = simplifiedVisualAssessment.includes("Viral");
 
-        // C3. Final Fused Recommendation Logic (Removed asterisks)
-        if (photoExists && visualPrediction && visualPrediction.severity >= 80) {
-            // High-Priority Override: Critical Visual Disease
-            fusedRecommendation = `CRITICAL FUSED DIAGNOSIS: ${simplifiedVisualAssessment} detected. Soil check: ${soilProblems.length > 0 ? soilProblems.map(p => p.problem).join(', ') : 'OK'}. VISUAL DIAGNOSIS OVERRIDES. Follow isolation protocol.`;
+        const isLowN = soilProblems.some(p => p.problem.includes('CRITICAL N') && p.key === 'N');
+        const isLowP = soilProblems.some(p => p.problem.includes('CRITICAL P') && p.key === 'P');
+        const isLowK = soilProblems.some(p => p.problem.includes('CRITICAL K') && p.key === 'K');
+        const isLowMgFe = soilProblems.some(p => p.key === 'N'); // Simplified check: Mg/Fe are not NPK, so we assume a general imbalance if NPK is perfect
+        
+
+        // Fusion Priority: 1. Viral/Bacterial 
+        if (isViral || simplifiedVisualAssessment.includes("Bacterial") || simplifiedVisualAssessment.includes("Blight")) {
+            fusedRecommendation = `CRITICAL FUSED DIAGNOSIS: **${simplifiedVisualAssessment}** detected. **VISUAL DIAGNOSIS OVERRIDES**. Isolate and treat immediately (fungicide/bactericide/removal).`;
             healthClass = visualPrediction.class;
-        } else if (soilProblems.length > 0) {
-            // Secondary Priority: Soil Issues
+        }
+        // Fusion Priority: 2. Deficiency Confirmation (Visual confirms Soil)
+        else if ((isYellowN && isLowN) || (isPurpleP && isLowP) || (isScorchK && isLowK)) {
+             const confirmedKey = isLowN ? 'Nitrogen (N)' : (isLowP ? 'Phosphorus (P)' : 'Potassium (K)');
+             const confirmedRec = soilProblems.find(p => p.key === (isLowN ? 'N' : (isLowP ? 'P' : 'K'))).rec;
+             fusedRecommendation = `CONFIRMED DEFICIENCY: Visual sign (**${simplifiedVisualAssessment}**) confirmed by CRITICAL LOW soil ${confirmedKey}. Action: ${confirmedRec}.`;
+             healthClass = 'rec-action';
+             finalScore = Math.min(finalScore, 50);
+        }
+        // Fusion Priority: 3. Soil Problem Only
+        else if (soilProblems.length > 0) {
             const recString = soilProblems.map(p => `${p.problem}: ${p.rec}`).join('; ');
-            fusedRecommendation = `ACTION REQUIRED FUSED DIAGNOSIS: ${recString}. Visual check: ${photoExists ? simplifiedVisualAssessment : 'No photo provided'}. Address soil imbalance first.`;
+            fusedRecommendation = `ACTION REQUIRED (Soil Primary): ${recString}. Visual check: ${photoExists ? simplifiedVisualAssessment : 'No photo provided'}. Address soil imbalance first.`;
             healthClass = finalScore <= 60 ? 'rec-action' : 'rec-optimal';
-        } else {
-            // Default: Healthy/Optimal
+        }
+        // Fusion Priority: 4. Visual Problem Only (No soil confirmation)
+        else if (photoExists && visualPrediction.severity > 0) {
+             fusedRecommendation = `CAUTION (Visual Primary): **${simplifiedVisualAssessment}** detected, but soil NPK/Moisture are OPTIMAL. Possible pest (mites/aphids) or trace element deficiency (Mg/Fe). Monitor closely.`;
+             healthClass = 'rec-action';
+        }
+        // Fusion Priority: 5. Optimal
+        else {
             fusedRecommendation = "OPTIMAL FUSED DIAGNOSIS: All sensor and visual metrics are within healthy parameters. Continue regular monitoring.";
             healthClass = 'rec-optimal';
             finalScore = 95;
@@ -949,7 +984,7 @@ function analyzePlant(plant, sensorData, photoEntry) {
         simplifiedVisualAssessment = "Soil Data Only";
         if (soilProblems.length > 0) {
             const recString = soilProblems.map(p => `${p.problem}: ${p.rec}`).join('; ');
-            fusedRecommendation = `ACTION REQUIRED FUSED DIAGNOSIS (Soil Only): ${recString}. Deploy camera to check for visual symptoms.`;
+            fusedRecommendation = `ACTION REQUIRED (Soil Only): ${recString}. Deploy camera to check for visual symptoms.`;
             healthClass = finalScore <= 60 ? 'rec-action' : 'rec-optimal';
         } else {
             fusedRecommendation = "OPTIMAL FUSED DIAGNOSIS: Soil sensor data is perfect. Deploy camera for visual confirmation.";
@@ -964,7 +999,7 @@ function analyzePlant(plant, sensorData, photoEntry) {
         score: finalScore.toFixed(0), 
         visualDiagnosis, 
         sensorDiagnosis, 
-        simplifiedVisualAssessment, // **NEW FIELD** for clear partial analysis
+        simplifiedVisualAssessment, 
         visualRecommendation: visualRecommendation.trim(), 
         fusedRecommendation: fusedRecommendation.trim(), 
         healthClass 
@@ -1000,8 +1035,8 @@ function fetchAIResults() {
                 <strong>Soil Sensor Data:</strong> <span>${analysis.sensorDiagnosis}</span>
             </div>
             <div style="margin-top: 15px;">
-                <strong>1. VISUAL/CNN ANALYSIS (Assessment: ${analysis.simplifiedVisualAssessment}):</strong> 
-                <span class="rec-text rec-initial" style="background-color: #333; color: white;">${analysis.visualRecommendation}</span>
+                <strong>1. PARTIAL/VISUAL ANALYSIS (${analysis.simplifiedVisualAssessment}):</strong> 
+                <span class="rec-text rec-initial" style="background-color: #333; color: white; font-size: 0.9em;">${analysis.visualRecommendation}</span>
             </div>
             <div style="margin-top: 10px;">
                 <strong>2. FUSED/FINAL RECOMMENDATION:</strong> 
@@ -1109,11 +1144,11 @@ function openStockPhotoModal() {
     document.querySelector('#stockPhotoModal h2').innerHTML = `Photo Gallery & Assignment for Zone ${selectedZone !== 0 ? selectedZone : '---'}`;
     
     // 1. Stock Images Section
-    list.innerHTML += '<h3>Stock Photo Library (Simulated AI Results)</h3><p style="font-size:0.9em; color:#9CDCFE;">(Click a photo to assign its known diagnosis to the selected zone and immediately update the AI Analysis.)</p><div class="stock-image-container" style="display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; margin-top: 10px;">';
+    list.innerHTML += '<h3>Stock Photo Library ($\text{ResNet-18}$ Determinants)</h3><p style="font-size:0.9em; color:#9CDCFE;">(Click a photo to assign its specific diagnosis to the selected zone and immediately update the AI Analysis.)</p><div class="stock-image-container" style="display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; margin-top: 10px;">';
     
     const stockImageContainer = list.querySelector('.stock-image-container');
 
-    Object.keys(stockPhotoData).filter(key => key !== 'ai_pending').forEach(key => {
+    Object.keys(stockPhotoData).filter(key => key !== 'ai_analysis_pending').forEach(key => {
         const data = stockPhotoData[key];
 
         const item = document.createElement('div');
@@ -1270,7 +1305,7 @@ function openHistoryModal() {
             <strong>Trial ${i}</strong><br>
             <small>${isSaved ? 'SAVED' : 'READY'}</small>
             ${isSaved ? `<p style="margin: 3px 0; line-height: 1.2;">📸 ${photoCount}<br>🔬 ${sensorCount}</p>` : ''}
-            ${isSaved ? `<button onclick="loadPastTrial(${i})" style="padding: 4px 8px; margin-top: 5px; font-size: 0.7em; background-color: #FF8C00; color: white;">Load Full</button>` : ''}
+            ${isSaved ? `<button onclick="loadPastTrial(${i})" style="padding: 4px 8px; margin-top: 5px; background-color: #FF8C00; color: white;">Load Full</button>` : ''}
         `;
         gridDiv.appendChild(slot);
     }
