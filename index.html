@@ -3,44 +3,84 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>S.C.O.U.T. Rover Mapping & Control</title>
+    <title>S.C.O.U.T. Rover Mapping & Control (4m Grid)</title>
     <style>
-        /* CSS STYLING */
+        /* BASE STYLING (Dark Theme) */
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background-color: #1e1e1e; color: #d4d4d4; }
-        .container { max-width: 1200px; margin: auto; background: #2d2d30; padding: 25px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); display: flex; flex-wrap: wrap; }
+        .container { max-width: 1400px; margin: auto; background: #2d2d30; padding: 25px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); display: flex; flex-wrap: wrap; }
+        
+        /* LAYOUT PANELS */
         .controls-panel { flex: 1; min-width: 350px; padding-right: 20px; }
         .map-panel { flex: 1; min-width: 450px; }
+        .photo-panel { flex: 1; min-width: 450px; padding-left: 20px; border-left: 1px solid #3c3c3c; } 
+        
+        /* TYPOGRAPHY & HEADERS */
         h1 { color: #569cd6; border-bottom: 3px solid #3c3c3c; padding-bottom: 10px; }
         h2 { color: #4ec9b0; margin-top: 20px; }
         h3 { color: #c8c8c8; margin-top: 10px; }
+        #status { font-weight: bold; color: #ffcc00; }
+
+        /* BUTTONS */
         button { padding: 12px 18px; margin: 8px 5px; cursor: pointer; border: none; border-radius: 6px; font-weight: bold; transition: background-color 0.2s; }
         .move-controls button { background-color: #569cd6; color: white; }
         .arm-controls button { background-color: #6a9955; color: white; }
         .camera-control button { background-color: #ce4257; color: white; }
-        .camera-control button.secondary { background-color: #ff9800; }
-        #status { font-weight: bold; color: #ffcc00; }
+        
+        /* DATA DISPLAY */
         .data-display { margin-top: 20px; padding: 15px; border: 1px solid #3c3c3c; border-radius: 6px; background-color: #252526; }
         .data-row strong { display: inline-block; width: 140px; color: #9cdcfe; }
-        #roverMap { border: 3px solid #6a9955; background-color: #3d3d3d; display: block; margin: 20px auto; }
         
-        /* New Gallery Styles */
-        #photoGallery { margin-top: 20px; border-top: 1px solid #3c3c3c; padding-top: 15px; display: none; }
-        .gallery-container { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
-        .gallery-item { width: 120px; height: 120px; background-color: #3c3c3c; border: 1px solid #5a5a5a; display: flex; align-items: center; justify-content: center; color: #d4d4d4; font-size: 0.8em; }
-        .gallery-item img { width: 100%; height: 100%; object-fit: cover; }
-
-        /* AI Results Styling (Updated Section) */
-        #ai-analysis { 
-            margin-top: 15px; 
-            padding: 15px; 
-            border: 2px solid #ff007f; /* Vibrant color for AI */
-            border-radius: 6px; 
-            background-color: #3e2d30;
-        }
-        #ai-analysis p { margin: 5px 0; font-size: 0.95em; }
+        /* CANVAS MAP (4m x 4m) */
+        #roverMap { border: 3px solid #6a9955; background-color: #3d3d3d; display: block; margin: 20px auto 0; }
+        
+        /* AI RESULTS STYLING */
+        #ai-analysis { margin-top: 15px; padding: 15px; border: 2px solid #ff007f; border-radius: 6px; background-color: #3e2d30; }
         #ai-analysis strong { color: #f28b82; }
-        #ai-analysis h3 { color: #d6b8ff; margin-top: 8px; margin-bottom: 3px; border-bottom: 1px dashed #5a5a5a; padding-bottom: 3px; }
 
+        /* --- NEW: 4x4 PHOTO GRID STYLES --- */
+        #photoGrid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(4, 1fr);
+            gap: 5px;
+            border: 2px solid #569cd6;
+            max-width: 450px;
+            margin: 20px auto;
+            aspect-ratio: 1 / 1; 
+            background-color: #252526;
+        }
+        .grid-cell {
+            background-color: #3d3d3d;
+            border: 1px solid #4ec9b0;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            overflow: hidden;
+            transition: background-color 0.1s;
+        }
+        .grid-cell:hover { background-color: #555; }
+        .cell-label {
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            font-weight: bold;
+            color: #4ec9b0;
+            font-size: 16px;
+            z-index: 10;
+            background: rgba(45, 45, 48, 0.7);
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+        .cell-photo {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
     </style>
 </head>
 <body>
@@ -68,6 +108,7 @@
             <h3 style="border-bottom: none;">Overall Recommendation</h3>
             <p><strong>Action Required:</strong> <span id="ai-recommendation">Fetching...</span></p>
         </div>
+
         <div class="move-controls">
             <h2>Rover Movement</h2>
             <button onclick="sendCommand('forward')">Forward (↑)</button>
@@ -79,27 +120,11 @@
 
         <hr style="border-top: 1px solid #3c3c3c;">
 
-        <div class="camera-control">
-            <h2>Image Capture & Gallery</h2>
-            <button onclick="sendCommand('capture')">📸 Take Photo (to Dell Wyse)</button>
-            <button class="secondary" onclick="toggleGallery()">🖼️ View Stock Images</button>
-            <p>Last photo status: <span id="lastPhotoStatus">N/A</span>. Sent to Dell Wyse server at <span id="server-ip">192.168.X.X:5000</span>.</p>
-        </div>
-        
-        <div id="photoGallery">
-            <h3>Stock Image Gallery (Simulation)</h3>
-            <div class="gallery-container" id="imageContainer">
-                </div>
-        </div>
-
-        <hr style="border-top: 1px solid #3c3c3c;">
-
         <div class="arm-controls">
             <h2>Data Acquisition</h2>
             <button onclick="sendCommand('probe')">🔬 Probe Soil (Arm Down)</button>
             <button onclick="sendCommand('read_sensors')">💧 Read Soil Data</button>
             <button onclick="sendCommand('read_nav')">🧭 Get GPS/Heading</button>
-            <button onclick="clearMapData()">🗑️ Clear Map Data</button>
         </div>
 
         <hr style="border-top: 1px solid #3c3c3c;">
@@ -120,9 +145,27 @@
     </div>
 
     <div class="map-panel">
-        <h2>Field Map ($3\text{m} \times 3\text{m}$ Grid)</h2>
+        <h2>Field Map ($\mathbf{4\text{m} \times 4\text{m}}$ Grid)</h2>
         <canvas id="roverMap" width="450" height="450"></canvas>
-        <p>Map Key: $\text{Grid} = 1 \text{m} \times 1 \text{m}$. $\text{Green/Yellow/Red Circles} = \text{Plant Health}$. $\text{Blue Triangle} = \text{Rover}$.</p>
+        <p>Map Key: $\text{Grid} = 1 \text{m} \times 1 \text{m}$. $\text{Circles} = \text{Health}$. $\text{Triangle} = \text{Rover}$.</p>
+        <button onclick="clearMapData()">🗑️ Clear Map Data</button>
+    </div>
+
+    <div class="photo-panel">
+        <div class="camera-control">
+            <h2>Image Capture & Gallery</h2>
+            <button onclick="sendCommand('capture')">📸 Take Photo (to Dell Wyse)</button>
+            <p>Last photo status: <span id="lastPhotoStatus">N/A</span>. Sent to Dell Wyse server at <span id="server-ip">192.168.X.X:5000</span>.</p>
+        </div>
+
+        <hr style="border-top: 1px solid #3c3c3c;">
+
+        <h2>Manual Photo Upload Map (Zones 1-16)</h2>
+        <p>Click a zone below to manually upload a photo for that $\mathbf{1\text{m} \times 1\text{m}}$ area.</p>
+        <div id="photoGrid">
+            </div>
+        <input type="file" id="fileInput" accept="image/*" style="display:none;" onchange="handleFileSelect(event)">
+        <p><small>Note: Uploaded photos are stored locally in your browser's memory/cache.</small></p>
     </div>
 </div>
 
@@ -140,80 +183,103 @@
     // Update the server IP display on the page
     document.getElementById('server-ip').innerText = DELL_WYSE_IP.replace('http://', ''); 
 
-    // Map Constants
+    // --- MAP CONSTANTS (UPDATED FOR 4m x 4m) ---
     const MAP_CANVAS = document.getElementById('roverMap');
     const CTX = MAP_CANVAS.getContext('2d');
-    const MAP_SIZE = 450;
-    const FIELD_SIZE = 3;
+    const MAP_SIZE = 450; 
+    const FIELD_SIZE = 4; // *** UPDATED: 4 meters ***
     const PIXELS_PER_METER = MAP_SIZE / FIELD_SIZE;
     
-    // Plant locations in meters (relative to bottom-left corner (0,0))
+    // Plant locations in meters (16 total for a 4x4 grid)
     const PLANT_LOCATIONS_M = [
-        {x: 0.5, y: 0.5}, {x: 1.5, y: 0.5}, {x: 2.5, y: 0.5},
-        {x: 0.5, y: 1.5}, {x: 1.5, y: 1.5}, {x: 2.5, y: 1.5},
-        {x: 0.5, y: 2.5}, {x: 1.5, y: 2.5}, {x: 2.5, y: 2.5}
+        {x: 0.5, y: 0.5}, {x: 1.5, y: 0.5}, {x: 2.5, y: 0.5}, {x: 3.5, y: 0.5},
+        {x: 0.5, y: 1.5}, {x: 1.5, y: 1.5}, {x: 2.5, y: 1.5}, {x: 3.5, y: 1.5},
+        {x: 0.5, y: 2.5}, {x: 1.5, y: 2.5}, {x: 2.5, y: 2.5}, {x: 3.5, y: 2.5},
+        {x: 0.5, y: 3.5}, {x: 1.5, y: 3.5}, {x: 2.5, y: 3.5}, {x: 3.5, y: 3.5}
     ];
 
     let loggedData = []; 
+    let selectedZone = 0; // Tracks which zone (1-16) was clicked for upload
 
     let currentRoverData = {
         latitude: 0, 
         longitude: 0, 
         heading: 0, 
-        x_m: 1.5, 
-        y_m: 1.5 
+        x_m: 2.0, // Center of 4m field
+        y_m: 2.0 
     };
     
-    const STOCK_IMAGES = [
-        {url: 'placeholder_healthy.jpg', caption: 'Healthy Plant'},
-        {url: 'placeholder_damaged.jpg', caption: 'Damaged Crop'},
-        {url: 'placeholder_dry.jpg', caption: 'Dry Soil'},
-        {url: 'placeholder_wet.jpg', caption: 'Wet Soil'},
-        {url: 'placeholder_npk_issue.jpg', caption: 'NPK Deficiency'},
-        {url: 'placeholder_rover.jpg', caption: 'Rover View'}
-    ];
-
-
-    // --- Gallery Functions ---
+    // ------------------------------------
+    // --- NEW: PHOTO GRID FUNCTIONS ---
+    // ------------------------------------
     
-    function populateGallery() {
-        const container = document.getElementById('imageContainer');
-        if (container.children.length > 0) return; 
-
-        STOCK_IMAGES.forEach(img => {
-            const item = document.createElement('div');
-            item.className = 'gallery-item';
-            item.innerHTML = img.caption.replace(/\s/g, '<br>'); 
-            container.appendChild(item);
-        });
-    }
-
-    function toggleGallery() {
-        const gallery = document.getElementById('photoGallery');
-        if (gallery.style.display === 'flex') {
-            gallery.style.display = 'none';
-        } else {
-            populateGallery(); 
-            gallery.style.display = 'flex';
+    function generatePhotoGrid() {
+        const grid = document.getElementById('photoGrid');
+        for (let i = 1; i <= 16; i++) {
+            const cell = document.createElement('div');
+            cell.className = 'grid-cell';
+            cell.id = 'zone-' + i;
+            cell.innerHTML = '<span class="cell-label">' + i + '</span>';
+            
+            // Add event listener for manual photo upload
+            cell.addEventListener('click', function() {
+                selectedZone = i;
+                document.getElementById('fileInput').click(); // Trigger the hidden file dialog
+            });
+            
+            grid.appendChild(cell);
+            loadPhoto(i); // Load any stored photo
         }
     }
 
+    function handleFileSelect(event) {
+        const file = event.target.files[0];
+        if (!file || selectedZone === 0) return;
 
-    // --- AI Analysis Fetch Function (UPDATED) ---
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const base64Image = e.target.result;
+            // Store the image in the browser's local storage (Dell Wyse Cache)
+            localStorage.setItem('zonePhoto' + selectedZone, base64Image);
+            loadPhoto(selectedZone, base64Image);
+            selectedZone = 0; // Reset selected zone
+        };
+        reader.readAsDataURL(file); // Convert file to Base64 string
+    }
+
+    function loadPhoto(zoneId, base64Image) {
+        const cell = document.getElementById('zone-' + zoneId);
+        if (!cell) return;
+        
+        if (!base64Image) {
+            base64Image = localStorage.getItem('zonePhoto' + zoneId);
+        }
+        
+        const existingPhoto = cell.querySelector('.cell-photo');
+        if (existingPhoto) existingPhoto.remove();
+
+        if (base64Image) {
+            const img = document.createElement('img');
+            img.src = base64Image;
+            img.className = 'cell-photo';
+            cell.appendChild(img);
+        }
+    }
+
+    // ------------------------------------
+    // --- AI AND COMMUNICATION FUNCTIONS ---
+    // ------------------------------------
+    
     function fetchAIResults() {
         fetch(DELL_WYSE_IP + '/ai_results')
             .then(response => {
-                if (!response.ok) {
-                    throw new Error('Dell Wyse Server returned error ' + response.status);
-                }
+                if (!response.ok) { throw new Error('Dell Wyse Server returned error ' + response.status); }
                 return response.json();
             })
             .then(data => {
                 document.getElementById('ai-time').innerText = data.last_analysis_time || 'N/A';
                 document.getElementById('ai-health').innerText = data.image_health_score || 'N/A';
                 document.getElementById('ai-recommendation').innerText = data.overall_recommendation || 'No Recommendation';
-
-                // New Soil Analysis Fields
                 document.getElementById('ai-moisture-status').innerText = data.moisture_status || 'N/A';
                 document.getElementById('ai-moisture-value').innerText = data.moisture_value || 'N/A';
                 document.getElementById('ai-npk-status').innerText = data.npk_status || 'N/A';
@@ -221,32 +287,20 @@
             })
             .catch(error => {
                 document.getElementById('ai-time').innerText = 'ERROR';
-                document.getElementById('ai-health').innerText = 'ERROR';
                 document.getElementById('ai-recommendation').innerText = 'Cannot connect to Dell Wyse AI server.';
-                document.getElementById('ai-moisture-status').innerText = 'ERROR';
-                document.getElementById('ai-npk-status').innerText = 'ERROR';
                 console.error('Fetch AI error:', error);
             });
     }
 
-    // --- Data Communication and Update Functions ---
-
     function sendCommand(command) {
-        let url = '';
-        if (command === 'capture') {
-            url = `${ESP32_URL_BASE}/capture`; 
-        } else {
-            url = `${ESP32_URL_BASE}/move?dir=${command}`;
-        }
+        let url = (command === 'capture') ? `${ESP32_URL_BASE}/capture` : `${ESP32_URL_BASE}/move?dir=${command}`;
         
         STATUS_ELEMENT.innerText = `Sending command: ${command}...`;
         if (command === 'capture') { LAST_PHOTO_STATUS.innerText = 'Attempting capture...'; }
 
         fetch(url)
             .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP Error: ${response.status}`);
-                }
+                if (!response.ok) { throw new Error(`HTTP Error: ${response.status}`); }
                 return response.text();
             })
             .then(data => {
@@ -254,10 +308,7 @@
                 if (command === 'capture') {
                     LAST_PHOTO_STATUS.innerText = 'Photo command sent. Awaiting Wyse confirmation (poll AI results).';
                 }
-
                 if (command.startsWith('read_') || command === 'probe') {
-                    // Force a fetch of the webpage data (which updates live sensor data)
-                    // and then force an AI results fetch shortly after.
                     setTimeout(() => fetchData(command), 500); 
                     setTimeout(() => fetchAIResults(), 1000); 
                 }
@@ -269,71 +320,67 @@
             });
     }
     
+    // --- SIMULATED/MOCK DATA FETCH ---
     function fetchData(lastCommand = null) {
         
         STATUS_ELEMENT.innerText = "Fetching latest data...";
         
-        // This is a simplified fetch/parse for simulation. In a real system, you'd fetch /sensor_data JSON
-        fetch(ESP32_URL_BASE)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`Failed to fetch data: ${response.status}`);
-                }
-                return response.text();
-            })
-            .then(html => {
-                // --- SIMULATED DATA UPDATES (Simplified as ESP32 HTML is static) ---
-                 currentRoverData.latitude = "40.7128";
-                 currentRoverData.longitude = "-74.0060";
-                 let headingStr = (Math.random() * 360).toFixed(1) + ' deg';
-                 currentRoverData.heading = parseFloat(headingStr.split(' ')[0]) || 0; 
-                 document.getElementById('latitudeData').innerText = currentRoverData.latitude;
-                 document.getElementById('longitudeData').innerText = currentRoverData.longitude;
-                 document.getElementById('gpsFix').innerText = "3D Fix";
-                 document.getElementById('headingData').innerText = headingStr;
+        // This is a mock function since a full ESP32 server isn't provided here.
+        // It simulates data updates and rover movement.
+        setTimeout(() => {
+            // Simulate GPS/Nav Data
+             currentRoverData.latitude = "40.7128";
+             currentRoverData.longitude = "-74.0060";
+             let headingStr = (Math.random() * 360).toFixed(1) + ' deg';
+             currentRoverData.heading = parseFloat(headingStr.split(' ')[0]) || 0; 
+             document.getElementById('latitudeData').innerText = currentRoverData.latitude;
+             document.getElementById('longitudeData').innerText = currentRoverData.longitude;
+             document.getElementById('gpsFix').innerText = "3D Fix";
+             document.getElementById('headingData').innerText = headingStr;
 
-                 // **SIMULATE ROVER MOVEMENT**
-                 if (lastCommand !== 'read_nav') {
-                    currentRoverData.x_m = Math.min(FIELD_SIZE, Math.max(0, parseFloat(currentRoverData.x_m) + (Math.random() - 0.5) * 0.1)).toFixed(2);
-                    currentRoverData.y_m = Math.min(FIELD_SIZE, Math.max(0, parseFloat(currentRoverData.y_m) + (Math.random() - 0.5) * 0.1)).toFixed(2);
-                 }
+             // Simulate Rover Movement within 4m bounds
+             if (lastCommand !== 'read_nav' && lastCommand !== 'stop') {
+                 currentRoverData.x_m = Math.min(FIELD_SIZE, Math.max(0, parseFloat(currentRoverData.x_m) + (Math.random() - 0.5) * 0.1)).toFixed(2);
+                 currentRoverData.y_m = Math.min(FIELD_SIZE, Math.max(0, parseFloat(currentRoverData.y_m) + (Math.random() - 0.5) * 0.1)).toFixed(2);
+             }
 
-                 let moistureStr = (Math.random() * 80 + 10).toFixed(1) + '%';
-                 let npkStr = `N:${Math.floor(Math.random() * 100)}, P:${Math.floor(Math.random() * 100)}, K:${Math.floor(Math.random() * 100)}`;
-                 document.getElementById('moistureData').innerText = moistureStr;
-                 document.getElementById('npkData').innerText = npkStr;
+             // Simulate Soil Data
+             let moistureStr = (Math.random() * 80 + 10).toFixed(1) + '%';
+             let npkStr = `N:${Math.floor(Math.random() * 100)}, P:${Math.floor(Math.random() * 100)}, K:${Math.floor(Math.random() * 100)}`;
+             document.getElementById('moistureData').innerText = moistureStr;
+             document.getElementById('npkData').innerText = npkStr;
+            
+             // Log Data if a read command was sent
+             if (lastCommand === 'probe' || lastCommand === 'read_sensors') {
                 
-                // 3. LOG Data if a read command was just sent
-                if (lastCommand === 'probe' || lastCommand === 'read_sensors') {
-                    
-                    let moisture = parseFloat(moistureStr.split('%')[0]) || 0;
-                    let npk_values = npkStr.match(/N:(\d+), P:(\d+), K:(\d+)/);
-                    let npk_n = npk_values ? parseInt(npk_values[1]) : 0;
-                    let npk_p = npk_values ? parseInt(npk_values[2]) : 0;
-                    let npk_k = npk_values ? parseInt(npk_values[3]) : 0;
-                    
-                    let healthStatus = analyzeHealth(moisture, npk_n, npk_p, npk_k);
+                 let moisture = parseFloat(moistureStr.split('%')[0]) || 0;
+                 let npk_values = npkStr.match(/N:(\d+), P:(\d+), K:(\d+)/);
+                 let npk_n = npk_values ? parseInt(npk_values[1]) : 0;
+                 let npk_p = npk_values ? parseInt(npk_values[2]) : 0;
+                 let npk_k = npk_values ? parseInt(npk_values[3]) : 0;
+                
+                 let healthStatus = analyzeHealth(moisture, npk_n, npk_p, npk_k);
 
-                    loggedData.push({
-                        x_m: parseFloat(currentRoverData.x_m),
-                        y_m: parseFloat(currentRoverData.y_m),
-                        healthStatus: healthStatus,
-                        moisture: moisture
-                    });
-                    STATUS_ELEMENT.innerText = `Data logged! Status: ${healthStatus}`;
-                }
+                 loggedData.push({
+                     x_m: parseFloat(currentRoverData.x_m),
+                     y_m: parseFloat(currentRoverData.y_m),
+                     healthStatus: healthStatus,
+                     moisture: moisture
+                 });
+                 STATUS_ELEMENT.innerText = `Data logged! Status: ${healthStatus}`;
+             }
 
+             // Draw the map with the new data
+             drawMap();
+             STATUS_ELEMENT.innerText = "Data updated successfully.";
 
-                // 4. Draw the map with the new data
-                drawMap();
-
-            })
-            .catch(error => {
-                STATUS_ELEMENT.innerText = `ERROR: Could not fetch data from ESP32.`;
-                console.error('Error fetching data:', error);
-            });
+        }, 500); // Simulate network delay
     }
     
+    // ------------------------------------
+    // --- MAP & HEALTH LOGIC (4x4) ---
+    // ------------------------------------
+
     function analyzeHealth(moisture, npk_n, npk_p, npk_k) {
         let issues = 0;
         const MIN_MOISTURE = 30;
@@ -368,19 +415,19 @@
     function drawMap() {
         CTX.clearRect(0, 0, MAP_SIZE, MAP_SIZE);
         
-        // 1. Draw the 3x3 Grid
+        // 1. Draw the 4x4 Grid
         CTX.strokeStyle = '#5a5a5a'; 
         CTX.lineWidth = 1;
-        for (let i = 1; i < FIELD_SIZE; i++) {
+        for (let i = 1; i < FIELD_SIZE; i++) { 
             let px = i * PIXELS_PER_METER;
             CTX.beginPath(); CTX.moveTo(px, 0); CTX.lineTo(px, MAP_SIZE); CTX.stroke();
             CTX.beginPath(); CTX.moveTo(0, px); CTX.lineTo(MAP_SIZE, px); CTX.stroke();
         }
 
-        // 2. Map Soil Condition 
+        // 2. Map Soil Condition (Background Squares)
         const GRID_SIZE_M = 1.0;
-        for (let row = 0; row < FIELD_SIZE; row++) {
-            for (let col = 0; col < FIELD_SIZE; col++) {
+        for (let row = 0; row < FIELD_SIZE; row++) { 
+            for (let col = 0; col < FIELD_SIZE; col++) { 
                 let center_x_m = col * GRID_SIZE_M + 0.5;
                 let center_y_m = row * GRID_SIZE_M + 0.5;
 
@@ -415,7 +462,7 @@
             }
         }
 
-        // 3. Draw Tomato Plants (Color coded by health)
+        // 3. Draw Plant Health Circles
         PLANT_LOCATIONS_M.forEach((plant, index) => {
             let px = plant.x * PIXELS_PER_METER;
             let py = MAP_SIZE - (plant.y * PIXELS_PER_METER);
@@ -448,7 +495,7 @@
             }
         });
 
-        // 4. Draw Rover Position and Heading
+        // 4. Draw Rover Position and Heading (Triangle)
         let rover_x_px = currentRoverData.x_m * PIXELS_PER_METER;
         let rover_y_px = MAP_SIZE - (currentRoverData.y_m * PIXELS_PER_METER);
         let heading_rad = (currentRoverData.heading - 90) * (Math.PI / 180);
@@ -459,7 +506,7 @@
         CTX.rotate(heading_rad); 
 
         CTX.beginPath();
-        CTX.moveTo(10, 0);   
+        CTX.moveTo(10, 0);  
         CTX.lineTo(-10, -8); 
         CTX.lineTo(-10, 8);  
         CTX.closePath();
@@ -473,13 +520,14 @@
         CTX.fill();
     }
     
-    // Initialization
+    // --- Initialization ---
     window.onload = function() {
         drawMap(); 
+        generatePhotoGrid(); // Initialize the new photo grid (Zones 1-16)
         fetchData(); 
-        fetchAIResults(); // Initial fetch for AI results
-        setInterval(fetchData, 3000); // Polling for sensor data
-        setInterval(fetchAIResults, 5000); // Polling for AI analysis results
+        fetchAIResults();
+        setInterval(fetchData, 3000); 
+        setInterval(fetchAIResults, 5000); 
         LAST_PHOTO_STATUS.innerText = 'No photos taken yet.';
     };
 </script>
