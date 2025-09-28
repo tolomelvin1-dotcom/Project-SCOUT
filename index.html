@@ -446,84 +446,92 @@ function closeStockImageModal() {
 document.getElementById('stockImageModal').style.display = "none";
 }
 
-// --- NEW CLASSICAL CV ANALYSIS FUNCTION ---
+// --- NEW CLASSICAL CV ANALYSIS FUNCTION (ASYNC) ---
 function getCVAnalysis(base64Image) {
     if (!cvReady) {
-        return { score: 5, diagnosis: "CV Library Not Ready", prediction: TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS.find(d => d.name.includes("Mottling")) };
+        return Promise.resolve({ score: 5, diagnosis: "CV Library Not Ready", prediction: TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS.find(d => d.name.includes("Mottling")) });
     }
     
-    // 1. Create temporary image and load the data into an OpenCV Mat
-    const img = document.createElement('img');
-    img.src = base64Image;
-
-    try {
-        const src = cv.imread(img);
-        if (src.cols === 0 || src.rows === 0) {
-            src.delete();
-            return { score: 10, diagnosis: "CV Error: Failed to read image data.", prediction: TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS.find(d => d.name.includes("Mottling")) };
-        }
-
-        // 2. Convert to HSV
-        const hsv = new cv.Mat();
-        cv.cvtColor(src, hsv, cv.COLOR_RGB2HSV);
-
-        // 3. Define Masks (H, S, V)
-        // Green (Healthy) Range (H: 30-90, S: 40-255, V: 40-255)
-        const green_low = new cv.Mat(hsv.rows, hsv.cols, hsv.type(), [30, 40, 40, 0]);
-        const green_high = new cv.Mat(hsv.rows, hsv.cols, hsv.type(), [90, 255, 255, 255]);
-        const green_mask = new cv.Mat();
-        cv.inRange(hsv, green_low, green_high, green_mask);
-
-        // Yellow/Brown (Unhealthy) Range (H: 15-30, S: 60-255, V: 60-255)
-        const yellow_low = new cv.Mat(hsv.rows, hsv.cols, hsv.type(), [15, 60, 60, 0]);
-        const yellow_high = new cv.Mat(hsv.rows, hsv.cols, hsv.type(), [30, 255, 255, 255]);
-        const yellow_mask = new cv.Mat();
-        cv.inRange(hsv, yellow_low, yellow_high, yellow_mask);
+    return new Promise((resolve) => {
+        const img = document.createElement('img');
         
-        green_low.delete(); green_high.delete();
-        yellow_low.delete(); yellow_high.delete();
+        img.onload = function() {
+            try {
+                // Load image into OpenCV Mat
+                const src = cv.imread(img);
+                if (src.cols === 0 || src.rows === 0) {
+                    src.delete();
+                    resolve({ score: 10, diagnosis: "CV Error: Failed to read image data (0 size).", prediction: TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS.find(d => d.name.includes("Mottling")) });
+                    return;
+                }
 
-        // 4. Calculate pixel counts
-        const greenPixels = cv.countNonZero(green_mask);
-        const unhealthyPixels = cv.countNonZero(yellow_mask);
-        const totalAnalyzedPixels = greenPixels + unhealthyPixels;
-
-        // Clean up Mats
-        src.delete(); hsv.delete(); green_mask.delete(); yellow_mask.delete();
+                // 2. Convert to HSV
+                const hsv = new cv.Mat();
+                cv.cvtColor(src, hsv, cv.COLOR_RGBA2HSV); // Use RGBA2HSV for image data
         
-        let finalScore = 100;
-        let diagnosis = "Healthy, Deep Green (CV Analysis)";
-        let prediction = TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS.find(d => d.name.includes("Healthy"));
-        
-        if (totalAnalyzedPixels > 500) { // Require a minimum number of pixels to analyze
-            const ratio = greenPixels / totalAnalyzedPixels;
-            finalScore = Math.max(10, Math.min(100, Math.round(ratio * 100)));
+                // 3. Define Masks (H, S, V)
+                // Green (Healthy) Range (H: 30-90, S: 40-255, V: 40-255)
+                const green_low = new cv.Mat(hsv.rows, hsv.cols, hsv.type(), [30, 40, 40, 0]);
+                const green_high = new cv.Mat(hsv.rows, hsv.cols, hsv.type(), [90, 255, 255, 255]);
+                const green_mask = new cv.Mat();
+                cv.inRange(hsv, green_low, green_high, green_mask);
 
-            if (ratio < 0.6) {
-                diagnosis = "General Yellowing (Chlorosis) - CV";
-                prediction = TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS.find(d => d.name.includes("Yellowing"));
-            } else if (ratio < 0.8) {
-                diagnosis = "Mild Chlorosis - CV";
+                // Yellow/Brown (Unhealthy) Range (H: 15-30, S: 60-255, V: 60-255)
+                const yellow_low = new cv.Mat(hsv.rows, hsv.cols, hsv.type(), [15, 60, 60, 0]);
+                const yellow_high = new cv.Mat(hsv.rows, hsv.cols, hsv.type(), [30, 255, 255, 255]);
+                const yellow_mask = new cv.Mat();
+                cv.inRange(hsv, yellow_low, yellow_high, yellow_mask);
+                
+                green_low.delete(); green_high.delete();
+                yellow_low.delete(); yellow_high.delete();
+
+                // 4. Calculate pixel counts
+                const greenPixels = cv.countNonZero(green_mask);
+                const unhealthyPixels = cv.countNonZero(yellow_mask);
+                const totalAnalyzedPixels = greenPixels + unhealthyPixels;
+
+                // Clean up Mats
+                src.delete(); hsv.delete(); green_mask.delete(); yellow_mask.delete();
+                
+                let finalScore = 100;
+                let diagnosis = "Healthy, Deep Green (CV Analysis)";
+                let prediction = TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS.find(d => d.name.includes("Healthy"));
+                
+                if (totalAnalyzedPixels > 500) { // Require a minimum number of relevant pixels to analyze
+                    const ratio = greenPixels / totalAnalyzedPixels;
+                    finalScore = Math.max(10, Math.min(100, Math.round(ratio * 100)));
+
+                    if (ratio < 0.6) {
+                        diagnosis = `General Yellowing (Chlorosis) - CV: ${finalScore}%`;
+                        prediction = TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS.find(d => d.name.includes("Yellowing"));
+                    } else if (ratio < 0.8) {
+                        diagnosis = `Mild Chlorosis - CV: ${finalScore}%`;
+                    }
+                } else {
+                    // Not enough foliage to analyze, default to neutral
+                    finalScore = 80;
+                    diagnosis = "Neutral (Low Relevant Pixel Count)";
+                }
+                
+                resolve({ score: finalScore, diagnosis: diagnosis, prediction: prediction });
+            } catch (e) {
+                console.error("OpenCV Analysis Error:", e);
+                // Fallback to critical error state if CV crashes
+                resolve({ score: 5, diagnosis: "CV Library Error during processing.", prediction: TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS.find(d => d.name.includes("Mottling")) });
             }
-        } else {
-            // Not enough foliage to analyze, default to neutral
-            finalScore = 80;
-            diagnosis = "Neutral (Low Pixel Count)";
+        };
+        img.onerror = function() {
+            resolve({ score: 5, diagnosis: "CV Image Load Error.", prediction: TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS.find(d => d.name.includes("Mottling")) });
         }
-        
-        return { score: finalScore, diagnosis: diagnosis, prediction: prediction };
-    } catch (e) {
-        console.error("OpenCV Analysis Error:", e);
-        // Fallback to critical error state if CV crashes
-        return { score: 5, diagnosis: "CV Library Error during processing.", prediction: TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS.find(d => d.name.includes("Mottling")) };
-    }
+        // Start loading the image
+        img.src = base64Image;
+    });
 }
 // --- END NEW CLASSICAL CV ANALYSIS FUNCTION ---
 
-function getPhotoPrediction(base64Image) {
+async function getPhotoPrediction(base64Image) {
     if (base64Image.includes('mocked_stock_photo_hash') || base64Image.includes('mocked_rover_capture_zone')) {
         // MOCK PATH: Retains the original hash-based deterministic diagnosis for stock photos
-        // This ensures the demo still shows complex diseases like 'Mottling' and 'Dark Spots'.
         const mockMatch = base64Image.match(/diag:([a-zA-Z_]+)/);
         const mockDiseaseName = mockMatch ? mockMatch[1].replace(/_/g, ' ') : "Healthy, Deep Green";
 
@@ -533,45 +541,55 @@ function getPhotoPrediction(base64Image) {
         
         return {
             score: mockScore,
-            diagnosis: prediction.name,
+            diagnosis: prediction.name + ` (Mock: ${mockScore}%)`,
             prediction: prediction
         };
 
     } else {
         // ACTUAL CV PATH: Used for user-uploaded photos
-        return getCVAnalysis(base64Image);
+        return await getCVAnalysis(base64Image);
     }
 }
 
-function renderStockImageGrid() {
+async function renderStockImageGrid() {
 const grid = document.getElementById('stockImageGrid');
-grid.innerHTML = '';
+grid.innerHTML = '<div>Loading Stock Images...</div>'; // Loading message
+
+// Create an array of promises for stock photo analysis
+const analysisPromises = [];
+for (let i = 1; i <= 16; i++) {
+    const base64Image = stockPhotoData[i];
+    analysisPromises.push(getPhotoPrediction(base64Image));
+}
+
+const results = await Promise.all(analysisPromises);
+grid.innerHTML = ''; // Clear loading message
 
 for (let i = 1; i <= 16; i++) {
-const base64Image = stockPhotoData[i];
-const result = getPhotoPrediction(base64Image); // Use the combined function
+    const base64Image = stockPhotoData[i];
+    const result = results[i-1];
 
-const cell = document.createElement('div');
-cell.className = 'grid-cell';
-cell.style.maxWidth = '150px';
-cell.style.aspectRatio = '1/1';
+    const cell = document.createElement('div');
+    cell.className = 'grid-cell';
+    cell.style.maxWidth = '150px';
+    cell.style.aspectRatio = '1/1';
 
-const img = document.createElement('img');
-img.src = base64Image;
-img.className = 'cell-photo';
+    const img = document.createElement('img');
+    img.src = base64Image;
+    img.className = 'cell-photo';
 
-const label = document.createElement('div');
-label.style.position = 'absolute';
-label.style.bottom = '0';
-label.style.backgroundColor = 'rgba(0,0,0,0.7)';
-label.style.color = 'white';
-label.style.padding = '5px';
-label.style.fontSize = '10px';
-label.innerText = `ID ${i}: ${result.prediction.name.split('(')[0].trim()}`;
-cell.appendChild(img);
-cell.appendChild(label);
-cell.onclick = () => assignStockPhotoToZone(i);
-grid.appendChild(cell);
+    const label = document.createElement('div');
+    label.style.position = 'absolute';
+    label.style.bottom = '0';
+    label.style.backgroundColor = 'rgba(0,0,0,0.7)';
+    label.style.color = 'white';
+    label.style.padding = '5px';
+    label.style.fontSize = '10px';
+    label.innerText = `ID ${i}: ${result.prediction.name.split('(')[0].trim()}`;
+    cell.appendChild(img);
+    cell.appendChild(label);
+    cell.onclick = () => assignStockPhotoToZone(i);
+    grid.appendChild(cell);
 }
 }
 function assignStockPhotoToZone(stockId) {
@@ -585,14 +603,14 @@ renderPhotoInCell(selectedZone, base64Image);
 STATUS_ELEMENT.innerText = `Stock Photo ID ${stockId} assigned to Zone ${selectedZone}.`;
 closeStockImageModal();
 selectedZone = 0;
-fetchAIResults();
+fetchAIResults(); // Re-run analysis
 }
 function deletePhoto(zoneId) {
 if (!photoData[zoneId]) return;
 delete photoData[zoneId];
 renderPhotoInCell(zoneId, null);
 STATUS_ELEMENT.innerText = `Photo deleted from Zone ${zoneId}.`;
-fetchAIResults();
+fetchAIResults(); // Re-run analysis
 }
 function generatePhotoGrid() {
 const grid = document.getElementById('photoGrid');
@@ -626,7 +644,7 @@ selectedZone = 0;
 
 event.target.value = '';
 
-fetchAIResults();
+fetchAIResults(); // Re-run analysis with the new photo
 };
 reader.readAsDataURL(file);
 }
@@ -672,9 +690,10 @@ nearestData = data;
 return nearestData;
 }
 
-function analyzePlant(plant, sensorData, photoExists) {
+function analyzePlant(plant, sensorData, visualResult) {
 let soilScore = 100;
 let soilProblems = [];
+let sensorDiagnosis = "Soil: Sensor Data Missing (Cannot Analyze)";
 
 // --- 1. Sensor Data Analysis ---
 if (sensorData) {
@@ -714,7 +733,7 @@ return {
 id: plant.id,
 score: 20,
 visualDiagnosis: "Visual: N/A (Data Missing)",
-sensorDiagnosis: "Soil: Sensor Data Missing (Cannot Analyze)",
+sensorDiagnosis: sensorDiagnosis,
 recommendation: "***CRITICAL ERROR: DATA GAP***. Conduct soil probe at Zone " + plant.id + " immediately to enable fused analysis.",
 healthClass: 'rec-critical'
 };
@@ -727,11 +746,11 @@ let visualScore = 100;
 let finalRecommendation = '';
 let healthClass = 'rec-optimal';
 
-if (photoExists) {
-    const visualResult = getPhotoPrediction(photoData[plant.id]); // Get prediction object from CV/Mock
+if (visualResult) {
     prediction = visualResult.prediction;
     visualScore = visualResult.score;
-    visualDiagnosis = `Visual: ${visualResult.diagnosis} (Score: ${visualScore}%)`;
+    // visualDiagnosis now includes the visual score for better pre-analysis clarity
+    visualDiagnosis = `Visual: ${visualResult.diagnosis}`;
 
     // Apply the visual score (from CV/Mock) as a penalty to the soil score
     // Lower score means higher penalty. Penalty maxes out at 90.
@@ -778,7 +797,7 @@ healthClass = 'rec-action'; // Usually action, not critical, unless growth is se
 // TIER 5: SECONDARY DEFICIENCY INFERENCE
 else if (isYellow && isLowK) {
 const critK = soilProblems.find(p => p.key === 'K');
-finalRecommendation = `INFERENCE: Yellowing present. Low Potassium (${critK.value} ppm) suggests K-deficiency. Supplement Potassium to boost immunity/fruit health.`;
+finalRecommendation = `INFERENCE: Yellowing present. Low Potassium (${critK.value} ppm) suggests K-deficiency. Supplement Potassium to boost resistance/fruit health.`;
 healthClass = 'rec-action';
 }
 // TIER 6: SOIL PROBLEMS ONLY (No Major Visual)
@@ -808,35 +827,50 @@ healthClass: healthClass
 };
 }
 
-function fetchAIResults() {
+// --- ASYNC AI Analysis function ---
+async function fetchAIResults() {
 const analysisGrid = document.getElementById('plantAnalysisGrid');
-analysisGrid.innerHTML = '';
-PLANT_LOCATIONS_M.forEach(plant => {
-const sensorData = getNearestSensorData(plant.x, plant.y);
-const photoExists = !!photoData[plant.id];
+analysisGrid.innerHTML = '<h2>Running Fused Analysis... This may take a moment for CV processing.</h2>';
 
-const analysis = analyzePlant(plant, sensorData, photoExists);
-
-const recLabel = analysis.recommendation;
-const card = `
-<div class="analysis-card">
-<div class="plant-id-label">Zone ${analysis.id} (P${Math.ceil(plant.id/4)}R${(plant.id-1)%4 + 1})</div>
-<div class="analysis-row">
-<strong>Composite Score:</strong> <span class="status-good">${analysis.score}/100</span>
-</div>
-<div class="analysis-row">
-<strong>Leaf Analysis:</strong> ${analysis.visualDiagnosis}
-</div>
-<div class="analysis-row">
-<strong>Soil Analysis:</strong> ${analysis.sensorDiagnosis}
-</div>
-<div class="analysis-row" style="margin-top: 10px;">
-<strong>Recommendation:</strong> <span class="${analysis.healthClass}">${recLabel}</span>
-</div>
-</div>
-`;
-analysisGrid.insertAdjacentHTML('beforeend', card);
+// Create an array of promises for concurrent analysis
+const analysisPromises = PLANT_LOCATIONS_M.map(async plant => {
+    const sensorData = getNearestSensorData(plant.x, plant.y);
+    const photoExists = !!photoData[plant.id];
+    
+    let visualResult = null;
+    if (photoExists) {
+        visualResult = await getPhotoPrediction(photoData[plant.id]); // Wait for photo analysis
+    }
+    
+    return analyzePlant(plant, sensorData, visualResult); // Fused analysis
 });
+
+const analyses = await Promise.all(analysisPromises); // Wait for all analyses to complete
+
+analysisGrid.innerHTML = ''; // Clear status message
+
+analyses.forEach(analysis => {
+    const recLabel = analysis.recommendation;
+    const card = `
+    <div class="analysis-card">
+    <div class="plant-id-label">Zone ${analysis.id} (P${Math.ceil(analysis.id/4)}R${(analysis.id-1)%4 + 1})</div>
+    <div class="analysis-row">
+    <strong>Composite Score:</strong> <span class="status-good">${analysis.score}/100</span>
+    </div>
+    <div class="analysis-row">
+    <strong>Leaf Analysis:</strong> ${analysis.visualDiagnosis}
+    </div>
+    <div class="analysis-row">
+    <strong>Soil Analysis:</strong> ${analysis.sensorDiagnosis}
+    </div>
+    <div class="analysis-row" style="margin-top: 10px;">
+    <strong>Recommendation:</strong> <span class="${analysis.healthClass}">${recLabel}</span>
+    </div>
+    </div>
+    `;
+    analysisGrid.insertAdjacentHTML('beforeend', card);
+});
+
 STATUS_ELEMENT.innerText = `AI Analysis Complete: ${PLANT_LOCATIONS_M.length} plants analyzed.`;
 }
 // ------------------------------------
@@ -862,7 +896,7 @@ if (nearestPlant) {
 photoData[nearestPlant.id] = `data:image/jpeg;base64,mocked_rover_capture_zone_${nearestPlant.id}_diag:Healthy_Deep_Green`;
 renderPhotoInCell(nearestPlant.id, photoData[nearestPlant.id]);
 }
-setTimeout(() => fetchAIResults(), 1000);
+setTimeout(() => fetchAIResults(), 1000); // Re-run analysis
 }
 })
 .catch(error => {
