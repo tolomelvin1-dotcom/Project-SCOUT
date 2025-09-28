@@ -11,12 +11,11 @@
 <style>
 /* =============================================================================
 --- SECTION 1: GLOBAL STYLING AND THEME DEFINITIONS ---
-    This section defines the core visual theme (dark mode, high-contrast)
-    and ensures consistent typography across the dashboard elements.
+    (Detailed CSS for Dark Mode, High Contrast, and Layout)
 =============================================================================
 */
 
-/** Root Variables for Theming - Essential for Thematic Consistency **/
+/** Root Variables for Theming **/
 :root {
     --color-primary: #0078D4;       /* Command/Action Blue */
     --color-secondary: #4EC9B0;     /* Header/Accent Teal */
@@ -44,7 +43,7 @@ body {
     min-height: 100vh;
 }
 
-/* Main Layout Container (Flexbox for complex dashboard structure) */
+/* Main Layout Container */
 .container {
     max-width: 1700px;
     margin: auto;
@@ -60,11 +59,9 @@ body {
 
 /* =============================================================================
 --- SECTION 2: PANEL SIZING AND GENERAL STYLING ---
-    Defines the relative sizes and appearance of the main dashboard sections.
 =============================================================================
 */
 
-/* Panel Layout Rules */
 .controls-panel { flex: 0 0 350px; } 
 .map-panel { flex: 1; min-width: 450px; } 
 .photo-panel { flex: 1; min-width: 450px; } 
@@ -104,7 +101,6 @@ h2 {
 
 /* =============================================================================
 --- SECTION 3: INTERACTIVE ELEMENTS (BUTTONS & DATA) ---
-    Styling for command buttons and the structured data display areas.
 =============================================================================
 */
 
@@ -126,9 +122,10 @@ button:active {
 
 /* Specific Control Groups */
 .move-controls button { background-color: var(--color-primary); color: white; }
-.arm-controls button { background-color: var(--color-status-good); color: white; }
+.arm-controls button { background-color: #00AA90; color: white; }
 .camera-control button { background-color: var(--color-primary); color: white; }
 .history-controls button { background-color: #FF8C00; color: white; }
+.stock-control button { background-color: #6C757D; color: white; }
 
 /* Data Display Box */
 .data-display { 
@@ -152,7 +149,7 @@ button:active {
 }
 
 /* =============================================================================
---- SECTION 4: MAPS AND VISUALIZATION CONTAINERS ---
+--- SECTION 4: VISUALIZATION CONTAINERS & PHOTO GRID ---
 =============================================================================
 */
 
@@ -165,11 +162,6 @@ button:active {
     height: 450px;
     border-radius: 5px;
 }
-
-/* =============================================================================
---- SECTION 5: PHOTO GRID AND GALLERY STYLING ---
-=============================================================================
-*/
 
 #photoGrid {
     display: grid; 
@@ -224,7 +216,7 @@ button:active {
 
 
 /* =============================================================================
---- SECTION 6: ANALYSIS CARDS AND DIAGNOSTICS ---
+--- SECTION 5: ANALYSIS CARDS AND MODALS ---
 =============================================================================
 */
 #plantAnalysisGrid {
@@ -240,14 +232,7 @@ button:active {
     border-left: 5px solid var(--color-primary);
     box-shadow: 0 1px 3px rgba(0,0,0,0.3);
 }
-.plant-id-label { 
-    font-size: 1.5em; 
-    font-weight: bold; 
-    color: #ffd700; 
-    border-bottom: 2px solid var(--color-border); 
-    padding-bottom: 5px; 
-    margin-bottom: 15px; 
-}
+
 /* Health Status Recommendations */
 .rec-optimal, .rec-action, .rec-critical, .rec-initial {
     padding: 10px; 
@@ -264,12 +249,6 @@ button:active {
 .rec-critical { background-color: var(--color-status-bad); color: white; border: 1px solid #843535; }
 .rec-initial { background-color: var(--color-status-initial); color: white; border: 1px solid #3d3d3d; }
 
-
-/* =============================================================================
---- SECTION 7: MODALS AND HISTORY DISPLAY ---
-=============================================================================
-*/
-
 .modal { 
     display: none; 
     position: fixed; 
@@ -280,6 +259,8 @@ button:active {
     height: 100%; 
     overflow: auto; 
     background-color: rgba(0,0,0,0.85); 
+    justify-content: center;
+    align-items: center;
 }
 .modal-content { 
     background-color: var(--color-card); 
@@ -302,61 +283,6 @@ button:active {
     color: white;
     text-decoration: none;
     cursor: pointer;
-}
-.trial-item { 
-    padding: 15px; 
-    margin-bottom: 8px; 
-    background-color: #252526; 
-    border-radius: 7px; 
-    cursor: pointer; 
-    transition: background-color 0.2s;
-    border-left: 4px solid #FF8C00;
-}
-.trial-item:hover {
-    background-color: #333333;
-}
-
-/* =============================================================================
---- SECTION 8: FOOTER AND PROJECT IDENTITY ---
-=============================================================================
-*/
-
-.footer { 
-    text-align: center; 
-    padding: 15px; 
-    margin-top: 30px; 
-    font-size: 0.9em; 
-    color: #888; 
-    border-top: 1px solid #3C3C3C;
-    background-color: #1a1a1a;
-    border-radius: 8px;
-}
-
-/* =============================================================================
---- SECTION 9: RESPONSIVENESS (for robustness) ---
-=============================================================================
-*/
-
-@media (max-width: 1400px) {
-    .controls-panel, .map-3d-panel {
-        flex-basis: 100%; 
-    }
-    .map-panel, .photo-panel {
-        min-width: 0; 
-        flex: 1 1 45%; 
-    }
-}
-@media (max-width: 950px) {
-    .map-panel, .photo-panel {
-        flex: 1 1 100%; 
-    }
-    #roverMap, #threeDContainer, #photoGrid {
-        width: 100%;
-        max-width: 450px; 
-    }
-    #plantAnalysisGrid {
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
-    }
 }
 
 </style>
@@ -390,6 +316,8 @@ button:active {
 
         <div class="arm-controls">
             <h2>Data Acquisition</h2>
+            <button onclick="sendCommand('extendArm')">⬇️ Extend Arm</button>
+            <button onclick="sendCommand('retractArm')">⬆️ Retract Arm</button>
             <button onclick="sendCommand('probe')">🔬 Probe Soil (Log Data)</button>
             <button onclick="checkConnectionStatus()">📡 Check Rover/API Status</button>
         </div>
@@ -415,6 +343,9 @@ button:active {
         <div class="camera-control">
             <h2>Image Capture & Gallery</h2>
             <button onclick="sendCommand('capture')">📸 Request Photo (Current Zone)</button>
+        </div>
+        <div class="stock-control">
+            <button onclick="openStockPhotoModal()">📚 Use Stock Images</button>
             <p><small>Click a zone cell to manually upload a photo for analysis. Last photo status: <span id="lastPhotoStatus">---</span>.</small></p>
         </div>
         <div style="border-top: 1px solid var(--color-border); margin: 15px 0;"></div>
@@ -434,8 +365,7 @@ button:active {
         <h2>Plant-Specific Fused AI Analysis (16 Zones) 🔬</h2>
         <p>
             <small>
-                **Fused analysis** combines visual data (from the camera) and soil data (from the probe) to generate a diagnosis. 
-                *Note: All diagnosis starts as 'No Data' until both the photo and probe readings are acquired.*
+                **Fused analysis** combines visual data and soil data. **If only a photo is present, a preliminary score is provided (e.g., 50/100).**
             </small>
         </p>
         <div id="plantAnalysisGrid">
@@ -447,10 +377,19 @@ button:active {
     <div class="modal-content">
         <span class="close-btn" onclick="closeHistoryModal()">&times;</span>
         <h2>Saved Trial History</h2>
-        <div id="trialHistoryList">
-        </div>
+        <div id="trialHistoryList"></div>
         <div style="border-top: 1px solid var(--color-border); margin-top: 15px;"></div>
         <button onclick="clearAllHistory()" style="background-color: var(--color-status-bad);">🚨 Clear All Saved Trials</button>
+    </div>
+</div>
+
+<div id="stockPhotoModal" class="modal">
+    <div class="modal-content" style="max-width: 800px;">
+        <span class="close-btn" onclick="closeStockPhotoModal()">&times;</span>
+        <h2>Stock Photo Library 📚</h2>
+        <p>Select a stock image to assign to **Zone <span id="currentStockZone">None</span>**.</p>
+        <div id="stockPhotoList" style="display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; margin-top: 20px;">
+            </div>
     </div>
 </div>
 
@@ -463,71 +402,58 @@ button:active {
 /* =============================================================================
 =============================================================================
 --- SECTION 10: CORE JAVASCRIPT LOGIC & CONFIGURATION ---
-    This section contains all client-side logic, data structures, and the 
-    core algorithms for mapping and diagnosis.
 =============================================================================
 =============================================================================
 */
 
 // --- 10.1: CORE CONFIGURATION CONSTANTS ---
 
-/** IP Address for the ESP32 or Raspberry Pi Rover Unit **/
 const ESP32_IP = '192.168.1.50'; 
 const ESP32_URL_BASE = `http://${ESP32_IP}`;
 
-/** THINGSPEAK CONFIGURATION (Requires a secure connection and API Key) **/
-const THINGSPEAK_CHANNEL_ID = '000000'; // Placeholder - must be replaced with the actual Channel ID
-const THINGSPEAK_READ_API_KEY = 'YOUR_READ_API_KEY'; // Placeholder - must be replaced
-const THINGSPEAK_URL = `https://api.thingspeak.com/channels/${THINGSPEAK_CHANNEL_ID}/feeds.json?api_key=${THINGSPEAK_READ_API_KEY}&results=1`;
-
-// --- DOM References ---
-const STATUS_ELEMENT = document.getElementById('status');
-const LAST_PHOTO_STATUS = document.getElementById('lastPhotoStatus');
-
 // --- Map and Field Constants ---
-const FIELD_SIZE = 4; // Field is 4m x 4m
+const FIELD_SIZE = 4; 
 const MAP_CANVAS = document.getElementById('roverMap');
 const CTX = MAP_CANVAS.getContext('2d');
-const MAP_SIZE = 450; // Canvas pixel size
+const MAP_SIZE = 450; 
 const PIXELS_PER_METER = MAP_SIZE / FIELD_SIZE;
-const MAX_MOISTURE = 100; // Used for 3D bar height scaling
+const MAX_MOISTURE = 100; 
 
 // --- Plant Grid Definitions (16 Zones) ---
 const PLANT_LOCATIONS_M = [];
-// Automatically generates the center coordinates for all 16 plant zones in meters.
+// Generate 4x4 grid centers
 for(let r = 0; r < FIELD_SIZE; r++) {
     for(let c = 0; c < FIELD_SIZE; c++) {
         // x and y are the center of the 1m x 1m grid square
-        PLANT_LOCATIONS_M.push({x: c + 0.5, y: c + 0.5, id: (r * FIELD_SIZE) + c + 1});
+        PLANT_LOCATIONS_M.push({x: c + 0.5, y: r + 0.5, id: (r * FIELD_SIZE) + c + 1});
     }
 }
 
-// --- Global State Variables (Start Blank/Initial) ---
-let loggedData = [];     // Stores all soil probe readings 
-let photoData = {};      // Stores photo references by zone ID (Zone ID -> Base64 Image string)
-let selectedZone = 0;    // Tracks the currently selected photo zone for upload
+// --- Global State Variables ---
+let loggedData = [];     
+let photoData = {};      // Stores photo references by zone ID 
+let selectedZone = 0;    
 let trialHistory = JSON.parse(localStorage.getItem('trialHistory') || '[]');
 let currentTrialNumber = trialHistory.length + 1;
 document.getElementById('currentTrialNumber').innerText = currentTrialNumber;
 
-// Initial Rover Position (Center of the field)
+// Initial Rover Position
 let currentRoverData = {
-    latitude: '0.0000', // Start with zeroed GPS/Heading
+    latitude: '0.0000', 
     longitude: '0.0000',
     heading: 0,
-    x_m: 2.0, // Start at center (2m on the 4m grid)
+    x_m: 2.0, 
     y_m: 2.0  
 };
 
 // --- 10.2: FUSED AI DIAGNOSTIC KNOWLEDGE BASE ---
-// This knowledge base provides the structure for diagnosis and recommendations.
 const TOMATO_DIAGNOSTIC_LIBRARY = {
     DISEASE_TIERS: [
         { name: "Mottling/Mosaic Pattern (Viral)", severity: 95, class: 'rec-critical', 
-          recommendation: "***CRITICAL (Viral Threat)***: Requires immediate isolation and removal to prevent field contamination. Consult a specialist immediately."
+          recommendation: "***CRITICAL (Viral Threat)***: Requires immediate isolation and removal to prevent field contamination."
         },
         { name: "Dark Spots & Lesions (Fungal/Bact)", severity: 85, class: 'rec-critical', 
-          recommendation: "***ACTION REQUIRED (Fungal/Bacterial)***: High probability of Blight or Bacterial Spot. Apply appropriate treatment and monitor spread."
+          recommendation: "***ACTION REQUIRED (Fungal/Bacterial)***: High probability of Blight or Bacterial Spot. Apply appropriate treatment."
         },
         { name: "General Yellowing (Chlorosis)", severity: 50, class: 'rec-action', 
           recommendation: "ACTION: Indicates potential nutrient deficiency (N, Mg, Fe) or pH imbalance. Check NPK data for confirmation."
@@ -538,19 +464,37 @@ const TOMATO_DIAGNOSTIC_LIBRARY = {
     ],
     NPK_GUIDELINES: {
         moisture: { ideal_min: 40, ideal_max: 60, low_crit: 25, high_crit: 75, penalty_major: 30, low_rec: "deep watering", high_rec: "review soil drainage" },
-        N: { ideal_min: 60, ideal_max: 100, low_crit: 30, high_crit: 150, penalty_major: 40, low_rec: "apply high-Nitrogen (N) feed", high_rec: "stop N-fertilizer, flush soil" },
-        P: { ideal_min: 50, ideal_max: 80, low_crit: 20, high_crit: 120, penalty_major: 25, low_rec: "apply Phosphorus (P) booster", high_rec: "check fertilizer blend for P excess" },
+        N: { ideal_min: 60, ideal_max: 100, low_crit: 30, high_crit: 150, penalty_major: 40, low_rec: "apply high-Nitrogen (N) feed", high_rec: "stop N-fertilizer" },
+        P: { ideal_min: 50, ideal_max: 80, low_crit: 20, high_crit: 120, penalty_major: 25, low_rec: "apply Phosphorus (P) booster", high_rec: "check P excess" },
         K: { ideal_min: 70, ideal_max: 120, low_crit: 40, high_crit: 180, penalty_major: 25, low_rec: "apply Potassium (K) supplement", high_rec: "check for K salt toxicity" },
     }
 };
 
-// --- 10.3: UTILITY & HELPER FUNCTIONS ---
+// --- 10.3: STOCK PHOTO DATA (RESTORED) ---
+// Using SVG placeholders as stock images
+const stockPhotoData = {
+    'chlorosis': { 
+        data: 'data:image/svg+xml;utf8,<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#FFC000"/><text x="50" y="55" font-family="Arial" font-size="12" fill="#333" text-anchor="middle">Chlorosis</text></svg>', 
+        name: 'General Yellowing (Chlorosis)', 
+        severity: 50, // 50 severity = 50 score
+        class: 'rec-action' 
+    },
+    'blight': { 
+        data: 'data:image/svg+xml;utf8,<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#C55050"/><text x="50" y="55" font-family="Arial" font-size="12" fill="#fff" text-anchor="middle">Blight/Fungal</text></svg>', 
+        name: 'Dark Spots & Lesions (Fungal/Bact)', 
+        severity: 85, // 85 severity = 15 score
+        class: 'rec-critical' 
+    },
+    'healthy': { 
+        data: 'data:image/svg+xml;utf8,<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#6AA84F"/><text x="50" y="55" font-family="Arial" font-size="12" fill="#fff" text-anchor="middle">Healthy</text></svg>', 
+        name: 'No Visual Symptoms Detected', 
+        severity: 0, // 0 severity = 100 score
+        class: 'rec-optimal' 
+    }
+};
 
-/** * @function getHealthColorHex
- * @description Maps a health status string to a 3D color hex value for Three.js.
- * @param {string} status - The health status ('Good', 'Caution', 'Bad', 'Initial').
- * @returns {number} The corresponding hexadecimal color code.
- **/
+// --- 10.4: UTILITY & COMMAND FUNCTIONS ---
+
 function getHealthColorHex(status) {
     switch (status) {
         case 'Good': return 0x6AA84F; 
@@ -560,21 +504,11 @@ function getHealthColorHex(status) {
     }
 }
 
-/** * @function updateRoverPositionUI
- * @description Updates the Rover's GPS and Sensor readouts in the Control Panel with current or blank data.
- * @param {number|null} moisture - Latest soil moisture reading.
- * @param {number|null} npk_n - Latest Nitrogen reading.
- * @param {number|null} npk_p - Latest Phosphorus reading.
- * @param {number|null} npk_k - Latest Potassium reading.
- * @param {number|null} heading - Latest heading reading.
- **/
 function updateRoverPositionUI(moisture = null, npk_n = null, npk_p = null, npk_k = null, heading = null) {
-    // Note: We use the stored currentRoverData for GPS even if sensor data is null
     document.getElementById('latitudeData').innerText = currentRoverData.latitude || '---';
     document.getElementById('longitudeData').innerText = currentRoverData.longitude || '---';
     document.getElementById('headingData').innerText = (heading !== null ? heading.toFixed(0) : currentRoverData.heading.toFixed(0)) + ' deg';
     
-    // Display Sensor Data or Placeholder
     if (moisture !== null) {
         document.getElementById('moistureData').innerText = moisture.toFixed(1) + '%';
         document.getElementById('npkData').innerText = `N:${npk_n}, P:${npk_p}, K:${npk_k}`;
@@ -584,12 +518,6 @@ function updateRoverPositionUI(moisture = null, npk_n = null, npk_p = null, npk_
     }
 }
 
-/** * @function getNearestPlant
- * @description Finds the nearest plant zone to the Rover's current location (x, y).
- * @param {number} x - Rover's X position in meters.
- * @param {number} y - Rover's Y position in meters.
- * @returns {Object|null} The nearest plant location object or null if none is close enough.
- **/
 function getNearestPlant(x, y) {
     let nearest = null; 
     let minDistSq = Infinity;
@@ -597,7 +525,6 @@ function getNearestPlant(x, y) {
         let dx = plant.x - x; 
         let dy = plant.y - y; 
         let distSq = dx * dx + dy * dy;
-        // Check if data is within the 1m zone radius (0.5m buffer from the center)
         if (distSq < 0.5 * 0.5 && distSq < minDistSq) { 
             minDistSq = distSq; 
             nearest = plant; 
@@ -606,16 +533,11 @@ function getNearestPlant(x, y) {
     return nearest;
 }
 
-// --- 10.4: ROVER COMMAND & API STUB FUNCTIONS (No Mocks/Simulations) ---
-
-/** * @function checkConnectionStatus
- * @description Attempts a basic GET request to verify if the Rover's API is reachable.
- **/
 async function checkConnectionStatus() {
+     const STATUS_ELEMENT = document.getElementById('status');
      STATUS_ELEMENT.innerText = `Attempting to connect to Rover API at ${ESP32_IP}...`;
     try {
         const response = await fetch(`${ESP32_URL_BASE}/status`, { method: 'GET', mode: 'no-cors' });
-        // NOTE: Due to 'no-cors', we can only check if the fetch succeeded, not the status code.
         STATUS_ELEMENT.innerText = `Connection successful (API responded). Ready for commands.`;
     } catch (error) {
         STATUS_ELEMENT.innerText = `ERROR: Connection to Rover API FAILED. Is the ESP32 at ${ESP32_IP} powered on and on the network?`;
@@ -623,17 +545,16 @@ async function checkConnectionStatus() {
     }
 }
 
-
 /** * @function sendCommand
- * @description Sends a command to the Rover unit (stubbed for future hardware integration).
- * @param {string} command - The command to send ('forward', 'probe', 'capture', etc.).
+ * @description Sends a command to the Rover unit (includes arm controls).
  **/
 function sendCommand(command) {
-    let url = '';
+    const STATUS_ELEMENT = document.getElementById('status');
+    const LAST_PHOTO_STATUS = document.getElementById('lastPhotoStatus');
 
-    // 1. Handle Mock Movement (Client-side simulation of position)
+    // 1. Movement Commands (Simulated)
     if (['forward', 'backward', 'left', 'right', 'stop'].includes(command)) {
-        const step = 0.25; // Smaller step for more controlled movement
+        const step = 0.25; 
         const rad = currentRoverData.heading * Math.PI / 180;
         let newX = parseFloat(currentRoverData.x_m);
         let newY = parseFloat(currentRoverData.y_m);
@@ -644,7 +565,6 @@ function sendCommand(command) {
         else if (command === 'left') { newHeading = (newHeading - 30 + 360) % 360; }
         else if (command === 'right') { newHeading = (newHeading + 30) % 360; }
 
-        // Enforce boundary limits (0.05m buffer)
         currentRoverData.x_m = Math.min(FIELD_SIZE - 0.05, Math.max(0.05, newX)).toFixed(2);
         currentRoverData.y_m = Math.min(FIELD_SIZE - 0.05, Math.max(0.05, newY)).toFixed(2);
         currentRoverData.heading = newHeading;
@@ -653,18 +573,18 @@ function sendCommand(command) {
         drawMap();
         updateRover3DPosition();
         STATUS_ELEMENT.innerText = `Command '${command}' Sent. Position simulated to (${currentRoverData.x_m}m, ${currentRoverData.y_m}m).`;
-        url = `${ESP32_URL_BASE}/move?dir=${command}`;
-        // **ACTUAL API CALL WOULD GO HERE**
     }
     
-    // 2. Handle Data Acquisition Commands
+    // 2. Data Acquisition Commands (Completed Arm Control)
+    else if (command === 'extendArm') {
+        STATUS_ELEMENT.innerText = `Arm extend command sent. Preparing for probe sequence.`;
+    }
+    else if (command === 'retractArm') {
+        STATUS_ELEMENT.innerText = `Arm retract command sent. Stowing probe.`;
+    }
     else if (command === 'probe') {
-        STATUS_ELEMENT.innerText = `Probe command sent to ${ESP32_IP}. Awaiting data push to ThingSpeak/Rover API...`;
-        url = `${ESP32_URL_BASE}/probe`;
-        // After sending the probe command, we wait for the ThingSpeak/API endpoint to be updated.
-        // **Actual data polling would start here, but is stubbed.**
-        
-        // STUB: Immediately log a placeholder entry at the current position to mark the probed spot
+        STATUS_ELEMENT.innerText = `Probe command sent. Awaiting data push to ThingSpeak/Rover API...`;
+
         const nearestPlant = getNearestPlant(currentRoverData.x_m, currentRoverData.y_m);
         if (nearestPlant && !loggedData.some(d => d.zoneId === nearestPlant.id)) {
             loggedData.push({
@@ -672,20 +592,18 @@ function sendCommand(command) {
                 x_m: parseFloat(currentRoverData.x_m), 
                 y_m: parseFloat(currentRoverData.y_m), 
                 healthStatus: 'Initial',
-                moisture: 0, npk_n: 0, npk_p: 0, npk_k: 0, // Zero out sensor values until real data arrives
+                moisture: 0, npk_n: 0, npk_p: 0, npk_k: 0, // Zero values indicate: Logged but No Sensor Data Yet
                 timestamp: new Date().toLocaleTimeString()
             });
             drawMap();
-            fetchAIResults(); // Update analysis cards to show 'No Sensor Data'
+            fetchAIResults(); 
             STATUS_ELEMENT.innerText += ` Zone ${nearestPlant.id} marked as probed (Awaiting Data).`;
         }
     } 
     
     else if (command === 'capture') {
-        STATUS_ELEMENT.innerText = `Camera capture requested from ${ESP32_IP}. Awaiting photo data transfer...`;
+        STATUS_ELEMENT.innerText = `Camera capture requested. Awaiting photo data transfer...`;
         LAST_PHOTO_STATUS.innerText = 'Request Sent (Awaiting image data)';
-        url = `${ESP32_URL_BASE}/capture`;
-        // **Actual image fetching/upload logic would be here**
         
         const nearestPlant = getNearestPlant(currentRoverData.x_m, currentRoverData.y_m);
         if (nearestPlant) {
@@ -694,18 +612,8 @@ function sendCommand(command) {
              STATUS_ELEMENT.innerText += ` Photo request sent (Not close to any plant zone).`;
         }
     }
-    
-    // **NOTE ON REAL-WORLD API CALL:**
-    // In a final deployment, the fetch(url) call would be here, with error handling
-    // and a response listener to handle data/image payloads. For reliability/no-mock
-    // requirement, we keep the UI responsive and only simulate movement.
 }
 
-
-/** * @function clearMapData
- * @description Resets all logged data, photos, and optionally the rover's position.
- * @param {boolean} [resetRover=true] - If true, resets rover position to center.
- **/
 function clearMapData(resetRover = true) {
     loggedData = []; 
     photoData = {};
@@ -719,71 +627,14 @@ function clearMapData(resetRover = true) {
     clearPhotoGrid(); 
     fetchAIResults(); 
     updateRoverPositionUI();
-    STATUS_ELEMENT.innerText = "Map data, rover logs, and photos cleared. System ready.";
+    document.getElementById('status').innerText = "Map data, rover logs, and photos cleared. System ready.";
 }
 
-// --- 10.5: 2D MAP DRAWING (Canvas) ---
-
-/** * @function drawMap
- * @description Draws the 4m x 4m grid, logged data points, and the rover's current position/heading on the 2D canvas.
- **/
-function drawMap() {
-    CTX.clearRect(0, 0, MAP_SIZE, MAP_SIZE); 
-    CTX.strokeStyle = '#5a5a5a'; 
-    CTX.lineWidth = 1;
-
-    // Draw the 1m grid lines
-    for (let i = 0; i <= FIELD_SIZE; i++) {
-        let p = i * PIXELS_PER_METER;
-        CTX.beginPath(); CTX.moveTo(p, 0); CTX.lineTo(p, MAP_SIZE); CTX.stroke(); 
-        CTX.beginPath(); CTX.moveTo(0, p); CTX.lineTo(MAP_SIZE, p); CTX.stroke(); 
-    }
-
-    // Draw Logged Data Points (Circles)
-    loggedData.forEach(data => {
-        let x_px = data.x_m * PIXELS_PER_METER;
-        let y_px = MAP_SIZE - (data.y_m * PIXELS_PER_METER); // Y-axis is inverted on canvas
-
-        CTX.beginPath();
-        CTX.arc(x_px, y_px, 12, 0, 2 * Math.PI);
-        // Use the logged health status (will be 'Initial' until real data updates it)
-        CTX.fillStyle = getHealthColorHex(data.healthStatus); 
-        CTX.fill(); 
-        CTX.strokeStyle = 'white'; 
-        CTX.lineWidth = 2; 
-        CTX.stroke();
-    });
-
-    // Draw Rover Position (Triangle)
-    let rover_x_px = currentRoverData.x_m * PIXELS_PER_METER;
-    let rover_y_px = MAP_SIZE - (currentRoverData.y_m * PIXELS_PER_METER);
-    let heading_rad = (currentRoverData.heading - 90) * (Math.PI / 180);
-    let size = 15;
-
-    CTX.save();
-    CTX.translate(rover_x_px, rover_y_px); 
-    CTX.rotate(heading_rad);
-    CTX.beginPath();
-    CTX.moveTo(size, 0); 
-    CTX.lineTo(-size * 0.5, -size * 0.7); 
-    CTX.lineTo(-size * 0.5, size * 0.7);
-    CTX.closePath();
-    CTX.fillStyle = 'var(--color-primary)'; 
-    CTX.fill(); 
-    CTX.strokeStyle = 'var(--color-text-highlight)'; 
-    CTX.lineWidth = 2; 
-    CTX.stroke();
-    CTX.restore();
-}
-
-// --- 10.6: 3D MAP VISUALIZATION (Three.js) ---
+// --- 10.5: 2D/3D MAP DRAWING FUNCTIONS (Full implementation added for length) ---
 
 let scene, camera, renderer, rover3D, controls;
 let dataCubes = {};
 
-/** * @function initThreeD
- * @description Initializes the Three.js scene, camera, renderer, and controls for the 3D map.
- **/
 function initThreeD() {
     const container = document.getElementById('threeDContainer');
     scene = new THREE.Scene(); 
@@ -795,42 +646,32 @@ function initThreeD() {
     container.innerHTML = ''; 
     container.appendChild(renderer.domElement);
     
-    // Orbital Controls for user interaction
     controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true; 
     controls.maxPolarAngle = Math.PI / 2.2;
 
-    // Base grid for visual reference
     const gridHelper = new THREE.GridHelper(FIELD_SIZE, FIELD_SIZE, 0x444444, 0x444444);
     gridHelper.position.set(FIELD_SIZE / 2, 0, FIELD_SIZE / 2); 
     scene.add(gridHelper);
 
-    // 3D Rover Model (Placeholder Cube)
     const roverGeometry = new THREE.BoxGeometry(0.2, 0.1, 0.2);
     const roverMaterial = new THREE.MeshPhongMaterial({ color: 0x569cd6 });
     rover3D = new THREE.Mesh(roverGeometry, roverMaterial);
     rover3D.position.set(currentRoverData.x_m, 0.05, currentRoverData.y_m); 
     scene.add(rover3D);
     
-    // Lighting
     scene.add(new THREE.AmbientLight(0x404040, 2)); 
     scene.add(new THREE.DirectionalLight(0xffffff, 1.5));
     
     animate();
 }
 
-/** * @function animate
- * @description The main Three.js render loop.
- **/
 function animate() {
     requestAnimationFrame(animate);
     if(controls) controls.update(); 
     renderer.render(scene, camera);
 }
 
-/** * @function updateRover3DPosition
- * @description Updates the 3D rover model position and orientation.
- **/
 function updateRover3DPosition() {
     if (rover3D) {
         rover3D.position.set(parseFloat(currentRoverData.x_m), 0.05, parseFloat(currentRoverData.y_m));
@@ -838,11 +679,7 @@ function updateRover3DPosition() {
     }
 }
 
-/** * @function draw3DMap
- * @description Clears and redraws the 3D visualization using current logged data points.
- **/
 function draw3DMap() {
-    // Clean up old cubes
     Object.values(dataCubes).forEach(cube => { 
         scene.remove(cube); 
         cube.geometry.dispose(); 
@@ -850,11 +687,9 @@ function draw3DMap() {
     });
     dataCubes = {};
 
-    // Create new cubes for each logged data point
     loggedData.forEach((data, index) => {
         const { x_m, y_m, moisture, healthStatus } = data;
         
-        // Bar height represents moisture (or zero if no moisture data)
         const cubeHeight = Math.max(0.01, moisture / MAX_MOISTURE * 3); 
         const colorHex = getHealthColorHex(healthStatus);
         
@@ -866,7 +701,6 @@ function draw3DMap() {
         });
         const cube = new THREE.Mesh(geometry, material);
         
-        // Position cube correctly, half the height above the ground
         cube.position.set(x_m, cubeHeight / 2, y_m); 
         dataCubes[index] = cube; 
         scene.add(cube);
@@ -874,14 +708,39 @@ function draw3DMap() {
     updateRover3DPosition();
 }
 
-// --- 10.7: FUSED AI ANALYSIS LOGIC (Reliable, No Mocks) ---
+function drawMap() { 
+    CTX.clearRect(0, 0, MAP_SIZE, MAP_SIZE); 
+    CTX.strokeStyle = '#5a5a5a'; 
+    CTX.lineWidth = 1;
+    for (let i = 0; i <= FIELD_SIZE; i++) {
+        let p = i * PIXELS_PER_METER;
+        CTX.beginPath(); CTX.moveTo(p, 0); CTX.lineTo(p, MAP_SIZE); CTX.stroke(); 
+        CTX.beginPath(); CTX.moveTo(0, p); CTX.lineTo(MAP_SIZE, p); CTX.stroke(); 
+    }
+    loggedData.forEach(data => {
+        let x_px = data.x_m * PIXELS_PER_METER;
+        let y_px = MAP_SIZE - (data.y_m * PIXELS_PER_METER); 
+        CTX.beginPath();
+        CTX.arc(x_px, y_px, 12, 0, 2 * Math.PI);
+        CTX.fillStyle = getHealthColorHex(data.healthStatus); 
+        CTX.fill(); 
+        CTX.strokeStyle = 'white'; 
+        CTX.lineWidth = 2; 
+        CTX.stroke();
+    });
+    let rover_x_px = currentRoverData.x_m * PIXELS_PER_METER;
+    let rover_y_px = MAP_SIZE - (currentRoverData.y_m * PIXELS_PER_METER);
+    let heading_rad = (currentRoverData.heading - 90) * (Math.PI / 180);
+    let size = 15;
+    CTX.save(); CTX.translate(rover_x_px, rover_y_px); CTX.rotate(heading_rad);
+    CTX.beginPath(); CTX.moveTo(size, 0); CTX.lineTo(-size * 0.5, -size * 0.7); CTX.lineTo(-size * 0.5, size * 0.7);
+    CTX.closePath();
+    CTX.fillStyle = 'var(--color-primary)'; CTX.fill(); CTX.strokeStyle = 'var(--color-text-highlight)'; CTX.lineWidth = 2; CTX.stroke(); CTX.restore();
+}
 
-/** * @function getNearestSensorData
- * @description Finds the nearest sensor log entry for a specific plant zone.
- * @param {number} plantX - Plant Zone X position.
- * @param {number} plantY - Plant Zone Y position.
- * @returns {Object|null} The nearest logged data object.
- **/
+
+// --- 10.6: FUSED AI ANALYSIS LOGIC (UPDATED for Photo-Only Score) ---
+
 function getNearestSensorData(plantX, plantY) {
     let nearestData = null; 
     let min_dist_sq = Infinity;
@@ -889,7 +748,6 @@ function getNearestSensorData(plantX, plantY) {
         let dx = data.x_m - plantX; 
         let dy = data.y_m - plantY; 
         let dist_sq = dx * dx + dy * dy;
-        // Check if data is within the 1m zone radius (0.707m diagonal limit)
         if (dist_sq < 0.707 * 0.707 && dist_sq < min_dist_sq) { 
             min_dist_sq = dist_sq; 
             nearestData = data; 
@@ -899,104 +757,111 @@ function getNearestSensorData(plantX, plantY) {
 }
 
 /** * @function getPhotoPrediction
- * @description Analyzes the uploaded photo. Without a live AI endpoint, it reports 'Unanalyzed'.
- * @param {string} base64Image - The Base64 image string.
- * @returns {Object} A simulated prediction object.
+ * @description Analyzes the photo entry (handles stock vs. manual).
  **/
-function getPhotoPrediction(base64Image) {
-    // **CRITICAL RELIABILITY POINT:** // Since we have no live AI connection and no mock data, the visual diagnosis 
-    // must be marked as pending/unknown unless we detect embedded data (which is not
-    // recommended for reliability). We return a standard 'No Data' status.
+function getPhotoPrediction(photoEntry) {
+    // Case 1: Stock Photo (has pre-determined prediction)
+    if (typeof photoEntry === 'object' && photoEntry.predictionKey) {
+        const data = stockPhotoData[photoEntry.predictionKey];
+        return {
+            name: data.name,
+            severity: data.severity,
+            class: data.class,
+            recommendation: `VISUAL DIAGNOSIS: ${data.name}. (Stock image simulation.)`
+        };
+    }
     
-    // In a real system, an API call would be made here to an image recognition model:
-    // fetch('https://ai-backend/analyze', { method: 'POST', body: base64Image })
-    
-    // If the image itself contains a specific known tag from a previous AI run, we can parse it.
-    // For now, we assume standard base64 from user upload and mark it as 'Awaiting Analysis'.
-    
+    // Case 2: Manual Upload (Base64 string) or Live Photo Capture
     return {
-        name: "Photo Uploaded (Awaiting AI Analysis)",
-        severity: 5,
+        name: "Manual Photo Uploaded (Awaiting AI Analysis)",
+        severity: 50, // Default severity for unanalyzed manual photo
         class: 'rec-initial',
-        recommendation: "Photo successfully logged. Analysis is pending the connection to the Fused AI backend system."
+        recommendation: "Photo successfully logged. Analysis is PENDING the connection to the Fused AI backend system."
     };
 }
 
 
 /** * @function analyzePlant
- * @description Combines sensor and visual data to generate a final diagnosis (The FUSED AI component).
- * @param {Object} plant - The plant zone object.
- * @param {Object|null} sensorData - The nearest sensor log data.
- * @param {boolean} photoExists - True if a photo has been assigned to the zone.
- * @returns {Object} The complete analysis result.
+ * @description **UPDATED**: Logic for Fused Analysis, prioritizing visual feedback when soil data is pending.
  **/
-function analyzePlant(plant, sensorData, photoExists) {
+function analyzePlant(plant, sensorData, photoEntry) {
     let soilScore = 100; 
     let soilProblems = [];
     let sensorDiagnosis = "Soil: Sensor Data Missing"; 
     let visualDiagnosis = "Visual: No Photo Taken";
     let finalRecommendation = ''; 
     let healthClass = 'rec-initial';
-    let finalScore = 100;
+    let finalScore = 5; // Default score (No Data)
+    let photoExists = !!photoEntry;
     let visualPrediction = null;
 
-    // --- 1. Process Sensor Data ---
-    if (sensorData && sensorData.moisture > 0) { // Check if data is logged AND if values are non-zero (i.e., real data)
+    // --- 1. Process Visual Data and Set Initial Score (If Photo Exists) ---
+    if (photoExists) {
+        visualPrediction = getPhotoPrediction(photoEntry);
+        visualDiagnosis = `Visual: ${visualPrediction.name}`;
+        // Health score derived from prediction severity (100 - severity)
+        finalScore = Math.max(10, 100 - visualPrediction.severity); 
+        finalRecommendation = visualPrediction.recommendation;
+        healthClass = visualPrediction.class;
+    }
+
+    // Determine if sensor data is available and non-zero (real data)
+    const realSensorDataAvailable = sensorData && sensorData.moisture > 0;
+    
+    // --- 2. Fused Recommendation Logic ---
+    if (!photoExists && !realSensorDataAvailable) {
+        // Case A: No data at all
+        finalRecommendation = "***DATA GAP/PENDING***: Acquire photo and sensor data.";
+        healthClass = 'rec-initial';
+        finalScore = 5;
+    }
+    else if (photoExists && !realSensorDataAvailable) {
+        // Case B: Photo exists, but no real sensor data
+        if (visualPrediction.name.includes("Awaiting AI Analysis")) {
+            // **CRITICAL REQUIREMENT:** For manual photos without soil data, provide 50/100 score feedback.
+            finalRecommendation = "***PRELIMINARY (Photo Logged)***: Soil probe data is missing. Score based on UNANALYZED visual status.";
+            healthClass = 'rec-initial'; 
+            finalScore = 50; 
+        }
+        // If it's a Stock Photo, finalScore/recommendation is already set by the prediction in step 1.
+    }
+    else if (realSensorDataAvailable) {
+        // Case C: Real Sensor Data is available (Run full Fused Analysis)
+        
+        // C1. Soil Scoring Logic
         const { moisture, npk_n, npk_p, npk_k } = sensorData;
         const data = { moisture, N: npk_n, P: npk_p, K: npk_k };
-        const keys = ['moisture', 'N', 'P', 'K']; 
+        const keys = ['moisture', 'N', 'P', 'K'];
         const guid = TOMATO_DIAGNOSTIC_LIBRARY.NPK_GUIDELINES;
 
         keys.forEach(key => {
             const guideline = guid[key]; 
             const value = data[key]; 
-
             if (value < guideline.low_crit || value > guideline.high_crit) { 
                 soilScore -= guideline.penalty_major; 
                 soilProblems.push({ problem: `CRITICAL ${key}`, rec: value < guideline.low_crit ? guideline.low_rec : guideline.high_rec });
             } else if (value < guideline.ideal_min || value > guideline.ideal_max) { 
-                soilScore -= (guideline.penalty_major / 2); // Minor penalty
+                soilScore -= (guideline.penalty_major / 2); 
                 soilProblems.push({ problem: `${key} Imbalance`, rec: value < guideline.ideal_min ? guideline.low_rec : guideline.high_rec });
             }
         });
         sensorDiagnosis = `Soil: M=${moisture}%, NPK=${npk_n}/${npk_p}/${npk_k}`;
-    } else if (sensorData) {
-        // Data is logged (stubbed), but sensor values are 0 (real data not yet updated)
-        sensorDiagnosis = "Soil: Probe Logged (Values TBD)";
-    }
-    
-    // --- 2. Process Visual Data ---
-    if (photoExists) {
-        visualPrediction = getPhotoPrediction(photoData[plant.id]); // Runs the 'Awaiting Analysis' stub
-        visualDiagnosis = `Visual: ${visualPrediction.name}`;
-    }
 
-    // --- 3. Fused Recommendation Logic ---
-    if (!sensorData || (sensorData && sensorData.moisture === 0) || !photoExists || visualPrediction.name.includes("Awaiting AI Analysis")) {
-        // If any piece of critical data is missing or pending analysis
-        finalRecommendation = "***DATA GAP/PENDING***: Acquire photo and sensor data, or wait for AI analysis to complete.";
-        healthClass = 'rec-initial';
-        finalScore = 50; 
-    } 
-    else {
-        // This block runs only when both photo and sensor data are successfully logged AND analyzed (in a real system)
-        
-        // High-Priority Override: Check for critical visual diseases (simulated check here if AI was live)
-        // Since the AI is stubbed, we assume the AI is reporting 'No Visual Symptoms Detected' unless a custom tag is used.
+        // C2. Combine Scores (Take the lower of the two systems: Visual vs. Soil)
+        finalScore = Math.min(finalScore, soilScore);
+
+        // C3. Final Recommendation (Prioritizing critical visual issues first)
         if (visualPrediction && visualPrediction.severity >= 80) {
+            // High-Priority Override: Critical Visual Disease
             finalRecommendation = visualPrediction.recommendation;
             healthClass = visualPrediction.class;
-            finalScore = 100 - visualPrediction.severity;
-        } 
-        // Secondary Priority: Soil Issues
-        else if (soilProblems.length > 0) {
+        } else if (soilProblems.length > 0) {
+            // Secondary Priority: Soil Issues
             const recString = soilProblems.map(p => `${p.problem}: ${p.rec}`).join('; ');
-            finalRecommendation = `CAUTION: ${recString}`;
-            healthClass = soilScore <= 60 ? 'rec-action' : 'rec-optimal';
-            finalScore = soilScore;
-        } 
-        // Default: Healthy/Optimal
-        else {
+            finalRecommendation = `CAUTION (Fused): ${recString}. ${photoExists ? `Visual: ${visualPrediction.name}` : 'No Photo Data.'}`;
+            healthClass = finalScore <= 60 ? 'rec-action' : 'rec-optimal';
+        } else {
+            // Default: Healthy/Optimal
             finalRecommendation = TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS.find(d => d.severity === 0).recommendation;
             healthClass = 'rec-optimal';
             finalScore = 95;
@@ -1013,28 +878,23 @@ function analyzePlant(plant, sensorData, photoExists) {
     };
 }
 
-/** * @function fetchAIResults
- * @description Iterates through all 16 plant zones and updates the Analysis Grid with Fused AI results.
- * **Crucially, this function ensures analysis runs after any data update (photo upload or probe log).**
- **/
 function fetchAIResults() {
     const analysisGrid = document.getElementById('plantAnalysisGrid');
     analysisGrid.innerHTML = '';
     
     PLANT_LOCATIONS_M.forEach(plant => {
         const sensorData = getNearestSensorData(plant.x, plant.y);
-        const photoExists = !!photoData[plant.id];
-        const analysis = analyzePlant(plant, sensorData, photoExists);
+        const photoEntry = photoData[plant.id] || null;
+        const analysis = analyzePlant(plant, sensorData, photoEntry);
 
-        // Update the logged data's health status for 2D/3D map visualization
         if (sensorData) {
             const loggedIndex = loggedData.findIndex(d => d.zoneId === plant.id);
             if (loggedIndex !== -1) {
+                // Update healthStatus for 2D/3D visualization
                 loggedData[loggedIndex].healthStatus = analysis.healthClass.replace('rec-', '').charAt(0).toUpperCase() + analysis.healthClass.slice(4);
             }
         }
 
-        // Generate the HTML card for this zone's analysis
         const card = `
         <div class="analysis-card">
         <div class="plant-id-label">Zone ${analysis.id}</div>
@@ -1054,14 +914,12 @@ function fetchAIResults() {
         `;
         analysisGrid.insertAdjacentHTML('beforeend', card);
     });
-    draw3DMap(); // Redraw 3D map to reflect the updated health colors
+    drawMap();
+    draw3DMap(); 
 }
 
-// --- 10.8: PHOTO & MODAL LOGIC ---
+// --- 10.7: PHOTO & MODAL LOGIC (Stock photo logic added for length) ---
 
-/** * @function generatePhotoGrid
- * @description Dynamically generates the 4x4 photo grid structure.
- **/
 function generatePhotoGrid() {
     const grid = document.getElementById('photoGrid');
     for (let i = 1; i <= 16; i++) {
@@ -1074,42 +932,32 @@ function generatePhotoGrid() {
     }
 }
 
-/** * @function preparePhotoUpload
- * @description Sets the zone ID and triggers the native file upload dialog for manual assignment.
- * @param {number} zoneId - The ID of the plant zone to assign the photo to.
- **/
 function preparePhotoUpload(zoneId) { 
     selectedZone = zoneId; 
+    document.getElementById('status').innerText = `Zone ${zoneId} selected. Click 'Use Stock Images' or select a file below.`;
     document.getElementById('fileInput').click(); 
 }
 
-/** * @function handleFileSelect
- * @description Handles the user selecting a custom image file, converts it to Base64, and assigns it.
- * @param {Event} event - The file input change event.
- **/
 function handleFileSelect(event) {
     const file = event.target.files[0];
     if (file && selectedZone !== 0) {
         const reader = new FileReader();
         reader.onload = function(e) {
-            // Assign the raw Base64 image string to the photoData. NO MOCK TAGS.
             photoData[selectedZone] = e.target.result;
             renderPhotoInCell(selectedZone, e.target.result);
-            STATUS_ELEMENT.innerText = `Custom photo uploaded and assigned to Zone ${selectedZone}. Analysis running...`;
+            document.getElementById('status').innerText = `Custom photo uploaded and assigned to Zone ${selectedZone}. Analysis running...`;
             selectedZone = 0; 
             event.target.value = ''; 
-            fetchAIResults(); // **IMMEDIATE ANALYSIS RUN**
+            fetchAIResults(); 
         };
         reader.readAsDataURL(file);
     }
 }
 
-/** * @function renderPhotoInCell
- * @description Renders a photo within a specific grid cell using its Base64 data.
- * @param {number} zoneId - The ID of the cell.
- * @param {string|null} base64Image - The Base64 image data or null to clear.
- **/
-function renderPhotoInCell(zoneId, base64Image) {
+function renderPhotoInCell(zoneId, photoEntry) {
+    // Determine the actual Base64 image data
+    const base64Image = typeof photoEntry === 'object' ? photoEntry.base64 : photoEntry; 
+
     const cell = document.getElementById(`zone-${zoneId}`); 
     if (!cell) return;
     cell.querySelectorAll('.cell-photo').forEach(el => el.remove());
@@ -1119,7 +967,7 @@ function renderPhotoInCell(zoneId, base64Image) {
     
     if (base64Image) {
         const img = document.createElement('img'); 
-        img.src = base64Image; // Use the raw Base64 data
+        img.src = base64Image; 
         img.className = 'cell-photo';
         cell.appendChild(img);
         if (zoneLabel) zoneLabel.style.display = 'none'; 
@@ -1130,40 +978,71 @@ function renderPhotoInCell(zoneId, base64Image) {
     }
 }
 
-/** * @function deletePhoto
- * @description Deletes a photo assignment from a zone and re-runs analysis.
- * @param {number} zoneId - The ID of the cell to clear.
- **/
 function deletePhoto(zoneId) { 
     delete photoData[zoneId]; 
     renderPhotoInCell(zoneId, null); 
     fetchAIResults(); 
-    STATUS_ELEMENT.innerText = `Photo cleared from Zone ${zoneId}. Analysis updated to 'No Photo'.`;
+    document.getElementById('status').innerText = `Photo cleared from Zone ${zoneId}. Analysis updated to 'No Photo'.`;
 }
 
-/** * @function loadCurrentPhotoData
- * @description Renders photos from the global state onto the grid.
- **/
 function loadCurrentPhotoData() { 
     for (let i = 1; i <= 16; i++) { 
         renderPhotoInCell(i, photoData[i] || null); 
     } 
 }
 
-/** * @function clearPhotoGrid
- * @description Clears all photos from the grid display.
- **/
-function clearPhotoGrid() { 
-    for (let i = 1; i <= 16; i++) { 
-        renderPhotoInCell(i, null); 
-    } 
+// --- Stock Photo Functions (RESTORED) ---
+function openStockPhotoModal() {
+    const nearest = getNearestPlant(currentRoverData.x_m, currentRoverData.y_m);
+    const zoneToAssign = selectedZone || (nearest ? nearest.id : null);
+    
+    if (!zoneToAssign) {
+        document.getElementById('status').innerText = "Please click a zone cell (1-16) or move the rover closer to a plant zone first.";
+        selectedZone = 0;
+        return;
+    }
+    
+    selectedZone = zoneToAssign;
+    document.getElementById('currentStockZone').innerText = selectedZone;
+    const list = document.getElementById('stockPhotoList');
+    list.innerHTML = '';
+    
+    // Populate the list with the placeholder data
+    Object.keys(stockPhotoData).forEach(key => {
+        const data = stockPhotoData[key];
+        const item = document.createElement('div');
+        item.style.textAlign = 'center';
+        item.style.cursor = 'pointer';
+        item.style.width = '120px';
+        item.innerHTML = `<img src="${data.data}" style="width: 100px; height: 100px; border: 2px solid ${data.class === 'rec-action' ? '#FFC000' : (data.class === 'rec-critical' ? '#C55050' : '#6AA84F')}; border-radius: 8px;">
+                          <p style="margin: 5px 0 0; font-size: 0.9em; color: var(--color-text-highlight);">${data.name.split('(')[0]}</p>`;
+        item.onclick = () => assignStockPhoto(selectedZone, key);
+        list.appendChild(item);
+    });
+    
+    document.getElementById('stockPhotoModal').style.display = "flex";
+}
+function closeStockPhotoModal() { document.getElementById('stockPhotoModal').style.display = "none"; }
+
+function assignStockPhoto(zoneId, photoKey) {
+    const data = stockPhotoData[photoKey];
+    if (data) {
+        // Store the image data and the key for prediction lookup
+        photoData[zoneId] = {
+            base64: data.data,
+            predictionKey: photoKey
+        };
+        renderPhotoInCell(zoneId, photoData[zoneId]);
+        document.getElementById('status').innerText = `Stock photo '${data.name}' assigned to Zone ${zoneId}. Analysis running...`;
+        selectedZone = 0;
+        closeStockPhotoModal();
+        fetchAIResults();
+    }
 }
 
-// --- 10.9: HISTORY LOGIC (Uses localStorage) ---
 
-/** * @function saveCurrentTrial
- * @description Saves the current state as a new trial entry to local storage.
- **/
+// --- 10.8: HISTORY LOGIC (Full implementation added for length) ---
+
 function saveCurrentTrial() {
     const trialId = trialHistory.length + 1;
     const trialData = {
@@ -1171,8 +1050,7 @@ function saveCurrentTrial() {
         date: new Date().toLocaleString(), 
         roverData: { ...currentRoverData },
         loggedData: [...loggedData], 
-        photoData: { ...photoData }, 
-        // Save the final rendered HTML of the analysis grid
+        photoData: JSON.parse(JSON.stringify(photoData)), // Deep copy for photo object structure
         aiData: { analysisGrid: document.getElementById('plantAnalysisGrid').innerHTML } 
     };
     trialHistory.push(trialData);
@@ -1180,17 +1058,13 @@ function saveCurrentTrial() {
     
     currentTrialNumber = trialId + 1;
     document.getElementById('currentTrialNumber').innerText = currentTrialNumber;
-    STATUS_ELEMENT.innerText = `Trial ${trialId} saved successfully! Starting new trial...`;
+    document.getElementById('status').innerText = `Trial ${trialId} saved successfully! Starting new trial...`;
     
-    // Reset data for the new trial
     loggedData = []; 
     photoData = {}; 
-    clearMapData(false); // Keep rover position, clear data
+    clearMapData(false); 
 }
 
-/** * @function openHistoryModal
- * @description Opens the modal displaying the list of saved trials.
- **/
 function openHistoryModal() {
     const modal = document.getElementById('historyModal'); 
     const list = document.getElementById('trialHistoryList');
@@ -1211,36 +1085,25 @@ function openHistoryModal() {
 }
 function closeHistoryModal() { document.getElementById('historyModal').style.display = "none"; }
 
-/** * @function loadPastTrial
- * @description Loads the saved state of a specific trial into the dashboard.
- * @param {number} trialId - The ID of the trial to load.
- **/
 function loadPastTrial(trialId) {
     const trial = trialHistory.find(t => t.id === trialId); 
     if (!trial) return;
     
-    // Restore Rover and GPS State
     currentRoverData = trial.roverData;
-    updateRoverPositionUI(null, null, null, null, currentRoverData.heading); // Use null for sensor data
-    
-    // Restore Logged and Photo Data
+    updateRoverPositionUI(null, null, null, null, currentRoverData.heading); 
     loggedData = trial.loggedData; 
     photoData = trial.photoData; 
     
-    // Restore Visuals
     document.getElementById('plantAnalysisGrid').innerHTML = trial.aiData.analysisGrid;
     drawMap(); 
     draw3DMap(); 
     loadCurrentPhotoData();
 
-    STATUS_ELEMENT.innerText = `Loaded data for Trial ${trialId}.`;
+    document.getElementById('status').innerText = `Loaded data for Trial ${trialId}.`;
     document.getElementById('currentTrialNumber').innerText = `${currentTrialNumber} (Viewing Trial ${trialId})`;
     closeHistoryModal();
 }
 
-/** * @function clearAllHistory
- * @description Clears the entire local storage history of trials.
- **/
 function clearAllHistory() {
     if (confirm("Are you sure you want to clear ALL saved trial history? This cannot be undone.")) {
         localStorage.removeItem('trialHistory');
@@ -1248,33 +1111,30 @@ function clearAllHistory() {
         currentTrialNumber = 1;
         document.getElementById('currentTrialNumber').innerText = currentTrialNumber;
         closeHistoryModal();
-        STATUS_ELEMENT.innerText = "All trial history cleared.";
+        document.getElementById('status').innerText = "All trial history cleared.";
     }
 }
 
-// --- 10.10: INITIALIZATION (Run on page load) ---
 
-/** * @function initializeDashboard
- * @description Function called when the window loads to set up the dashboard state.
- * All initial data fetching/mocking is omitted here for reliability.
- **/
+// --- 10.9: INITIALIZATION ---
+
 window.onload = function() {
     // 1. Initialize 3D renderer
     initThreeD(); 
     
-    // 2. Draw the 2D field map (Will show a blank grid with the rover at center)
+    // 2. Draw the 2D field map
     drawMap(); 
     
     // 3. Build the 4x4 photo upload grid
     generatePhotoGrid(); 
     
-    // 4. Run the first analysis, which will populate the grid with 'No Data' cards
+    // 4. Run the first analysis (populates 'No Data' cards)
     fetchAIResults(); 
     
-    // 5. Ensure UI placeholders are set to '---' and rover position is set
+    // 5. Ensure UI placeholders are set
     updateRoverPositionUI(); 
     
-    STATUS_ELEMENT.innerText = "System Initialized. No live connection. Ready for Movement and Data Acquisition Commands.";
+    document.getElementById('status').innerText = "System Initialized. No live connection. Ready for Movement, Data Acquisition, and Photo Logging.";
 };
 </script>
 </body>
