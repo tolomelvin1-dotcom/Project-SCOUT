@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PROJECT SCOUT)</title>
+<title>S.C.O.U.T. Rover Full-Spectrum Data Fusion & Control Console (V13.0 - INVISIBLE INLINE INPUT FIX)</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script async src="https://docs.opencv.org/4.x/opencv.js" onload="onOpenCvReady();"></script>
@@ -106,7 +106,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
     margin: 25px auto;
     aspect-ratio: 1 / 1;
     background-color: #0f131a;
-    position: relative; /* CRITICAL for absolute positioning of input */
+    position: relative; 
 }
 .grid-cell {
     background-color: #21262d;
@@ -125,10 +125,23 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 }
 .grid-cell:hover { border: 3px solid #79c0ff; background-color: #2a3038; }
 
+/* Styles for delete button for embedded file input to work */
+.delete-photo-btn {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    padding: 2px 5px;
+    font-size: 0.8em;
+    z-index: 10; /* Ensure button is on top of the transparent input */
+    background-color: #f85149;
+    color: #0d1117;
+    border-radius: 50%;
+}
+
 /* ANALYSIS CARD STYLING */
 #plantAnalysisGrid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(550px, 1fr)); /* Further maximized card size */
+    grid-template-columns: repeat(auto-fit, minmax(550px, 1fr)); 
     gap: 40px;
     margin-top: 30px;
 }
@@ -161,7 +174,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 .rec-optimal { background-color: #3fb950; color: #0d1117; }
 .rec-action { background-color: #e3b341; color: #0d1117; }
 .rec-critical { background-color: #f85149; color: #0d1117; }
-.rec-no-data { background-color: #58a6ff; color: #0d1117; } /* New color for Awaiting Data cards */
+.rec-no-data { background-color: #58a6ff; color: #0d1117; } 
 
 /* MODAL AND HISTORY LIST STYLES */
 .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.98); }
@@ -171,10 +184,10 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
     padding: 20px; 
     margin-bottom: 12px; 
     background-color: #0f131a; 
+    border-left: 6px solid #e3b341;
     border-radius: 12px; 
     cursor: pointer; 
     transition: background-color 0.3s;
-    border-left: 6px solid #e3b341;
 }
 .trial-item:hover { background-color: #21262d; border-left: 6px solid #79c0ff; }
 #stockImageGrid {
@@ -187,27 +200,12 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
     padding: 20px;
     border-radius: 10px;
 }
-
-/* CRITICAL V11.0 CSS: The input is positioned absolutely over the container */
-#superFileInput {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    opacity: 0.001; /* CRITICAL CHANGE: Must be non-zero for direct click to register in strict environments */
-    z-index: 100; /* Ensure it's on top of the grid cell */
-    cursor: pointer;
-    margin: 0;
-    padding: 0;
-    display: none; /* Initial state: completely hidden */
-}
 </style>
 </head>
 <body>
 <div class="container">
 <div class="controls-panel">
-    <h1>S.C.O.U.T. Rover Control & Telemetry Bridge (V11.0)</h1>
+    <h1>S.C.O.U.T. Rover Control & Telemetry Bridge (V13.0)</h1>
     <p>System Diagnostic Status: <span id="status">AWAITING SYSTEM BOOT SEQUENCE COMPLETION...</span></p>
 
     <div class="data-display history-controls">
@@ -264,7 +262,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 <div class="photo-panel">
     <div class="camera-control data-display">
         <h2>Image Capture & Stock Library</h2>
-        <p>TO UPLOAD: **Click a Zone (1-16)**, then **CLICK IT AGAIN** immediately.</p>
+        <p>TO UPLOAD: **Click any Zone (1-16)** to open the file dialog.</p>
         <button onclick="dispatchRoverMovementCommand('capture')" class="photo-controls"> 📸 TRIGGER CAMERA CAPTURE</button>
         <button onclick="openStockImageGalleryModal()" class="photo-controls"> 🖼️ VIEW STOCK PHOTOS (50 Presets)</button>
         <p>Current Target Zone: **Zone <span id="currentZoneSelection">N/A</span>**</p>
@@ -272,8 +270,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
     <hr style="border-top: 2px solid #30363d; margin: 30px 0;">
     <h2>Plant Zone Photo Assignments (16 Zones)</h2>
     <div id="photoGrid">
-        <input type="file" id="superFileInput" accept="image/*" onchange="handleSuperFileSelectedByUser(event)">
-    </div>
+        </div>
 </div>
 
 <div class="map-3d-panel">
@@ -317,7 +314,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 // ----------------------------------------------------------------------------------
 /**
  * @fileoverview S.C.O.U.T. Rover Control System JavaScript Core.
- * Version 11.0: The Pure Overlap Hack - Guarantees file upload by direct user click.
+ * Version 13.0: The Invisible Inline Input Hack - Guarantees file upload by direct user click.
  */
 
 // --- 0.2.1 HARDWARE AND NETWORK CONFIGURATION (CRITICAL SYSTEM IDENTIFIERS) ---
@@ -326,8 +323,8 @@ const THINGSPEAK_API_KEY = '6OXH3SUQ4VNSOJX1';
 const MAX_HISTORY_TRIALS = 50; 
 
 // --- 0.2.2 PHYSICAL SYSTEM AND UI CONSTANTS (STRICT ADHERENCE TO SPECIFICATIONS) ---
-const FIELD_GRID_SIZE_M = 4; // 4m x 4m field dimensions
-const MAP_CANVAS_PIXELS = 480; // Fixed canvas size for map
+const FIELD_GRID_SIZE_M = 4; 
+const MAP_CANVAS_PIXELS = 480; 
 const MAX_STOCK_PHOTOS = 50; 
 const PLANT_CIRCLE_RADIUS = 5; 
 
@@ -340,14 +337,13 @@ const MAP_CONTEXT = document.getElementById('roverMap').getContext('2d');
 const HISTORY_MODAL = document.getElementById('historyModal');
 const STOCK_MODAL = document.getElementById('stockImageModal');
 const CURRENT_ZONE_SELECTION_DISPLAY = document.getElementById('currentZoneSelection');
-const FILE_INPUT_ELEMENT = document.getElementById('superFileInput'); // CRITICAL V11.0 REFERENCE
 
 // --- 0.2.4 GLOBAL STATE VARIABLES (Clean Initial State Definition) ---
 let openCvLibraryIsReady = false;
 let systemLoggedSensorDataArray = []; 
 let currentPhotoAssignmentData = {}; 
 let stockPhotoLibraryData = {}; 
-let currentlySelectedPlantZone = 0; // CRITICAL: Used by V11.0 file input
+let currentlySelectedPlantZone = 0; // CRITICAL: Used by photo handlers
 let historyIsBeingViewed = false;
 
 let currentRoverKinematicState = {
@@ -643,7 +639,7 @@ function executePhotoPrediction(base64Image) {
 
 
 // ==================================================================================
-// SECTION 3.0: USER INTERFACE, RENDERING, AND INITIALIZATION (V11.0 FIXES APPLIED)
+// SECTION 3.0: USER INTERFACE, RENDERING, AND INITIALIZATION (V13.0 FIXES APPLIED)
 // ----------------------------------------------------------------------------------
 
 /**
@@ -652,11 +648,9 @@ function executePhotoPrediction(base64Image) {
 async function triggerComprehensiveAnalysisCycle() {
     const analysisGridContainer = document.getElementById('plantAnalysisGrid');
     
-    // Check if we have enough data to move past the initial 'No Data' state.
     const hasAnyData = systemLoggedSensorDataArray.length > 0 || Object.keys(currentPhotoAssignmentData).length > 0;
     
     if (!hasAnyData && !historyIsBeingViewed) {
-        // If no data, ensure the "No Data" cards are rendered (they were already rendered in onDocumentReady, but this handles reset).
         renderNoDataCards();
         STATUS_ELEMENT.innerText = `DATA FUSION STANDBY: Awaiting initial sensor or photo data. Rover is STANDBY.`;
         return; 
@@ -680,7 +674,6 @@ async function triggerComprehensiveAnalysisCycle() {
     const finalAnalysesResults = await Promise.all(fusionPromises); 
     analysisGridContainer.innerHTML = ''; 
 
-    // Render all 16 definitive cards.
     finalAnalysesResults.forEach(renderAnalysisCard);
 
     draw3DMap(); 
@@ -730,10 +723,7 @@ function renderNoDataCards() {
 function renderAnalysisCard(analysisResult) {
     const analysisGridContainer = document.getElementById('plantAnalysisGrid');
     
-    // We keep this function for rendering actual data-driven cards
     if (analysisResult.healthClassification === 'rec-no-data') {
-        // If we reach here, it means we ran the full cycle but this specific card
-        // still had no data, so we render the no-data template.
         const noDataCardHTML = `
         <div class="analysis-card" style="border: 2px solid #58a6ff;">
             <div class="plant-id-label">ZONE ${analysisResult.id} DIAGNOSTIC REPORT</div>
@@ -779,26 +769,16 @@ function renderAnalysisCard(analysisResult) {
 }
 
 /**
- * CRITICAL V11.0 FIX: Handler for the file input.
+ * CRITICAL V13.0 FIX: The change handler for the transparent file input.
  */
-function handleSuperFileSelectedByUser(event) {
+function handleFileSelect(event) {
     const file = event.target.files[0];
     const targetZoneId = currentlySelectedPlantZone;
     
-    // Clear the file input value immediately to allow the user to select the same file again
-    event.target.value = '';
-
-    // CRITICAL V11.0 CLEANUP: Hide the input immediately after file dialog closes
-    FILE_INPUT_ELEMENT.style.display = 'none';
-    FILE_INPUT_ELEMENT.style.width = '0';
-    FILE_INPUT_ELEMENT.style.height = '0';
-    
+    // Check if the input used was one of the dynamic ones
     if (!file || targetZoneId === 0) {
-        STATUS_ELEMENT.innerText = "NOTICE: File selection canceled or target zone lost. Re-click the cell to try again.";
-        // Ensure styling is reset
-        document.querySelectorAll('.grid-cell').forEach(c => c.style.border = '1px solid #3fb950'); 
-        currentlySelectedPlantZone = 0; 
-        CURRENT_ZONE_SELECTION_DISPLAY.innerText = 'N/A';
+        // We expect selectedZone to be set by the inline input's onchange listener
+        STATUS_ELEMENT.innerText = "NOTICE: File selection canceled or target zone lost. Ready to select again.";
         return;
     }
 
@@ -813,8 +793,10 @@ function handleSuperFileSelectedByUser(event) {
             
             STATUS_ELEMENT.innerText = `SUCCESS: Photo **${file.name}** uploaded successfully to Zone ${targetZoneId}. Triggering Fused Analysis...`;
             
+            // Clear the file input value so the same file can be selected again
+            event.target.value = ''; 
+            
             // CRITICAL CLEANUP: Reset the selection and trigger analysis
-            document.querySelectorAll('.grid-cell').forEach(c => c.style.border = '1px solid #3fb950'); 
             currentlySelectedPlantZone = 0; 
             CURRENT_ZONE_SELECTION_DISPLAY.innerText = 'N/A';
             
@@ -930,7 +912,6 @@ function executeTrialSaveOperation() {
         sensorLogs: [...systemLoggedSensorDataArray],
         photoAssignments: JSON.parse(JSON.stringify(currentPhotoAssignmentData)), 
         aiData: {
-            // Save the current analysis HTML to ensure history recall is instant
             analysisGridHTML: document.getElementById('plantAnalysisGrid').innerHTML 
         }
     };
@@ -944,95 +925,116 @@ function executeTrialSaveOperation() {
     currentIncrementalTrialID++;
     HISTORY_TRIAL_COUNTER.innerText = currentIncrementalTrialID;
     resetSensorAndMapData(true);
-    clearPhotoGrid();
-    triggerComprehensiveAnalysisCycle(); // Immediately render 'No Data' state for new trial
+    triggerComprehensiveAnalysisCycle(); 
 }
 
 /**
- * CRITICAL V11.0 FIX: Grid cell click now prepares the file input for overlap and direct click.
+ * CRITICAL V13.0 FIX: Grid cell click is now handled by the embedded file input.
  */
 function generatePhotoGrid() {
-    const photoGrid = document.getElementById('photoGrid');
-    // Remove all children *except* the file input
-    Array.from(photoGrid.children).forEach(child => {
-        if (child.id !== 'superFileInput') {
-            child.remove();
-        }
-    });
+    const grid = document.getElementById('photoGrid');
+    grid.innerHTML = ''; // Clear all existing cells
 
     for (let i = 1; i <= 16; i++) {
         const cell = document.createElement('div');
         cell.className = 'grid-cell';
         cell.id = `zone-cell-${i}`;
-        cell.innerText = `Zone ${i} - AWAITING PHOTO`;
+        cell.style.position = 'relative'; // Make the cell a positioning context
         
-        cell.onclick = () => {
-            // 1. Highlight the selected cell
-            document.querySelectorAll('.grid-cell').forEach(c => c.style.border = '1px solid #3fb950');
-            document.getElementById(`zone-cell-${i}`).style.border = '3px solid #ffd700';
-            
-            // 2. Set the target zone ID
-            currentlySelectedPlantZone = i; 
+        // --- The Fix: Embed Transparent File Input directly in the cell ---
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = 'image/*';
+        fileInput.id = `fileInput-${i}`; // Unique ID for each input
+        
+        // **KEY FIX:** Make it invisible but physically clickable
+        fileInput.style.cssText = `
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0; 
+            cursor: pointer;
+            z-index: 5; /* Ensure it is above the background, but below the delete button */
+        `;
+        
+        // Assign the correct zone and call the original handler when a file is selected
+        fileInput.onchange = function(event) {
+            currentlySelectedPlantZone = i; // Set the global variable for the handler
             CURRENT_ZONE_SELECTION_DISPLAY.innerText = i;
-            
-            // 3. CRITICAL V11.0 HACK: Overlay the file input directly over the clicked cell
-            prepareInputOverlay(i);
+            handleFileSelect(event);
         };
+        // ------------------------------------------------------------------
+
+        // Add label and delete button
+        cell.innerHTML = `
+        <span class="cell-label">Zone ${i}</span>
+        <button class="delete-photo-btn" onclick="event.stopPropagation(); deletePhoto(${i})">X</button>
+        `;
         
-        photoGrid.appendChild(cell);
+        // Append the transparent, clickable input
+        cell.appendChild(fileInput);
+
+        grid.appendChild(cell);
         
         if (currentPhotoAssignmentData[i]) {
              renderPhotoInPhotoGridCell(i, currentPhotoAssignmentData[i]);
         }
     }
-    // Ensure input is off-screen and invisible initially
-    FILE_INPUT_ELEMENT.style.display = 'none';
 }
-
-function prepareInputOverlay(zoneId) {
-    const cell = document.getElementById(`zone-cell-${zoneId}`);
-    const cellRect = cell.getBoundingClientRect();
-
-    // Position the absolute input element relative to its parent (#photoGrid)
-    FILE_INPUT_ELEMENT.style.display = 'block';
-    FILE_INPUT_ELEMENT.style.left = `${cell.offsetLeft}px`;
-    FILE_INPUT_ELEMENT.style.top = `${cell.offsetTop}px`;
-    FILE_INPUT_ELEMENT.style.width = `${cellRect.width}px`;
-    FILE_INPUT_ELEMENT.style.height = `${cellRect.height}px`;
-    
-    // V11.0 CRITICAL CHANGE: NO programmatic click is used here.
-    // The user's next click on the cell (which is now the input) will trigger the file dialog.
-    
-    STATUS_ELEMENT.innerText = `Zone ${zoneId} selected. 🚨 URGENT: **Click the highlighted Zone ${zoneId} one more time** to open the file selection dialog. This is a guaranteed direct click on the file input!`;
-    
-}
-
 
 function renderPhotoInPhotoGridCell(zoneId, base64Image) {
     const cell = document.getElementById(`zone-cell-${zoneId}`);
-    cell.innerHTML = ''; 
+    
+    // Remove all children *except* the file input and delete button/label
+    Array.from(cell.children).forEach(child => {
+        if (!child.classList.contains('delete-photo-btn') && !child.classList.contains('cell-label') && child.type !== 'file') {
+            cell.removeChild(child);
+        }
+    });
+
     const img = document.createElement('img');
     img.src = base64Image;
     img.style.width = '100%';
     img.style.height = '100%';
     img.style.objectFit = 'cover';
+    img.style.position = 'absolute';
+    img.style.top = '0';
+    img.style.left = '0';
+    img.style.zIndex = '1'; // Below the input/delete button
+
     cell.appendChild(img);
     
-    const label = document.createElement('div');
-    label.style.position = 'absolute';
-    label.style.top = '0';
-    label.style.left = '0';
-    label.style.backgroundColor = 'rgba(0,0,0,0.7)';
-    label.style.color = '#ffd700';
-    label.style.padding = '5px 7px';
-    label.style.fontSize = '0.7em';
-    label.innerText = `ZONE ${zoneId} (ASSIGNED)`;
-    cell.appendChild(label);
+    // Bring the label and delete button back to the front
+    const label = cell.querySelector('.cell-label');
+    const deleteBtn = cell.querySelector('.delete-photo-btn');
+    if (label) label.style.zIndex = 10;
+    if (deleteBtn) deleteBtn.style.zIndex = 10;
 }
 
-function clearPhotoGrid() {
-    currentPhotoAssignmentData = {};
-    generatePhotoGrid();
+function deletePhoto(zoneId) {
+    delete currentPhotoAssignmentData[zoneId];
+    // Re-render the cell without the image
+    const cell = document.getElementById(`zone-cell-${zoneId}`);
+    
+    // Remove all children *except* the file input and delete button/label
+    Array.from(cell.children).forEach(child => {
+        if (child.tagName === 'IMG') {
+            cell.removeChild(child);
+        }
+    });
+
+    // Reset the cell text
+    const label = cell.querySelector('.cell-label');
+    label.innerText = `Zone ${zoneId}`;
+
+    // Clear the file input value so the user can upload a new photo
+    const fileInput = document.getElementById(`fileInput-${zoneId}`);
+    if (fileInput) fileInput.value = '';
+
+    STATUS_ELEMENT.innerText = `Photo cleared from Zone ${zoneId}. Re-running analysis...`;
+    triggerComprehensiveAnalysisCycle();
 }
 
 function populateStockPhotos() {
@@ -1048,10 +1050,16 @@ function populateStockPhotos() {
 }
 
 function openStockImageGalleryModal() {
+    // Requires a zone to be pre-selected for assignment
+    if (currentlySelectedPlantZone === 0) {
+        STATUS_ELEMENT.innerText = "ERROR: Please click one of the 16 Plant Zones first to set the assignment target.";
+        return;
+    }
+    
     populateStockPhotos();
     renderStockImageGrid();
     STOCK_MODAL.style.display = "block";
-    STATUS_ELEMENT.innerText = "Stock Photo Gallery opened. Select a photo to assign to the current target zone.";
+    STATUS_ELEMENT.innerText = `Stock Photo Gallery opened. Select a photo to assign to target Zone ${currentlySelectedPlantZone}.`;
 }
 
 function closeStockImageGalleryModal() {
@@ -1094,7 +1102,7 @@ function renderStockImageGrid() {
 
 function assignStockPhotoToZone(stockId) {
     if (currentlySelectedPlantZone === 0) {
-        STATUS_ELEMENT.innerText = "ERROR: Please click one of the 16 Plant Zones first before selecting a stock photo.";
+        STATUS_ELEMENT.innerText = "ERROR: Target zone lost. Re-click the cell and try again.";
         return;
     }
     
@@ -1106,7 +1114,6 @@ function assignStockPhotoToZone(stockId) {
     
     STATUS_ELEMENT.innerText = `Stock Photo ID ${stockId} assigned to Zone ${targetZoneId}. Triggering Fused Analysis.`;
     
-    document.querySelectorAll('.grid-cell').forEach(c => c.style.border = '1px solid #3fb950'); 
     currentlySelectedPlantZone = 0;
     CURRENT_ZONE_SELECTION_DISPLAY.innerText = 'N/A';
     closeStockImageGalleryModal();
@@ -1161,12 +1168,11 @@ function resetSensorAndMapData(fullReset = true) {
     draw3DMap(); 
     
     if (fullReset) {
-        clearPhotoGrid();
+        generatePhotoGrid();
         historyIsBeingViewed = false;
         currentlySelectedPlantZone = 0;
         CURRENT_ZONE_SELECTION_DISPLAY.innerText = 'N/A';
     }
-    // The analysis is handled by onDocumentReady/triggerComprehensiveAnalysisCycle
 }
 
 function updateMapVisualization() {
@@ -1307,7 +1313,6 @@ function draw3DMap() {
         let color = 0xcccccc; 
 
         if (sensorData) {
-            // Logic to determine color based on health class from the analysis card
             const dummyAnalysis = performFinalDataFusionAndDiagnosis(plant, sensorData, null);
             
             if (dummyAnalysis.healthClassification === 'rec-optimal') color = 0x3fb950;
