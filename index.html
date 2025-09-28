@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>S.C.O.U.T. Rover Full-Spectrum Data Fusion & Control Console (V7.1 - STABILITY FIX)</title>
+<title>S.C.O.U.T. Rover Full-Spectrum Data Fusion & Control Console (V8.0 - STABILITY OVERLOAD)</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script async src="https://docs.opencv.org/4.x/opencv.js" onload="onOpenCvReady();"></script>
@@ -148,7 +148,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 .assessment-section { margin-bottom: 30px; padding: 25px; border-radius: 12px; }
 
 /* Recommendation Coloring */
-.rec-optimal, .rec-action, .rec-critical {
+.rec-optimal, .rec-action, .rec-critical, .rec-no-data {
     padding: 15px;
     border-radius: 10px;
     display: block;
@@ -160,6 +160,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 .rec-optimal { background-color: #3fb950; color: #0d1117; }
 .rec-action { background-color: #e3b341; color: #0d1117; }
 .rec-critical { background-color: #f85149; color: #0d1117; }
+.rec-no-data { background-color: #58a6ff; color: #0d1117; } /* New color for Awaiting Data cards */
 
 /* MODAL AND HISTORY LIST STYLES */
 .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.98); }
@@ -190,7 +191,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 <body>
 <div class="container">
 <div class="controls-panel">
-    <h1>S.C.O.U.T. Rover Control & Telemetry Bridge (V7.1)</h1>
+    <h1>S.C.O.U.T. Rover Control & Telemetry Bridge (V8.0)</h1>
     <p>System Diagnostic Status: <span id="status">AWAITING SYSTEM BOOT SEQUENCE COMPLETION...</span></p>
 
     <div class="data-display history-controls">
@@ -256,8 +257,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
     <h2>Plant Zone Photo Assignments (16 Zones)</h2>
     <div id="photoGrid">
     </div>
-    <input type="file" id="fileInput" accept="image/*" style="display:none;" onchange="handleFileSelectedByUser(event)">
-</div>
+    </div>
 
 <div class="map-3d-panel">
     <h2>3D Soil Metric Visualization 📊 (Height=Moisture, Color=Health)</h2>
@@ -300,7 +300,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 // ----------------------------------------------------------------------------------
 /**
  * @fileoverview S.C.O.U.T. Rover Control System JavaScript Core.
- * Version 7.1: Critical fix for History Modal, Photo Upload Stability, and Analysis Visibility Guarantee.
+ * Version 8.0: Critical fix for Dynamic Photo Upload and Guaranteed Analysis Card Visibility.
  */
 
 // --- 0.2.1 HARDWARE AND NETWORK CONFIGURATION (CRITICAL SYSTEM IDENTIFIERS) ---
@@ -322,7 +322,6 @@ const HISTORY_TRIAL_COUNTER = document.getElementById('currentTrialNumber');
 const MAP_CONTEXT = document.getElementById('roverMap').getContext('2d');
 const HISTORY_MODAL = document.getElementById('historyModal');
 const STOCK_MODAL = document.getElementById('stockImageModal');
-const FILE_INPUT_ELEMENT = document.getElementById('fileInput');
 const CURRENT_ZONE_SELECTION_DISPLAY = document.getElementById('currentZoneSelection');
 
 // --- 0.2.4 GLOBAL STATE VARIABLES (Clean Initial State Definition) ---
@@ -539,6 +538,22 @@ function performFinalDataFusionAndDiagnosis(plant, sensorData, visualResult) {
     let finalActionRecommendation = 'Optimal health confirmed. Continue regular monitoring and data logging.';
     let finalHealthClassification = 'rec-optimal';
     
+    // --- SPECIAL CASE: NO DATA ---
+    const noSensor = sensorDataSummary.includes('Missing');
+    const noPhoto = visualPreAssessment.includes('No Photo');
+
+    if (noSensor && noPhoto) {
+         return {
+            id: plant.id,
+            fusedScore: 'N/A',
+            preAssessmentVisual: visualPreAssessment,
+            preAssessmentSensor: sensorDataSummary,
+            finalRecommendation: "Awaiting photo assignment or sensor log in this zone. Please collect data to generate a diagnosis.",
+            healthClassification: 'rec-no-data'
+        };
+    }
+    // --- END SPECIAL CASE ---
+    
     const isMajorViral = visualPredictionTier.name.includes('Mottling');
     const hasCriticalSoilIssue = soilHealthPenalties.some(p => p.problemClassification.includes('CRITICAL'));
     
@@ -555,13 +570,14 @@ function performFinalDataFusionAndDiagnosis(plant, sensorData, visualResult) {
         finalActionRecommendation = `CAUTION: Moderate Soil Imbalance. Recommended adjustments: ${recString}`;
         finalHealthClassification = fusedHealthScore <= 70 ? 'rec-action' : 'rec-optimal';
     } else {
+        // If soil is fine, defer to visual diagnosis
         finalActionRecommendation = visualPredictionTier.recommendation;
         finalHealthClassification = visualPredictionTier.class;
     }
 
     return {
         id: plant.id,
-        fusedScore: Math.round(fusedHealthScore).toFixed(0),
+        fusedScore: (fusedHealthScore === 100 && finalHealthClassification === 'rec-optimal') ? 100 : Math.round(fusedHealthScore).toFixed(0),
         preAssessmentVisual: visualPreAssessment,
         preAssessmentSensor: sensorDataSummary,
         finalRecommendation: finalActionRecommendation.trim(),
@@ -578,24 +594,18 @@ function executeCoreCVAnalysis(base64Image) {
     return new Promise((resolve) => {
         const imageElement = document.createElement('img');
         imageElement.onload = function() {
-            let src, hsv, green_mask, yellow_mask; 
-            try {
-                // Placeholder for actual OpenCV processing logic...
-                // Mock result used if actual OpenCV is too slow or fails on the user's machine
-                const calculatedScore = Math.floor(Math.random() * 50) + 50; // 50-100 score
-                let predictionTier = TOMATO_DIAGNOSTIC_KB.DISEASE_TIERS.find(d => d.name.includes("Healthy"));
-                if (calculatedScore < 70) predictionTier = TOMATO_DIAGNOSTIC_KB.DISEASE_TIERS.find(d => d.name.includes("Yellowing"));
+            // Placeholder for actual OpenCV processing logic...
+            // Mock result used if actual OpenCV is too slow or fails on the user's machine
+            const calculatedScore = Math.floor(Math.random() * 50) + 50; // 50-100 score
+            let predictionTier = TOMATO_DIAGNOSTIC_KB.DISEASE_TIERS.find(d => d.name.includes("Healthy"));
+            if (calculatedScore < 70) predictionTier = TOMATO_DIAGNOSTIC_KB.DISEASE_TIERS.find(d => d.name.includes("Yellowing"));
 
-                resolve({ score: calculatedScore, diagnosis: predictionTier.name, prediction: predictionTier });
-            } catch (e) {
-                console.error("CRITICAL OpenCV Analysis Exception:", e);
-                const errorPrediction = TOMATO_DIAGNOSTIC_KB.DISEASE_TIERS.find(d => d.name.includes("Mottling"));
-                resolve({ score: 1, diagnosis: `CV Engine Failed: ${e.message}`, prediction: errorPrediction });
-            } finally {
-                if (src) src.delete();
-                // ... cleanup for other Mats
-            }
+            resolve({ score: calculatedScore, diagnosis: predictionTier.name, prediction: predictionTier });
         };
+        imageElement.onerror = function() {
+             const errorPrediction = TOMATO_DIAGNOSTIC_KB.DISEASE_TIERS.find(d => d.name.includes("Mottling"));
+             resolve({ score: 1, diagnosis: `CV Engine Image Load Failed`, prediction: errorPrediction });
+        }
         imageElement.src = base64Image;
     });
 }
@@ -624,16 +634,16 @@ function executePhotoPrediction(base64Image) {
  */
 async function triggerComprehensiveAnalysisCycle() {
     const analysisGridContainer = document.getElementById('plantAnalysisGrid');
-    const hasData = systemLoggedSensorDataArray.length > 0 || Object.keys(currentPhotoAssignmentData).length > 0;
+    const hasAnyData = systemLoggedSensorDataArray.length > 0 || Object.keys(currentPhotoAssignmentData).length > 0;
     
-    // CRITICAL FIX: Ensure the "AWAITING DATA" message is rendered if no data exists.
-    if (!hasData) {
+    if (!hasAnyData && !historyIsBeingViewed) {
         analysisGridContainer.innerHTML = '<h2><strong style="color: #f08047;">DATA FUSION ENGINE: AWAITING GATHERED DATA.</strong> (No sensor logs or photo assignments yet.) </h2>';
         STATUS_ELEMENT.innerText = `DATA FUSION STANDBY: Awaiting initial sensor or photo data. Rover is STANDBY.`;
         draw3DMap(); 
         return; 
     }
     
+    STATUS_ELEMENT.innerText = `DATA FUSION ENGINE: Processing all 16 zones with available data...`;
     analysisGridContainer.innerHTML = '<h2><strong style="color: #58a6ff;">DATA FUSION ENGINE: Processing...</strong></h2>';
 
     const fusionPromises = FIELD_PLANT_LOCATIONS_M.map(async plant => {
@@ -651,19 +661,40 @@ async function triggerComprehensiveAnalysisCycle() {
     const finalAnalysesResults = await Promise.all(fusionPromises); 
     analysisGridContainer.innerHTML = ''; 
 
-    // Filter out cards that have absolutely no data (to prevent 16 empty cards)
-    finalAnalysesResults.filter(r => 
-        !r.preAssessmentSensor.includes('Missing') || !r.preAssessmentVisual.includes('No Photo')
-    ).forEach(renderAnalysisCard);
+    // CRITICAL FIX: Render all 16 cards, even the "no data" ones, for guaranteed UI visibility
+    finalAnalysesResults.forEach(renderAnalysisCard);
 
     draw3DMap(); 
 
-    STATUS_ELEMENT.innerText = `DATA FUSION COMPLETE: All ${finalAnalysesResults.length} zones checked and results rendered. Rover is STANDBY.`;
+    STATUS_ELEMENT.innerText = `DATA FUSION COMPLETE: All 16 zones checked and results rendered. Rover is STANDBY.`;
 }
 
 function renderAnalysisCard(analysisResult) {
     const analysisGridContainer = document.getElementById('plantAnalysisGrid');
     
+    // Customize rendering for the "No Data Collected" case
+    if (analysisResult.healthClassification === 'rec-no-data') {
+        const noDataCardHTML = `
+        <div class="analysis-card" style="border: 2px solid #58a6ff;">
+            <div class="plant-id-label">ZONE ${analysisResult.id} DIAGNOSTIC REPORT</div>
+            <div class="assessment-section pre-assessment">
+                <strong>Data Status:</strong>
+                <p>Status: **Awaiting Data Collection**</p>
+                <p>Action: **${analysisResult.finalRecommendation}**</p>
+            </div>
+            <hr style="border-top: 2px solid #30363d; margin: 25px 0;">
+            <div class="assessment-section final-recommendation">
+                <strong>FINAL COMPOSITE HEALTH SCORE:</strong> 
+                <span class="${analysisResult.healthClassification}">N/A</span>
+                <h4 style="color: #c9d1d9; margin-top: 20px;">Priority Action:</h4>
+                <span class="${analysisResult.healthClassification}">Begin data acquisition (take photo or log sensor reading).</span>
+            </div>
+        </div>
+        `;
+        analysisGridContainer.insertAdjacentHTML('beforeend', noDataCardHTML);
+        return;
+    }
+
     const cardHTML = `
     <div class="analysis-card">
         <div class="plant-id-label">ZONE ${analysisResult.id} DIAGNOSTIC REPORT</div>
@@ -688,37 +719,47 @@ function renderAnalysisCard(analysisResult) {
 }
 
 /**
- * Handles file selection from the user's local machine (Photo Upload Fix).
+ * CRITICAL FIX: Dynamic creation and handling of the file input.
+ * This function is ONLY called via the dynamically created input's listener.
  */
-function handleFileSelectedByUser(event) {
+function handleFileSelectedByUser(event, targetZoneId) {
     const file = event.target.files[0];
-    const targetZoneId = currentlySelectedPlantZone;
+    
+    // Clean up the dynamically created input immediately
+    document.body.removeChild(event.target);
 
     if (!file || targetZoneId === 0) {
-        STATUS_ELEMENT.innerText = "ERROR: File selection failed or plant zone selection lost. Please re-click the zone.";
-        event.target.value = ''; 
+        STATUS_ELEMENT.innerText = "ERROR: File selection canceled or target zone lost. Re-click the zone to try again.";
         return;
     }
 
-    STATUS_ELEMENT.innerText = `Processing file ${file.name} for Zone ${targetZoneId}...`;
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const base64Image = e.target.result;
-        currentPhotoAssignmentData[targetZoneId] = base64Image;
-        renderPhotoInPhotoGridCell(targetZoneId, base64Image);
-        
-        STATUS_ELEMENT.innerText = `Photo uploaded successfully to Zone ${targetZoneId}. Triggering Fused Analysis...`;
-        
-        // CRITICAL CLEANUP: Reset the selection and the file input
-        document.querySelectorAll('.grid-cell').forEach(c => c.style.border = '1px solid #3fb950'); 
-        currentlySelectedPlantZone = 0; 
-        CURRENT_ZONE_SELECTION_DISPLAY.innerText = 'N/A';
-        // event.target.value = ''; // Clean up after successful read
-        
-        triggerComprehensiveAnalysisCycle(); 
-    };
+    STATUS_ELEMENT.innerText = `Processing file ${file.name} for Zone ${targetZoneId}... (This is the final step)`;
     
-    reader.readAsDataURL(file);
+    try {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const base64Image = e.target.result;
+            currentPhotoAssignmentData[targetZoneId] = base64Image;
+            renderPhotoInPhotoGridCell(targetZoneId, base64Image);
+            
+            STATUS_ELEMENT.innerText = `SUCCESS: Photo **${file.name}** uploaded successfully to Zone ${targetZoneId}. Triggering Fused Analysis...`;
+            
+            // CRITICAL CLEANUP: Reset the selection and trigger analysis
+            document.querySelectorAll('.grid-cell').forEach(c => c.style.border = '1px solid #3fb950'); 
+            currentlySelectedPlantZone = 0; 
+            CURRENT_ZONE_SELECTION_DISPLAY.innerText = 'N/A';
+            
+            triggerComprehensiveAnalysisCycle(); 
+        };
+        
+        reader.onerror = function(e) {
+            STATUS_ELEMENT.innerText = `CRITICAL READ ERROR: Failed to read file for Zone ${targetZoneId}. Error: ${e.target.error.name}`;
+        };
+
+        reader.readAsDataURL(file);
+    } catch(e) {
+        STATUS_ELEMENT.innerText = `CRITICAL JS ERROR: An exception occurred during file reading. ${e.message}`;
+    }
 }
 
 // ------------------------------------------
@@ -837,7 +878,9 @@ function executeTrialSaveOperation() {
     triggerComprehensiveAnalysisCycle();
 }
 
-
+/**
+ * CRITICAL FIX: Implement the dynamic file input creation inside the click handler.
+ */
 function generatePhotoGrid() {
     const photoGrid = document.getElementById('photoGrid');
     photoGrid.innerHTML = '';
@@ -854,11 +897,26 @@ function generatePhotoGrid() {
             document.getElementById(`zone-cell-${i}`).style.border = '3px solid #ffd700';
             CURRENT_ZONE_SELECTION_DISPLAY.innerText = i;
             
-            // CRITICAL FIX: Reset file input value before click to allow re-upload
-            FILE_INPUT_ELEMENT.value = ''; 
+            // --- AGGRESSIVE DYNAMIC FILE INPUT FIX START ---
             
-            STATUS_ELEMENT.innerText = `Zone ${i} selected for direct upload. Opening file dialog...`;
-            FILE_INPUT_ELEMENT.click(); // Trigger the file dialog
+            // 1. Create a brand-new file input element
+            const dynamicFileInput = document.createElement('input');
+            dynamicFileInput.type = 'file';
+            dynamicFileInput.accept = 'image/*';
+            dynamicFileInput.style.display = 'none';
+            
+            // 2. Attach the specific handler with the target zone ID
+            // We use an anonymous function to ensure the correct 'i' is passed
+            dynamicFileInput.onchange = (event) => handleFileSelectedByUser(event, i);
+
+            // 3. Attach it to the body (necessary for some browsers to allow the programmatic click)
+            document.body.appendChild(dynamicFileInput);
+
+            // 4. Trigger the click
+            STATUS_ELEMENT.innerText = `Zone ${i} selected for direct upload. Opening DYNAMIC file dialog...`;
+            dynamicFileInput.click(); 
+            
+            // --- AGGRESSIVE DYNAMIC FILE INPUT FIX END ---
         };
         
         photoGrid.appendChild(cell);
@@ -902,6 +960,7 @@ function populateStockPhotos() {
     for (let i = 1; i <= MAX_STOCK_PHOTOS; i++) {
         const diseaseIndex = i % diseaseList.length;
         const diseaseName = diseaseList[diseaseIndex].name;
+        // Mock image with diagnostic info embedded in base64 string
         const base64 = `data:image/svg+xml;base64,mocked_stock_photo_hash_${i}_diag:${diseaseName.replace(/\s/g, '_').replace(/[()]/g, '')}`;
         stockPhotoLibraryData[i] = base64;
     }
@@ -1025,9 +1084,9 @@ function resetSensorAndMapData(fullReset = true) {
         historyIsBeingViewed = false;
         currentlySelectedPlantZone = 0;
         CURRENT_ZONE_SELECTION_DISPLAY.innerText = 'N/A';
-        // Note: We intentionally removed the call to triggerComprehensiveAnalysisCycle here,
-        // and put a guaranteed call into onDocumentReady to avoid re-running the heavy logic twice.
     }
+    // Analysis is triggered on document ready and explicitly after data acquisition/history load.
+    // No need to call here unless a full UI refresh is mandatory.
 }
 
 function updateMapVisualization() {
@@ -1168,13 +1227,13 @@ function draw3DMap() {
         let color = 0xcccccc; 
 
         if (sensorData) {
-            const analysisCard = document.querySelector(`.analysis-card .plant-id-label:contains("ZONE ${plant.id}")`)?.parentElement;
-            const healthClassElement = analysisCard?.querySelector('.final-recommendation span[class^="rec-"]');
-            const healthClass = healthClassElement?.className;
+            // Logic to determine color based on health class from the analysis card
+            // We use the same coloring logic as in performFinalDataFusionAndDiagnosis
+            const dummyAnalysis = performFinalDataFusionAndDiagnosis(plant, sensorData, null);
             
-            if (healthClass === 'rec-optimal') color = 0x3fb950;
-            else if (healthClass === 'rec-action') color = 0xe3b341;
-            else if (healthClass === 'rec-critical') color = 0xf85149;
+            if (dummyAnalysis.healthClassification === 'rec-optimal') color = 0x3fb950;
+            else if (dummyAnalysis.healthClassification === 'rec-action') color = 0xe3b341;
+            else if (dummyAnalysis.healthClassification === 'rec-critical') color = 0xf85149;
             else color = 0x79c0ff; 
         }
         
@@ -1205,6 +1264,7 @@ function updateRover3DPosition() {
 // ------------------------------------------
 
 // Small utility to allow querySelector to use :contains for the 3D map coloring logic
+// (Kept for robustness, though not strictly needed for the 3D map coloring in V8.0)
 (function(D){
     D.querySelector = function(s){
         if(s.indexOf(':contains') === -1) return D.querySelector(s);
@@ -1225,9 +1285,9 @@ function onDocumentReady() {
     initThreeD();
     populateStockPhotos(); 
     generatePhotoGrid();
-    resetSensorAndMapData(true); 
+    resetSensorAndMapData(false); // Do not clear sensor/photo data on soft init
     
-    // CRITICAL FIX: Guarantee analysis view is rendered with the 'AWAITING DATA' message on load.
+    // CRITICAL FIX: Guarantee analysis view is rendered with the 16 card structure on load.
     triggerComprehensiveAnalysisCycle(); 
     
     STATUS_ELEMENT.innerText = "SYSTEM BOOT: DOM Ready. Awaiting OpenCV.js initialization for full CV capability.";
