@@ -3,14 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>S.C.O.U.T. Rover Mapping & Control (3D & History Enabled)</title>
+    <title>S.C.O.U.T. Rover Mapping & Control (3D Fix & Delete)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script> 
     <style>
         /* BASE STYLING (Dark Theme) */
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background-color: #1e1e1e; color: #d4d4d4; }
         .container { max-width: 1700px; margin: auto; background: #2d2d30; padding: 25px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); display: flex; flex-wrap: wrap; }
         
-        /* LAYOUT PANELS - Adjusted widths for 3D map */
+        /* LAYOUT PANELS */
         .controls-panel { flex: 1; min-width: 350px; padding-right: 20px; }
         .map-panel { flex: 1; min-width: 450px; }
         .photo-panel { flex: 1; min-width: 450px; padding-left: 20px; border-left: 1px solid #3c3c3c; } 
@@ -88,6 +89,25 @@
             position: absolute;
             top: 0;
             left: 0;
+        }
+        /* NEW: Delete Button on Photo Cells */
+        .delete-photo-btn {
+            position: absolute;
+            bottom: 2px;
+            right: 2px;
+            background-color: rgba(220, 53, 69, 0.8);
+            color: white;
+            border: none;
+            border-radius: 3px;
+            padding: 2px 5px;
+            font-size: 10px;
+            cursor: pointer;
+            z-index: 20;
+            line-height: 1;
+            display: none; /* Hidden by default */
+        }
+        .grid-cell:has(.cell-photo) .delete-photo-btn {
+            display: block; /* Show if photo is present */
         }
         
         /* MODAL (History Viewer) STYLES */
@@ -193,7 +213,7 @@
         <hr style="border-top: 1px solid #3c3c3c;">
 
         <h2>Manual Photo Upload Map (Zones 1-16)</h2>
-        <p>Click a zone below to manually upload a photo for that $\mathbf{1\text{m} \times 1\text{m}}$ area.</p>
+        <p>Click a zone below to upload/replace the photo. Click the **X** to delete it.</p>
         <div id="photoGrid">
             </div>
         <input type="file" id="fileInput" accept="image/*" style="display:none;" onchange="handleFileSelect(event)">
@@ -225,7 +245,7 @@
     document.getElementById('server-ip').innerText = DELL_WYSE_IP.replace('http://', ''); 
 
     // --- MAP CONSTANTS (4m x 4m) ---
-    const FIELD_SIZE = 4; // 4 meters
+    const FIELD_SIZE = 4;
     const MAP_CANVAS = document.getElementById('roverMap');
     const CTX = MAP_CANVAS.getContext('2d');
     const MAP_SIZE = 450; 
@@ -236,13 +256,12 @@
     for(let r=0; r<FIELD_SIZE; r++) for(let c=0; c<FIELD_SIZE; c++) PLANT_LOCATIONS_M.push({x: c + 0.5, y: r + 0.5});
 
     // Global Data Structures
-    let loggedData = []; // Sensor readings logged during the current trial
+    let loggedData = []; 
     let selectedZone = 0; 
-    let photoData = {};  // Stores Base64 images for the current trial (keyed by zone ID 1-16)
+    let photoData = {}; 
     let trialHistory = JSON.parse(localStorage.getItem('trialHistory') || '[]');
     let currentTrialNumber = trialHistory.length + 1;
 
-    // Set initial trial number display
     document.getElementById('currentTrialNumber').innerText = currentTrialNumber;
 
 
@@ -282,16 +301,16 @@
         renderer.setSize(width, height);
         container.appendChild(renderer.domElement);
         
-        // Add basic orbit controls for interaction
-        if (typeof THREE.OrbitControls === 'function') {
-            controls = new THREE.OrbitControls(camera, renderer.domElement);
-            controls.enableDamping = true; 
-            controls.dampingFactor = 0.05;
-            controls.screenSpacePanning = false;
-            controls.minDistance = 1;
-            controls.maxDistance = 10;
-            controls.maxPolarAngle = Math.PI / 2.2; 
-        }
+        // --- FIX: Initialize OrbitControls correctly ---
+        // OrbitControls is now available globally due to the script import
+        controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true; 
+        controls.dampingFactor = 0.05;
+        controls.screenSpacePanning = false;
+        controls.minDistance = 1;
+        controls.maxDistance = 10;
+        controls.maxPolarAngle = Math.PI / 2.2; 
+        
 
         // Field Grid (Ground Plane)
         const gridHelper = new THREE.GridHelper(FIELD_SIZE, FIELD_SIZE, 0x444444, 0x444444);
@@ -355,6 +374,7 @@
 
         // Create a new texture from the base64 image
         const img = new Image();
+        img.crossOrigin = "anonymous"; // Needed for texture loading from data URLs sometimes
         img.onload = () => {
             const texture = new THREE.Texture(img);
             texture.needsUpdate = true;
@@ -377,22 +397,37 @@
     // --- PHOTO GRID & STOCK PHOTO FUNCTIONS ---
     // ------------------------------------
     
-    // Base64 Stock Image data (simple 1x1 pixel image representing a zone)
-    const STOCK_IMAGE_BASE64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
-
     function loadStockPhotos() {
+        // Simple stock image generation
         for (let i = 1; i <= 16; i++) {
-            // Use a slightly different color for each stock photo to distinguish them
             const color = '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0');
             const stockImage = `<svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="${color}"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="20" fill="#fff">Zone ${i}</text></svg>`;
             const base64StockImage = 'data:image/svg+xml;base64,' + btoa(stockImage);
             
-            // Store and render the stock photo
             photoData[i] = base64StockImage;
             renderPhotoInCell(i, base64StockImage);
             addPhotoTo3DMap(i, base64StockImage);
         }
         LAST_PHOTO_STATUS.innerText = '16 stock photos loaded.';
+    }
+
+    function deletePhoto(zoneId) {
+        if (!photoData[zoneId]) return;
+
+        // 1. Remove from data structure
+        delete photoData[zoneId];
+
+        // 2. Remove from 2D grid
+        renderPhotoInCell(zoneId, null); // Render with null clears the image
+
+        // 3. Remove from 3D map
+        if (photoPlanes[zoneId]) {
+            scene.remove(photoPlanes[zoneId]);
+            photoPlanes[zoneId].geometry.dispose();
+            photoPlanes[zoneId].material.dispose();
+            delete photoPlanes[zoneId];
+        }
+        STATUS_ELEMENT.innerText = `Photo deleted from Zone ${zoneId}.`;
     }
 
     function generatePhotoGrid() {
@@ -401,16 +436,21 @@
             const cell = document.createElement('div');
             cell.className = 'grid-cell';
             cell.id = 'zone-' + i;
-            cell.innerHTML = '<span class="cell-label">' + i + '</span>';
+            cell.innerHTML = `
+                <span class="cell-label">${i}</span>
+                <button class="delete-photo-btn" onclick="deletePhoto(${i})">X</button>
+            `;
             
-            cell.addEventListener('click', function() {
-                selectedZone = i;
-                document.getElementById('fileInput').click(); 
+            // Only trigger upload on clicking the cell area, not the delete button
+            cell.addEventListener('click', function(e) {
+                if (e.target.className !== 'delete-photo-btn') {
+                    selectedZone = i;
+                    document.getElementById('fileInput').click(); 
+                }
             });
             
             grid.appendChild(cell);
         }
-        // Load photos from current photoData on startup
         loadCurrentPhotoData();
     }
 
@@ -421,9 +461,9 @@
         const reader = new FileReader();
         reader.onload = function(e) {
             const base64Image = e.target.result;
-            photoData[selectedZone] = base64Image; // Store in current trial's data
+            photoData[selectedZone] = base64Image; 
             renderPhotoInCell(selectedZone, base64Image);
-            addPhotoTo3DMap(selectedZone, base64Image); // Update 3D map
+            addPhotoTo3DMap(selectedZone, base64Image); 
             selectedZone = 0; 
         };
         reader.readAsDataURL(file); 
@@ -446,9 +486,7 @@
 
     function clearPhotoGrid() {
         for (let i = 1; i <= 16; i++) {
-            const cell = document.getElementById('zone-' + i);
-            const existingPhoto = cell.querySelector('.cell-photo');
-            if (existingPhoto) existingPhoto.remove();
+            renderPhotoInCell(i, null);
         }
     }
     
@@ -489,16 +527,16 @@
         photoData = {};
         currentTrialNumber++;
         document.getElementById('currentTrialNumber').innerText = currentTrialNumber;
-        clearMapData(false); // Clear 2D map but don't reset rover
-        clearPhotoGrid(); // Clear photo grid
-        clear3DPhotos(); // Clear 3D map photos
-        updateRover3DPosition(); // Reset rover position (if it moved)
+        clearMapData(false); 
+        clearPhotoGrid(); 
+        clear3DPhotos(); 
+        updateRover3DPosition(); 
     }
 
     function openHistoryModal() {
         const modal = document.getElementById('historyModal');
         const list = document.getElementById('trialHistoryList');
-        list.innerHTML = ''; // Clear previous list
+        list.innerHTML = ''; 
 
         if (trialHistory.length === 0) {
             list.innerHTML = '<p>No trials saved yet.</p>';
@@ -536,7 +574,7 @@
         
         // 3. Load Photo Data
         photoData = trial.photoData;
-        loadCurrentPhotoData(); // Renders photos and 3D planes
+        loadCurrentPhotoData(); 
 
         // 4. Load AI Data (from saved data)
         document.getElementById('ai-time').innerText = trial.aiData.time;
@@ -561,19 +599,17 @@
 
 
     // ------------------------------------
-    // --- AI and COMMUNICATION FUNCTIONS ---
+    // --- AI and COMMUNICATION FUNCTIONS (Mock) ---
     // ------------------------------------
     
     function fetchAIResults() {
-        // ... (API call and error handling for AI results) ...
-        // Using mock update on failure for this example
+        // Mock update on failure for this example
         document.getElementById('ai-time').innerText = 'N/A';
         document.getElementById('ai-health').innerText = 'N/A';
         document.getElementById('ai-recommendation').innerText = 'Awaiting data from Dell Wyse.';
     }
 
     function sendCommand(command) {
-        // ... (command logic remains the same) ...
         let url = (command === 'capture') ? `${ESP32_URL_BASE}/capture` : `${ESP32_URL_BASE}/move?dir=${command}`;
         
         STATUS_ELEMENT.innerText = `Sending command: ${command}...`;
@@ -685,7 +721,6 @@
     }
 
     function drawMap() {
-        // ... (2D drawing logic remains the same) ...
         CTX.clearRect(0, 0, MAP_SIZE, MAP_SIZE);
         
         // 1. Draw the 4x4 Grid
