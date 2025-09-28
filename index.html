@@ -143,7 +143,7 @@ button { padding: 10px 15px; margin: 8px 5px; cursor: pointer; border: none; bor
     box-sizing: border-box;
 }
 .rec-optimal { background-color: #28a745; color: white; }
-.rec-action { background-color: #ffc107; color: black; }
+.rec-action { background-color: #ffc101; color: black; }
 .rec-critical { background-color: #dc3545; color: white; }
 
 /* MODAL (History Viewer) STYLES */
@@ -303,12 +303,21 @@ let currentRoverData = {
 };
 
 // --- MOCK AI PARAMETERS ---
+// Disease probabilities for simulated AI
 const PHOTO_DISEASES = [
-    { name: "Healthy", probability: 0.70 },
-    { name: "Early Blight", probability: 0.15 },
-    { name: "Septoria Leaf Spot", probability: 0.10 },
-    { name: "Bacterial Spot", probability: 0.05 },
+    { name: "Healthy Leaf", severity: 0, probability: 0.70 },
+    { name: "Early Blight", severity: 40, probability: 0.15 },
+    { name: "Septoria Leaf Spot", severity: 30, probability: 0.10 },
+    { name: "Bacterial Spot", severity: 50, probability: 0.05 },
 ];
+
+// NPK Guidelines for Scoring (used in analyzePlant)
+const NPK_GUIDELINES = {
+    moisture: { ideal_min: 40, ideal_max: 60, low_crit: 25, high_crit: 75, penalty_minor: 10, penalty_major: 20 },
+    N: { ideal_min: 60, ideal_max: 100, low_crit: 30, high_crit: 150, penalty_minor: 10, penalty_major: 20 },
+    P: { ideal_min: 50, ideal_max: 80, low_crit: 20, high_crit: 120, penalty_minor: 10, penalty_major: 20 },
+    K: { ideal_min: 70, ideal_max: 120, low_crit: 40, high_crit: 180, penalty_minor: 10, penalty_major: 20 },
+};
 
 // --- 3D RENDERING SETUP (THREE.JS) ---
 let scene, camera, renderer, rover3D, controls;
@@ -507,11 +516,16 @@ function loadCurrentPhotoData() {
 // --- COMBINED AI ANALYSIS LOGIC ---
 // ------------------------------------
 
-// FIX: Deterministic pseudo-random function using Zone ID as a seed for consistent results
+// FIX: Improved deterministic pseudo-random function using LCG for consistent seeding
 function deterministicPseudoRandom(seed) {
-    let x = Math.sin(seed * 10000);
-    return x - Math.floor(x);
+    const a = 1664525;
+    const c = 1013904223;
+    const m = 4294967296; // 2^32
+    let state = (seed * 101) % m; // Initialize state based on the seed (Zone ID)
+    state = (a * state + c) % m; // Run one iteration
+    return state / m; // Normalize to [0, 1)
 }
+
 
 function getNearestSensorData(plantX, plantY) {
     let nearestData = null;
@@ -529,19 +543,67 @@ function getNearestSensorData(plantX, plantY) {
     return nearestData;
 }
 
-function analyzePlant(plant, sensorData, photoExists) {
-    let diagnosis = "No Data";
-    let recommendation = "Conduct full sensor probe and capture leaf photo.";
-    let totalScore = 100;
 
-    // --- 1. Photo Analysis (Simulated AI) ---
-    let visualDiagnosis = "Visual: Healthy Leaf";
+// REFINED Analysis function incorporating guidelines
+function analyzePlant(plant, sensorData, photoExists) {
+    let soilScore = 100; // Max soil score
+    let soilAction = "";
+    
+    // --- 1. Sensor Data Analysis (NPK/Moisture) ---
+    if (sensorData) {
+        const { moisture, npk_n, npk_p, npk_k } = sensorData;
+        const data = { moisture, N: npk_n, P: npk_p, K: npk_k };
+        const keys = ['moisture', 'N', 'P', 'K'];
+
+        // Iterate through each metric and apply guideline-based penalties
+        keys.forEach(key => {
+            const guideline = NPK_GUIDELINES[key.toLowerCase()];
+            const value = data[key];
+
+            let problem = '';
+            
+            if (value < guideline.low_crit) {
+                soilScore -= guideline.penalty_major;
+                problem = `CRITICAL LOW ${key}.`;
+            } else if (value < guideline.ideal_min) {
+                soilScore -= guideline.penalty_minor;
+                problem = `LOW ${key}.`;
+            } else if (value > guideline.high_crit) {
+                 soilScore -= guideline.penalty_major;
+                problem = `CRITICAL HIGH ${key}.`;
+            } else if (value > guideline.ideal_max) {
+                soilScore -= guideline.penalty_minor;
+                problem = `HIGH ${key}.`;
+            }
+            
+            if (problem) {
+                let rec = '';
+                if (key === 'moisture') rec = (value < guideline.ideal_min) ? "Immediate deep watering is required." : "Soil drainage needs urgent review.";
+                else if (key === 'N') rec = (value < guideline.ideal_min) ? "Apply high-Nitrogen (N) supplement for leaf growth." : "Stop all N-fertilizer to prevent burn/overgrowth.";
+                else if (key === 'P') rec = (value < guideline.ideal_min) ? "Apply Phosphorus (P) booster for root development." : "Review fertilizer blend for P excess.";
+                else if (key === 'K') rec = (value < guideline.ideal_min) ? "Apply Potassium (K) to boost stress/disease resistance." : "Check for K salt toxicity.";
+                
+                soilAction += `${problem} (${value}%/ppm). ${rec} `;
+            }
+        });
+
+        diagnosis = `Soil: M=${moisture}%, NPK=${npk_n}/${npk_p}/${npk_k}`;
+
+    } else {
+        soilScore = 50; // Heavy penalty for missing sensor data
+        diagnosis = "Soil: Sensor Data Missing";
+        soilAction = "REQUIRED: Conduct soil probe near this plant (Rover at Zone " + plant.id + ").";
+    }
+    
+    // --- 2. Photo Analysis (Simulated AI) ---
+    let visualDiagnosis = "Visual: No Photo";
     let visualAction = "";
+    let visualPenalty = 0;
+    
     if (photoExists) {
-        // Use the deterministic function based on plant.id (Zone ID)
-        const randomRoll = deterministicPseudoRandom(plant.id); 
+        const randomRoll = deterministicPseudoRandom(plant.id); // Guarantees consistent diagnosis for this Zone ID
         let cumulativeProb = 0;
-        let prediction = PHOTO_DISEASES[0]; // Default to Healthy
+        let prediction = PHOTO_DISEASES[0]; 
 
         for (const disease of PHOTO_DISEASES) {
             cumulativeProb += disease.probability;
@@ -552,51 +614,39 @@ function analyzePlant(plant, sensorData, photoExists) {
         }
 
         visualDiagnosis = `Visual: ${prediction.name}`;
-        if (prediction.name !== "Healthy") {
-            totalScore -= 40;
-            visualAction = `Immediate visual confirmation required. Apply ${prediction.name} specific fungicide.`;
+        visualPenalty = prediction.severity;
+        if (prediction.name !== "Healthy Leaf") {
+            visualAction = `LEAF DISEASE DETECTED: ${prediction.name}. Treat immediately with a general spectrum fungicide.`;
         }
     } else {
-        totalScore -= 5; // Small penalty for missing visual data
-        visualDiagnosis = "Visual: No Photo";
+        visualScore = 5; // Minor penalty for missing visual data
+        visualAction = "Missing leaf photo. Recommend 'Capture Photo' at this location.";
     }
 
-    // --- 2. Sensor Analysis (NPK/Moisture) ---
-    let sensorAction = "";
-    if (sensorData) {
-        const { moisture, npk_n, npk_p, npk_k } = sensorData;
-        
-        // Moisture Check
-        if (moisture < 25) { totalScore -= 20; sensorAction += "CRITICAL LOW MOISTURE. Immediate deep watering. "; } 
-        else if (moisture < 40) { totalScore -= 10; sensorAction += "Low moisture. Increase irrigation. "; }
-        
-        // NPK Check (Example: Ideal sum around 150)
-        let npk_sum = npk_n + npk_p + npk_k;
-        if (npk_sum < 100) { totalScore -= 15; sensorAction += "Severe NPK deficiency. Apply balanced fertilizer. "; }
-        else if (npk_sum < 150) { totalScore -= 5; sensorAction += "NPK low. Boost feed/foliar spray. "; }
+    // --- 3. Combined Score & Recommendation ---
+    const totalScore = Math.max(0, Math.round(soilScore - (visualPenalty * 0.7))); // Weighted Fusing
 
-        diagnosis = `Soil: M=${moisture}%, NPK=${npk_n}/${npk_p}/${npk_k}`;
-
+    // Combine actions, prioritizing the most critical issue (Soil critical > Visual disease)
+    let recommendation = '';
+    if (soilAction.includes('CRITICAL')) {
+        recommendation = soilAction.trim();
+    } else if (visualAction.includes('LEAF DISEASE')) {
+        recommendation = visualAction + " " + (soilAction || '');
     } else {
-        totalScore -= 20; // Major penalty for missing sensor data
-        diagnosis = "Soil: Sensor Data Missing";
-        sensorAction = "REQUIRED: Conduct soil probe near this plant (Rover at Zone " + plant.id + ").";
+        recommendation = (soilAction + visualAction).trim() || "Optimal: Continue monitoring. Conditions are within ideal range.";
     }
-
-    // --- 3. Combined Recommendation ---
-    recommendation = (visualAction + sensorAction).trim() || "Optimal: Continue monitoring.";
 
     // Final Health Classification
     let healthClass = 'rec-optimal';
-    if (totalScore <= 60) healthClass = 'rec-critical';
+    if (totalScore <= 65) healthClass = 'rec-critical';
     else if (totalScore <= 85) healthClass = 'rec-action';
 
     return {
         id: plant.id,
-        score: Math.max(0, totalScore.toFixed(0)), // Max 100, Min 0
+        score: totalScore.toFixed(0),
         visualDiagnosis: visualDiagnosis,
         sensorDiagnosis: diagnosis,
-        recommendation: recommendation,
+        recommendation: recommendation.trim(),
         healthClass: healthClass
     };
 }
