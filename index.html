@@ -84,6 +84,28 @@ button { padding: 10px 15px; margin: 8px 5px; cursor: pointer; border: none; bor
     transition: background-color 0.1s;
 }
 
+/* Delete Photo Button Styles */
+.delete-photo-btn {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    background-color: rgba(220, 53, 69, 0.8);
+    color: white;
+    border: none;
+    border-radius: 3px;
+    padding: 2px 5px;
+    font-size: 10px;
+    cursor: pointer;
+    z-index: 20;
+    line-height: 1;
+    display: none; /* Hidden by default */
+}
+/* Show delete button only if there is a photo */
+.grid-cell:has(.cell-photo) .delete-photo-btn {
+    display: block;
+}
+
+
 /* NEW: Plant Analysis Grid Styles */
 #plantAnalysisGrid {
     display: grid;
@@ -98,9 +120,6 @@ button { padding: 10px 15px; margin: 8px 5px; cursor: pointer; border: none; bor
     box-shadow: 0 2px 5px rgba(0,0,0,0.3);
     transition: box-shadow 0.2s;
 }
-.analysis-card:hover {
-    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-}
 .plant-id-label {
     font-size: 1.4em;
     font-weight: bold;
@@ -109,10 +128,6 @@ button { padding: 10px 15px; margin: 8px 5px; cursor: pointer; border: none; bor
     padding-bottom: 5px;
     margin-bottom: 10px;
 }
-.analysis-row {
-    margin-bottom: 5px;
-    font-size: 0.95em;
-}
 .status-good { color: #9cdcfe; } /* Blue for status labels */
 
 /* Recommendation coloring */
@@ -120,23 +135,13 @@ button { padding: 10px 15px; margin: 8px 5px; cursor: pointer; border: none; bor
 .rec-action { background-color: #ffc107; color: black; padding: 5px; border-radius: 4px; display: inline-block; font-weight: bold; }
 .rec-critical { background-color: #dc3545; color: white; padding: 5px; border-radius: 4px; display: inline-block; font-weight: bold; }
 
-/* MODAL (History Viewer) STYLES - kept for completeness */
+/* MODAL (History Viewer) STYLES */
 .modal {
     display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.7);
 }
 .modal-content {
     background-color: #2d2d30; margin: 10% auto; padding: 20px; border: 1px solid #3c3c3c; width: 80%; border-radius: 10px;
 }
-.close-btn {
-    color: #aaa; float: right; font-size: 28px; font-weight: bold;
-}
-.close-btn:hover, .close-btn:focus {
-    color: #fff; text-decoration: none; cursor: pointer;
-}
-.trial-item {
-    padding: 10px; margin-bottom: 5px; background-color: #252526; border-radius: 5px; cursor: pointer; transition: background-color 0.2s;
-}
-.trial-item:hover { background-color: #404040; }
 </style>
 </head>
 <body>
@@ -404,6 +409,7 @@ function loadStockPhotos() {
     LAST_PHOTO_STATUS.innerText = '16 stock photos loaded.';
     fetchAIResults(); // Trigger analysis after loading photos
 }
+
 function deletePhoto(zoneId) {
     if (!photoData[zoneId]) return;
     delete photoData[zoneId];
@@ -411,6 +417,7 @@ function deletePhoto(zoneId) {
     STATUS_ELEMENT.innerText = `Photo deleted from Zone ${zoneId}.`;
     fetchAIResults(); // Trigger analysis after deleting photo
 }
+
 function generatePhotoGrid() {
     const grid = document.getElementById('photoGrid');
     for (let i = 1; i <= 16; i++) {
@@ -419,10 +426,11 @@ function generatePhotoGrid() {
         cell.id = 'zone-' + i;
         cell.innerHTML = `
             <span class="cell-label">${i}</span>
-            <button class="delete-photo-btn" onclick="deletePhoto(${i})">X</button>
+            <button class="delete-photo-btn" onclick="event.stopPropagation(); deletePhoto(${i})">X</button>
         `;
 
         cell.addEventListener('click', function(e) {
+            // Check if the click target is the delete button itself before triggering upload
             if (e.target.className !== 'delete-photo-btn') {
                 selectedZone = i;
                 document.getElementById('fileInput').click();
@@ -618,7 +626,8 @@ function sendCommand(command) {
             // Assume rover is near a plant, simulate adding a photo for the nearest zone.
             const nearestPlant = getNearestPlant(currentRoverData.x_m, currentRoverData.y_m);
             if (nearestPlant) {
-                photoData[nearestPlant.id] = `data:image/jpeg;base64,mocked_image_zone_${nearestPlant.id}`;
+                // Mock image data that is distinguishable from stock photos
+                photoData[nearestPlant.id] = `data:image/jpeg;base64,mocked_rover_capture_zone_${nearestPlant.id}`;
                 renderPhotoInCell(nearestPlant.id, photoData[nearestPlant.id]);
             }
             setTimeout(() => fetchAIResults(), 1000);
@@ -816,7 +825,7 @@ function getHealthColor(status) {
     }
 }
 // ------------------------------------
-// --- HISTORY & DATA SAVING FUNCTIONS (Kept from previous version) ---
+// --- HISTORY & DATA SAVING FUNCTIONS ---
 // ------------------------------------
 
 function saveCurrentTrial() {
