@@ -6,6 +6,8 @@
 <title>S.C.O.U.T. Rover Mapping & Control (Data-Driven 3D)</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<!-- TensorFlow.js for simulated CNN analysis -->
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.16.0/dist/tf.min.js"></script>
 <style>
 /* BASE STYLING (Dark Theme) */
 body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background-color: #1e1e1e; color: #d4d4d4; }
@@ -255,55 +257,41 @@ button { padding: 10px 15px; margin: 8px 5px; cursor: pointer; border: none; bor
     </div>
 </div>
 <script>
-// JAVASCRIPT LOGIC
-// !!! CONFIGURE YOUR IPs HERE !!!
+// --- CONFIGURATION ---
+const DETECT_MODEL_URL = 'https://models.s3.amazonaws.com/fake-tomato-model/model.json'; // Placeholder: replace with your real model
 const ESP32_IP = '192.168.1.50';
 const DELL_WYSE_IP = 'http://192.168.X.X:5000';
 const ESP32_URL_BASE = `http://${ESP32_IP}`;
 const STATUS_ELEMENT = document.getElementById('status');
 const LAST_PHOTO_STATUS = document.getElementById('lastPhotoStatus');
 document.getElementById('server-ip').innerText = DELL_WYSE_IP.replace('http://', '');
-// --- GLOBAL CONSTANTS ---
+// --- GLOBALS ---
 const FIELD_SIZE = 4;
 const MAP_CANVAS = document.getElementById('roverMap');
 const CTX = MAP_CANVAS.getContext('2d');
 const MAP_SIZE = 450;
 const PIXELS_PER_METER = MAP_SIZE / FIELD_SIZE;
 const MAX_MOISTURE = 100;
-// Plant locations in meters (16 zones)
 const PLANT_LOCATIONS_M = [];
 for(let r=0; r<FIELD_SIZE; r++) for(let c=0; c<FIELD_SIZE; c++) PLANT_LOCATIONS_M.push({x: c + 0.5, y: r + 0.5, id: (r * FIELD_SIZE) + c + 1});
-// Global Data Structures
 let loggedData = [];
-let photoData = {}; // Stores {zoneId: base64Image} - ASSIGNED PHOTOS
-let stockPhotoData = {}; // Stores {stockId: base64Image} - GALLERY OF STOCK PHOTOS
+let photoData = {};
+let stockPhotoData = {};
 let selectedZone = 0;
 let trialHistory = JSON.parse(localStorage.getItem('trialHistory') || '[]');
 let currentTrialNumber = trialHistory.length + 1;
 document.getElementById('currentTrialNumber').innerText = currentTrialNumber;
-let currentRoverData = {
-    latitude: 'N/A',
-    longitude: 'N/A',
-    heading: 0,
-    x_m: 2.0,
-    y_m: 2.0
-};
-// --- SIMULATED LIBRARY: TOMATO DIAGNOSTIC RULES (SCIENTIFICALLY PRIORITIZED) ---
+let currentRoverData = { latitude: 'N/A', longitude: 'N/A', heading: 0, x_m: 2.0, y_m: 2.0 };
+
+// --- TOMATO DIAGNOSTIC LIBRARY ---
 const TOMATO_DIAGNOSTIC_LIBRARY = {
-    // Disease Tiers (Prioritized by Severity)
     DISEASE_TIERS: [
-        { name: "Mottling/Mosaic Pattern (Viral)", severity: 95, probability: 0.10, class: 'rec-critical', recommendation: "***ISOLATION REQUIRED***: Strong indicator of Tobacco Mosaic Virus (TMV) or similar. Incurable. Remove plant immediately to prevent field-wide contamination."
-        },
-        { name: "Dark Spots & Lesions (Fungal/Bact)", severity: 85, probability: 0.15, class: 'rec-critical', recommendation: "***FUNGICIDE/BACTERICIDE***: Likely Early Blight or Bacterial Spot. Apply broad-spectrum fungicide and improve air circulation/reduce leaf wetness."
-        },
-        { name: "Leaf Curl & Wilting (Stress/Viral)", severity: 75, probability: 0.10, class: 'rec-critical', recommendation: "WILTING: Could be severe water stress, root rot, or Tomato Yellow Leaf Curl Virus (TYLCV). Check moisture urgently. If moisture is good, isolate for potential virus."
-        },
-        { name: "General Yellowing (Chlorosis)", severity: 50, probability: 0.25, class: 'rec-action', recommendation: "GENERAL YELLOWING: A common sign of nutrient deficiency (N, Mg, Fe) or pH imbalance. Check NPK data for confirmation."
-        },
-        { name: "Healthy, Deep Green", severity: 0, probability: 0.40, class: 'rec-optimal', recommendation: "OPTIMAL: No visual symptoms detected. Continue regular monitoring."
-        }
+        { name: "Mottling/Mosaic Pattern (Viral)", severity: 95, probability: 0.10, class: 'rec-critical', recommendation: "***ISOLATION REQUIRED***: Strong indicator of Tobacco Mosaic Virus (TMV) or similar. Incurable. Remove plant immediately to prevent field-wide contamination." },
+        { name: "Dark Spots & Lesions (Fungal/Bact)", severity: 85, probability: 0.15, class: 'rec-critical', recommendation: "***FUNGICIDE/BACTERICIDE***: Likely Early Blight or Bacterial Spot. Apply broad-spectrum fungicide and improve air circulation/reduce leaf wetness." },
+        { name: "Leaf Curl & Wilting (Stress/Viral)", severity: 75, probability: 0.10, class: 'rec-critical', recommendation: "WILTING: Could be severe water stress, root rot, or Tomato Yellow Leaf Curl Virus (TYLCV). Check moisture urgently. If moisture is good, isolate for potential virus." },
+        { name: "General Yellowing (Chlorosis)", severity: 50, probability: 0.25, class: 'rec-action', recommendation: "GENERAL YELLOWING: A common sign of nutrient deficiency (N, Mg, Fe) or pH imbalance. Check NPK data for confirmation." },
+        { name: "Healthy, Deep Green", severity: 0, probability: 0.40, class: 'rec-optimal', recommendation: "OPTIMAL: No visual symptoms detected. Continue regular monitoring." }
     ],
-    // NPK Guidelines for Scoring (used in analyzePlant)
     NPK_GUIDELINES: {
         moisture: { ideal_min: 40, ideal_max: 60, low_crit: 25, high_crit: 75, penalty_minor: 10, penalty_major: 30, low_rec: "deep watering", high_rec: "review soil drainage/stop irrigation" },
         N: { ideal_min: 60, ideal_max: 100, low_crit: 30, high_crit: 150, penalty_minor: 15, penalty_major: 40, low_rec: "high-Nitrogen (N) liquid feed", high_rec: "stop all N-fertilizer, flush soil" },
@@ -311,7 +299,43 @@ const TOMATO_DIAGNOSTIC_LIBRARY = {
         K: { ideal_min: 70, ideal_max: 120, low_crit: 40, high_crit: 180, penalty_minor: 10, penalty_major: 25, low_rec: "Potassium (K) to boost resistance/fruit set", high_rec: "check for K salt toxicity" },
     }
 };
-// --- HASHING AND PRNG FOR ACCURACY/CONSISTENCY ---
+
+// --- CNN MODEL LOAD & IMAGE ANALYSIS ---
+let tomatoModel = null;
+async function loadTomatoModel() {
+    try {
+        tomatoModel = await tf.loadLayersModel(DETECT_MODEL_URL);
+        STATUS_ELEMENT.innerText = "AI Model Loaded.";
+    } catch (err) {
+        tomatoModel = null;
+        STATUS_ELEMENT.innerText = "Warning: AI Model not loaded (mocked analysis).";
+    }
+}
+
+// Simulated CNN image prediction: If no model, fallback to deterministic
+async function getPhotoPredictionCNN(base64Image) {
+    if (!tomatoModel) {
+        return getPhotoPrediction(base64Image);
+    }
+    return new Promise((resolve) => {
+        const img = new window.Image();
+        img.onload = async () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = 128; canvas.height = 128;
+            const context = canvas.getContext('2d');
+            context.drawImage(img, 0, 0, 128, 128);
+            let input = tf.browser.fromPixels(canvas).toFloat().div(255.0).expandDims(0);
+            let preds = tomatoModel.predict(input).arraySync()[0];
+            let maxIdx = preds.indexOf(Math.max(...preds));
+            let diseaseTier = TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS[maxIdx % TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS.length];
+            resolve(diseaseTier);
+        };
+        img.onerror = () => resolve(getPhotoPrediction(base64Image));
+        img.src = base64Image;
+    });
+}
+
+// --- HASHING & PRNG for consistency ---
 function simpleStringHash(str) {
     let hash = 0;
     for (let i = 0; i < Math.min(str.length, 1000); i++) {
@@ -329,7 +353,8 @@ function deterministicPseudoRandom(seed) {
     state = (a * state + c) % m;
     return state / m;
 }
-// --- 3D RENDERING SETUP (THREE.JS) ---
+
+// --- 3D RENDERING SETUP (Three.js) ---
 let scene, camera, renderer, rover3D, controls;
 let dataCubes = {};
 function initThreeD() {
@@ -423,6 +448,7 @@ function draw3DMap() {
     });
     updateRover3DPosition();
 }
+
 // ------------------------------------
 // --- PHOTO GRID & MODAL FUNCTIONS ---
 // ------------------------------------
@@ -430,7 +456,6 @@ function populateStockPhotos() {
     if (Object.keys(stockPhotoData).length === 16) return;
     const diseaseList = TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS;
     for (let i = 1; i <= 16; i++) {
-        // Use hash to get a specific disease from the list deterministically
         const diseaseIndex = i % diseaseList.length;
         const base64 = `data:image/svg+xml;base64,mocked_stock_photo_hash_${i}_diag:${diseaseList[diseaseIndex].name.replace(/\s/g, '_')}`;
         stockPhotoData[i] = base64;
@@ -440,7 +465,6 @@ function openStockImageModal() {
     populateStockPhotos();
     renderStockImageGrid();
     document.getElementById('stockImageModal').style.display = "block";
-
     if (selectedZone === 0) {
         STATUS_ELEMENT.innerText = "Select a stock photo, then click a zone (1-16) in the main photo grid to assign it.";
     }
@@ -452,8 +476,7 @@ function getPhotoPrediction(base64Image) {
     const photoHash = simpleStringHash(base64Image);
     const randomRoll = deterministicPseudoRandom(photoHash);
     let cumulativeProb = 0;
-    let prediction = TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS[4]; // Default to Healthy
-
+    let prediction = TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS[4];
     for (const disease of TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS) {
         cumulativeProb += disease.probability;
         if (randomRoll <= cumulativeProb) {
@@ -466,20 +489,16 @@ function getPhotoPrediction(base64Image) {
 function renderStockImageGrid() {
     const grid = document.getElementById('stockImageGrid');
     grid.innerHTML = '';
-
     for (let i = 1; i <= 16; i++) {
         const base64Image = stockPhotoData[i];
         const prediction = getPhotoPrediction(base64Image);
-
         const cell = document.createElement('div');
         cell.className = 'grid-cell';
         cell.style.maxWidth = '150px';
         cell.style.aspectRatio = '1/1';
-
         const img = document.createElement('img');
         img.src = base64Image;
         img.className = 'cell-photo';
-
         const label = document.createElement('div');
         label.style.position = 'absolute';
         label.style.bottom = '0';
@@ -494,7 +513,7 @@ function renderStockImageGrid() {
         grid.appendChild(cell);
     }
 }
-function assignStockPhotoToZone(stockId) {
+async function assignStockPhotoToZone(stockId) {
     if (selectedZone === 0) {
         STATUS_ELEMENT.innerText = "ERROR: Please click a zone (1-16) in the main grid first, then select a stock photo.";
         return;
@@ -505,7 +524,7 @@ function assignStockPhotoToZone(stockId) {
     STATUS_ELEMENT.innerText = `Stock Photo ID ${stockId} assigned to Zone ${selectedZone}.`;
     closeStockImageModal();
     selectedZone = 0;
-    fetchAIResults();
+    await fetchAIResults();
 }
 function deletePhoto(zoneId) {
     if (!photoData[zoneId]) return;
@@ -534,19 +553,17 @@ function generatePhotoGrid() {
     }
     loadCurrentPhotoData();
 }
-function handleFileSelect(event) {
+async function handleFileSelect(event) {
     const file = event.target.files[0];
     if (!file || selectedZone === 0) return;
     const reader = new FileReader();
-    reader.onload = function(e) {
+    reader.onload = async function(e) {
         const base64Image = e.target.result;
         photoData[selectedZone] = base64Image;
         renderPhotoInCell(selectedZone, base64Image);
         selectedZone = 0;
-
         event.target.value = '';
-
-        fetchAIResults();
+        await fetchAIResults();
     };
     reader.readAsDataURL(file);
 }
@@ -573,8 +590,9 @@ function loadCurrentPhotoData() {
         renderPhotoInCell(parseInt(zoneId), base64Image);
     }
 }
+
 // ------------------------------------
-// --- COMBINED AI ANALYSIS LOGIC (CRITICAL FUSION) ---
+// --- COMBINED AI ANALYSIS LOGIC ---
 // ------------------------------------
 function getNearestSensorData(plantX, plantY) {
     let nearestData = null;
@@ -583,7 +601,6 @@ function getNearestSensorData(plantX, plantY) {
         let dx = data.x_m - plantX;
         let dy = data.y_m - plantY;
         let dist_sq = dx * dx + dy * dy;
-        // Search radius: 0.707m (center of one grid to the edge of the next)
         if (dist_sq < 0.707 * 0.707 && dist_sq < min_dist_sq) {
             min_dist_sq = dist_sq;
             nearestData = data;
@@ -591,11 +608,10 @@ function getNearestSensorData(plantX, plantY) {
     });
     return nearestData;
 }
-function analyzePlant(plant, sensorData, photoExists) {
+async function analyzePlant(plant, sensorData, photoExists) {
     let soilScore = 100;
     let soilProblems = [];
-
-    // --- 1. Sensor Data Analysis ---
+    let sensorDiagnosis = '';
     if (sensorData) {
         const { moisture, npk_n, npk_p, npk_k } = sensorData;
         const data = { moisture, N: npk_n, P: npk_p, K: npk_k };
@@ -604,54 +620,32 @@ function analyzePlant(plant, sensorData, photoExists) {
             const guideline = TOMATO_DIAGNOSTIC_LIBRARY.NPK_GUIDELINES[key];
             const value = data[key];
             let problem = '';
-
-            if (value < guideline.low_crit) {
-                soilScore -= guideline.penalty_major;
-                problem = `CRITICAL LOW ${key}`;
-            } else if (value < guideline.ideal_min) {
-                soilScore -= guideline.penalty_minor;
-                problem = `LOW ${key}`;
-            } else if (value > guideline.high_crit) {
-                soilScore -= guideline.penalty_major;
-                problem = `CRITICAL HIGH ${key}`;
-            } else if (value > guideline.ideal_max) {
-                soilScore -= guideline.penalty_minor;
-                problem = `HIGH ${key}`;
-            }
-
+            if (value < guideline.low_crit) { soilScore -= guideline.penalty_major; problem = `CRITICAL LOW ${key}`; }
+            else if (value < guideline.ideal_min) { soilScore -= guideline.penalty_minor; problem = `LOW ${key}`; }
+            else if (value > guideline.high_crit) { soilScore -= guideline.penalty_major; problem = `CRITICAL HIGH ${key}`; }
+            else if (value > guideline.ideal_max) { soilScore -= guideline.penalty_minor; problem = `HIGH ${key}`; }
             if (problem) {
                 let rec = (problem.includes('CRITICAL') ? "Urgent " : "") +
                     (value < guideline.low_crit ? guideline.low_rec : guideline.high_rec);
-
                 soilProblems.push({ key, value, problem, rec });
             }
         });
         sensorDiagnosis = `Soil: M=${moisture}%, NPK=${npk_n}/${npk_p}/${npk_k}`;
     } else {
-        // Data Missing scenario
         return {
-            id: plant.id,
-            score: 20,
-            visualDiagnosis: "Visual: N/A (Data Missing)",
-            sensorDiagnosis: "Soil: Sensor Data Missing (Cannot Analyze)",
+            id: plant.id, score: 20, visualDiagnosis: "Visual: N/A (Data Missing)", sensorDiagnosis: "Soil: Sensor Data Missing (Cannot Analyze)",
             recommendation: "***CRITICAL ERROR: DATA GAP***. Conduct soil probe at Zone " + plant.id + " immediately to enable fused analysis.",
             healthClass: 'rec-critical'
         };
     }
-
-    // --- 2. Photo Analysis (Deterministic Lookup) ---
     let visualDiagnosis = "Visual: No Photo Taken";
     let prediction = TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS.find(d => d.name.includes("Healthy"));
     let finalRecommendation = '';
     let healthClass = 'rec-optimal';
-
     if (photoExists) {
-        prediction = getPhotoPrediction(photoData[plant.id]);
+        prediction = await getPhotoPredictionCNN(photoData[plant.id]);
         visualDiagnosis = `Visual: ${prediction.name}`;
     }
-
-    // --- 3. Fused Diagnosis (Scientific Priority Tiers) ---
-    // Convenience lookups
     const isYellow = prediction.name.includes('Yellowing');
     const isLesions = prediction.name.includes('Dark Spots');
     const isMottling = prediction.name.includes('Mottling');
@@ -660,89 +654,60 @@ function analyzePlant(plant, sensorData, photoExists) {
     const isLowP = soilProblems.some(p => p.problem.includes('CRITICAL LOW P'));
     const isLowK = soilProblems.some(p => p.problem.includes('CRITICAL LOW K'));
     const isCritMoisture = soilProblems.some(p => p.problem.includes('CRITICAL LOW moisture') || p.problem.includes('CRITICAL HIGH moisture'));
-
-
-    // TIER 1: INCURABLE PATHOGEN OVERRIDE (Highest Severity)
     if (isMottling || isWilting) {
-        finalRecommendation = prediction.recommendation; // Use the fixed viral recommendation
+        finalRecommendation = prediction.recommendation;
         healthClass = prediction.class;
-        soilScore = 5; // Force minimum score
-    }
-    // TIER 2: FUNGUS/BACTERIA OVERRIDE
-    else if (isLesions) {
-        finalRecommendation = prediction.recommendation; // Use the fixed fungal recommendation
+        soilScore = 5;
+    } else if (isLesions) {
+        finalRecommendation = prediction.recommendation;
         healthClass = prediction.class;
-        soilScore = Math.min(25, soilScore); // Penalize severely
-    }
-    // TIER 3: CRITICAL MOISTURE STRESS
-    else if (isCritMoisture) {
+        soilScore = Math.min(25, soilScore);
+    } else if (isCritMoisture) {
         const critMoisture = soilProblems.find(p => p.problem.includes('CRITICAL'));
         finalRecommendation = `***CRITICAL WATER STRESS***: ${critMoisture.problem} (${critMoisture.value}%). ${critMoisture.rec}.`;
         healthClass = 'rec-critical';
         soilScore = Math.min(35, soilScore);
-    }
-    // TIER 4: N-DEFICIENCY CONFIRMATION (Visual Yellowing + Critical Low N)
-    else if (isYellow && isLowN) {
+    } else if (isYellow && isLowN) {
         const critN = soilProblems.find(p => p.key === 'N');
         finalRecommendation = `***CONFIRMED PRIMARY N-DEFICIENCY***: Visual yellowing (Chlorosis) is strongly correlated with critical low Nitrogen (${critN.value} ppm). Action: Apply ${critN.rec}.`;
         healthClass = 'rec-action';
-        soilScore = Math.min(50, soilScore); // Strong penalty
-    }
-    // TIER 5: P-DEFICIENCY CONFIRMATION (Critical Low P - Soil primary indicator)
-    else if (isLowP) {
+        soilScore = Math.min(50, soilScore);
+    } else if (isLowP) {
         const critP = soilProblems.find(p => p.key === 'P');
         finalRecommendation = `CRITICAL P-DEFICIENCY ALERT: Soil data shows critically low Phosphorus (${critP.value} ppm). This limits energy transfer and root growth. Action: Apply ${critP.rec}.`;
         healthClass = 'rec-action';
         soilScore = Math.min(55, soilScore);
-    }
-    // TIER 6: K-DEFICIENCY CONFIRMATION (Visual Yellowing + Critical Low K)
-    else if (isYellow && isLowK) {
+    } else if (isYellow && isLowK) {
         const critK = soilProblems.find(p => p.key === 'K');
         finalRecommendation = `CONFIRMED K-DEFICIENCY: Yellowing present. Critically low Potassium (${critK.value} ppm) is compromising fruit quality and disease resistance. Action: Apply ${critK.rec}.`;
         healthClass = 'rec-action';
-        soilScore = Math.min(50, soilScore); // Strong penalty
-    }
-    // TIER 7: ONLY VISUAL ALERT (CNN detects Yellowing, but soil NPK is optimal)
-    else if (isYellow) {
+        soilScore = Math.min(50, soilScore);
+    } else if (isYellow) {
         finalRecommendation = `VISUAL ALERT (UNCONFIRMED): ${prediction.name}. Soil NPK is optimal. This suggests a **micro-nutrient deficiency** (Mg, Fe) or pH issue not measured. Consider supplementing micronutrients.`;
         healthClass = 'rec-action';
         soilScore = Math.min(75, soilScore);
-    }
-    // TIER 8: SOIL PROBLEMS ONLY (No Major Visual)
-    else if (soilProblems.length > 0) {
+    } else if (soilProblems.length > 0) {
         const problemString = soilProblems.map(p => `${p.problem} (${p.value}%)`).join(', ');
         const recString = soilProblems.map(p => p.rec).join('; ');
-
         finalRecommendation = `CAUTION: Soil Imbalance Detected (No Major Visual Symptoms): ${problemString}. Recommended action: ${recString}`;
         healthClass = soilScore <= 65 ? 'rec-action' : 'rec-optimal';
-    }
-    // TIER 9: OPTIMAL
-    else {
-        finalRecommendation = prediction.recommendation; // "Optimal: Continue monitoring"
+    } else {
+        finalRecommendation = prediction.recommendation;
         healthClass = prediction.class;
     }
-
-    // Final Score Calculation (Ensures score aligns with health class, giving visual severity slightly less dominance)
     const finalScore = Math.max(0, Math.round(soilScore - prediction.severity * 0.2));
-
     return {
-        id: plant.id,
-        score: finalScore.toFixed(0),
-        visualDiagnosis: visualDiagnosis,
-        sensorDiagnosis: sensorDiagnosis,
-        recommendation: finalRecommendation.trim(),
-        healthClass: healthClass
+        id: plant.id, score: finalScore.toFixed(0), visualDiagnosis, sensorDiagnosis,
+        recommendation: finalRecommendation.trim(), healthClass
     };
 }
-function fetchAIResults() {
+async function fetchAIResults() {
     const analysisGrid = document.getElementById('plantAnalysisGrid');
     analysisGrid.innerHTML = '';
-    PLANT_LOCATIONS_M.forEach(plant => {
+    for (const plant of PLANT_LOCATIONS_M) {
         const sensorData = getNearestSensorData(plant.x, plant.y);
         const photoExists = !!photoData[plant.id];
-
-        const analysis = analyzePlant(plant, sensorData, photoExists);
-
+        const analysis = await analyzePlant(plant, sensorData, photoExists);
         const recLabel = analysis.recommendation;
         const card = `
             <div class="analysis-card">
@@ -762,11 +727,11 @@ function fetchAIResults() {
             </div>
         `;
         analysisGrid.insertAdjacentHTML('beforeend', card);
-    });
+    }
     STATUS_ELEMENT.innerText = `AI Analysis Complete: ${PLANT_LOCATIONS_M.length} plants analyzed.`;
 }
 // ------------------------------------
-// --- COMMUNICATION, MAP, AND HISTORY FUNCTIONS (Minor Changes) ---
+// --- COMMUNICATION, MAP, AND HISTORY FUNCTIONS ---
 // ------------------------------------
 function sendCommand(command) {
     let url = (command === 'capture') ? `${ESP32_URL_BASE}/capture` : `${ESP32_URL_BASE}/move?dir=${command}`;
@@ -784,7 +749,6 @@ function sendCommand(command) {
             LAST_PHOTO_STATUS.innerText = 'Photo captured and sent to server.';
             const nearestPlant = getNearestPlant(currentRoverData.x_m, currentRoverData.y_m);
             if (nearestPlant) {
-                // Mock capture creates a unique hash for consistency
                 photoData[nearestPlant.id] = `data:image/jpeg;base64,mocked_rover_capture_zone_${nearestPlant.id}_${Date.now()}`;
                 renderPhotoInCell(nearestPlant.id, photoData[nearestPlant.id]);
             }
@@ -813,7 +777,6 @@ function getNearestPlant(x, y) {
 function fetchData(lastCommand = null) {
     STATUS_ELEMENT.innerText = "Fetching latest data...";
     setTimeout(() => {
-        // --- Simulate GPS/Nav Data ---
         let headingStr = (Math.random() * 360).toFixed(1) + ' deg';
         currentRoverData.heading = parseFloat(headingStr.split(' ')[0]) || 0;
         currentRoverData.latitude = "40.7128";
@@ -826,7 +789,6 @@ function fetchData(lastCommand = null) {
             currentRoverData.x_m = Math.min(FIELD_SIZE, Math.max(0, parseFloat(currentRoverData.x_m) + (Math.random() - 0.5) * 0.1)).toFixed(2);
             currentRoverData.y_m = Math.min(FIELD_SIZE, Math.max(0, parseFloat(currentRoverData.y_m) + (Math.random() - 0.5) * 0.1)).toFixed(2);
         }
-        // --- Simulate Soil Data ---
         let moistureVal = (Math.random() * 80 + 10).toFixed(1);
         let npk_n = Math.floor(Math.random() * 100);
         let npk_p = Math.floor(Math.random() * 100);
@@ -837,7 +799,6 @@ function fetchData(lastCommand = null) {
         document.getElementById('npkData').innerText = npkStr;
         if (lastCommand === 'probe' || lastCommand === 'read_sensors') {
             let healthStatus = analyzeHealth(parseFloat(moistureVal), npk_n, npk_p, npk_k);
-
             loggedData.push({
                 x_m: parseFloat(currentRoverData.x_m),
                 y_m: parseFloat(currentRoverData.y_m),
@@ -888,7 +849,6 @@ function drawMap() {
         CTX.beginPath(); CTX.moveTo(px, 0); CTX.lineTo(px, MAP_SIZE); CTX.stroke();
         CTX.beginPath(); CTX.moveTo(0, px); CTX.lineTo(MAP_SIZE, px); CTX.stroke();
     }
-
     const GRID_SIZE_M = 1.0;
     for (let row = 0; row < FIELD_SIZE; row++) {
         for (let col = 0; col < FIELD_SIZE; col++) {
@@ -1004,7 +964,6 @@ function closeHistoryModal() {
 function loadPastTrial(trialId) {
     const trial = trialHistory.find(t => t.id === trialId);
     if (!trial) return;
-
     currentRoverData = trial.roverData;
     document.getElementById('latitudeData').innerText = trial.roverData.latitude;
     document.getElementById('longitudeData').innerText = trial.roverData.longitude;
@@ -1032,12 +991,13 @@ function clearAllHistory() {
     }
 }
 // --- Initialization ---
-window.onload = function() {
+window.onload = async function() {
+    await loadTomatoModel();
     initThreeD();
     drawMap();
     generatePhotoGrid();
     populateStockPhotos();
-    fetchAIResults();
+    await fetchAIResults();
 };
 </script>
 </body>
