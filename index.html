@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PROJECT SCOUT - Rover Control & Fused AI Analysis (v1.3)</title>
+<title>PROJECT SCOUT - Rover Control & Fused AI Analysis (v1.4)</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -167,6 +167,7 @@ button:active {
     border-radius: 8px;
 }
 
+/* Main Grid (On the Dashboard) */
 #photoGrid {
     display: grid; 
     grid-template-columns: repeat(4, 1fr); 
@@ -199,7 +200,7 @@ button:active {
     font-size: 1.8em; 
     font-weight: bold; 
     color: rgba(255, 255, 255, 0.4); 
-    pointer-events: none; /* Allows click through to the cell */
+    pointer-events: none; 
 }
 .grid-cell img { 
     width: 100%; 
@@ -298,6 +299,21 @@ button:active {
     cursor: pointer;
 }
 
+/* New CSS for Assigned Photos 4x4 Grid in Modal */
+.assigned-photo-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr); /* Enforces 4 columns */
+    grid-template-rows: repeat(4, 1fr);    /* Enforces 4 rows */
+    gap: 10px;
+    padding: 10px;
+    max-width: 500px; /* Constrain the overall size for better visibility */
+    margin: 15px auto;
+    aspect-ratio: 1/1;
+}
+.assigned-photo-grid > div {
+    height: auto;
+    padding: 0;
+}
 </style>
 </head>
 <body>
@@ -378,7 +394,7 @@ button:active {
         <h2>Plant-Specific Fused AI Analysis (16 Zones) 🔬</h2>
         <p>
             <small>
-                **Fused analysis** combines visual data and soil data. **If only a photo is present, a preliminary score of 50/100 and a PARTIAL recommendation are provided.**
+                **Fused analysis** combines visual data and soil data. **If only a photo is present, a PARTIAL recommendation is provided based on a Crop Health Assessment.**
             </small>
         </p>
         <div id="plantAnalysisGrid">
@@ -398,8 +414,8 @@ button:active {
 
 <div id="stockPhotoModal" class="modal">
     <div class="modal-content" style="max-width: 900px;">
-        <span class="close-btn" onclick="closeStockPhotoModal()">&times;</span>
-        <h2>Photo Gallery & Assignment for Zone <span id="currentStockZone">None</span></h2> 
+        <span class="close-btn" onclick="closeStockPhotoModal()">&times;</span> 
+        <h2>Stock Photo Gallery & Assignment for Zone <span id="currentStockZone">---</span></h2> 
         <div id="stockPhotoList" style="margin-top: 25px;">
             </div>
     </div>
@@ -407,7 +423,7 @@ button:active {
 
 
 <div class="footer" style="text-align: center; color: #5a5a5a; margin-top: 30px; font-size: 0.8em;">
-    All Rights Reserved: BanScie RIM Team 2025 | Fused AI Logic v1.3
+    All Rights Reserved: BanScie RIM Team 2025 | Fused AI Logic v1.4
 </div>
 
 <script>
@@ -427,6 +443,7 @@ const CTX = MAP_CANVAS.getContext('2d');
 const MAP_SIZE = 480; 
 const PIXELS_PER_METER = MAP_SIZE / FIELD_SIZE;
 const MAX_MOISTURE = 100; 
+const MAX_TRIALS = 50; // New constant for the trial limit
 
 // --- Plant Grid Definitions (16 Zones) ---
 const PLANT_LOCATIONS_M = [];
@@ -442,7 +459,7 @@ let loggedData = [];
 let photoData = {};      
 let selectedZone = 0;    
 let trialHistory = JSON.parse(localStorage.getItem('trialHistory') || '[]');
-let currentTrialNumber = trialHistory.length + 1;
+let currentTrialNumber = trialHistory.length + 1; // Dynamic trial number
 
 // Global element variables (Defined in window.onload for reliability)
 let STATUS_ELEMENT;
@@ -475,7 +492,7 @@ const TOMATO_DIAGNOSTIC_LIBRARY = {
     ],
     NPK_GUIDELINES: {
         moisture: { ideal_min: 40, ideal_max: 60, low_crit: 25, high_crit: 75, penalty_major: 30, low_rec: "deep watering", high_rec: "review soil drainage" },
-        N: { ideal_min: 60, ideal_max: 100, low_crit: 30, high_crit: 150, penalty_major: 40, low_rec: "apply high-Nitrogen (N) feed", high_rec: "stop N-fertilizer" },
+        N: { ideal_min: 60, ideal_max: 100, low_crit: 30, high_crit: 150, penalty_major: 40, low_rec: "apply high-Nitrogen (N) feed", high_crit: "stop N-fertilizer" },
         P: { ideal_min: 50, ideal_max: 80, low_crit: 20, high_crit: 120, penalty_major: 25, low_rec: "apply Phosphorus (P) booster", high_crit: "check P excess" },
         K: { ideal_min: 70, ideal_max: 120, low_crit: 40, high_crit: 180, penalty_major: 25, low_rec: "apply Potassium (K) supplement", high_rec: "check for K salt toxicity" },
     }
@@ -487,19 +504,22 @@ const stockPhotoData = {
         data: 'data:image/svg+xml;utf8,<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#FFC000"/><text x="50" y="55" font-family="Arial" font-size="12" fill="#333" text-anchor="middle">Chlorosis</text></svg>', 
         name: 'General Yellowing (Chlorosis)', 
         severity: 50, 
-        class: 'rec-action' 
+        class: 'rec-action',
+        visual_rec: TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS.find(t => t.severity === 50).visual_rec 
     },
     'blight': { 
         data: 'data:image/svg+xml;utf8,<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#C55050"/><text x="50" y="55" font-family="Arial" font-size="12" fill="#fff" text-anchor="middle">Blight/Fungal</text></svg>', 
         name: 'Dark Spots & Lesions (Fungal/Bact)', 
         severity: 85, 
-        class: 'rec-critical' 
+        class: 'rec-critical',
+        visual_rec: TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS.find(t => t.severity === 85).visual_rec 
     },
     'healthy': { 
         data: 'data:image/svg+xml;utf8,<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#6AA84F"/><text x="50" y="55" font-family="Arial" font-size="12" fill="#fff" text-anchor="middle">Healthy</text></svg>', 
         name: 'No Visual Symptoms Detected', 
         severity: 0, 
-        class: 'rec-optimal' 
+        class: 'rec-optimal',
+        visual_rec: TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS.find(t => t.severity === 0).visual_rec
     }
 };
 
@@ -780,7 +800,7 @@ function drawMap() {
 }
 
 
-// --- 10.6: FUSED AI ANALYSIS LOGIC (UPDATED for Recommendation Separation) ---
+// --- 10.6: FUSED AI ANALYSIS LOGIC (UPDATED for PARTIAL ANALYSIS) ---
 
 function getNearestSensorData(x, y) {
     const nearest = getNearestPlant(x, y);
@@ -803,10 +823,10 @@ function getPhotoPrediction(photoEntry) {
     }
     
     // Case 2: Manual Upload (Base64 string) or Live Photo Capture
-    // We treat it as a generic photo that has been uploaded but not yet AI-analyzed
+    // We treat it as a generic photo that has been uploaded but not yet AI-analyzed, use a default severity 
     return {
-        name: "Photo Uploaded (AI Analysis Pending)",
-        severity: 50, // Default severity for unanalyzed manual photo
+        name: "Photo Uploaded (AI Analysis Pending - Assumed Healthy for now)",
+        severity: 10, // Default low severity for unanalyzed manual photo
         class: 'rec-initial',
         visual_rec: "Photo successfully logged. Visual analysis is PENDING the AI backend system response."
     };
@@ -834,7 +854,7 @@ function analyzePlant(plant, sensorData, photoEntry) {
         visualPrediction = getPhotoPrediction(photoEntry);
         visualDiagnosis = `Visual: ${visualPrediction.name}`;
         visualRecommendation = visualPrediction.visual_rec;
-        // Start final score based on visual severity, max 95 to allow for a perfect 100 with soil
+        // Start final score based on visual severity
         finalScore = Math.max(10, 100 - visualPrediction.severity); 
         healthClass = visualPrediction.class;
     }
@@ -844,10 +864,17 @@ function analyzePlant(plant, sensorData, photoEntry) {
         // Case A: No data at all (Default initial values are already set)
     }
     else if (photoExists && !realSensorDataAvailable) {
-        // Case B: Photo exists, but no real sensor data (ENFORCED 50/100 SCORE & PARTIAL REC)
-        fusedRecommendation = `***PARTIAL ANALYSIS (50/100)***: Image logged, visual diagnosis is ${visualPrediction.name.split('(')[0]}. Deploy **Soil Probe** to fuse NPK and Moisture data for a final, actionable recommendation.`;
-        healthClass = 'rec-initial'; 
-        finalScore = 50; 
+        // Case B: Photo exists, but no real sensor data (PARTIAL ANALYSIS - **Updated Logic**)
+        const assessment = visualPrediction.name.split('(')[0].trim();
+        const recClass = visualPrediction.class;
+        
+        // Set score based on visual severity
+        finalScore = Math.max(20, 100 - visualPrediction.severity); 
+        healthClass = recClass; 
+        
+        // Explicitly state partial analysis with the visual assessment and need for soil data
+        fusedRecommendation = `***PARTIAL ANALYSIS (${finalScore}/100)***: **Crop Health Assessment:** Plant visually assessed as '${assessment}'. **ACTION REQUIRED:** To ensure diagnosis accuracy and provide a full recommendation, deploy the **Soil Probe** to fuse NPK and Moisture data.`;
+
     }
     else if (realSensorDataAvailable) {
         // Case C: Real Sensor Data is available (Run full Fused Analysis)
@@ -1061,7 +1088,7 @@ function openStockPhotoModal() {
     list.innerHTML = '';
     
     // Update modal title to reflect the zone selection
-    document.querySelector('#stockPhotoModal h2').innerHTML = `Photo Gallery & Assignment for Zone ${selectedZone !== 0 ? selectedZone : '---'}`;
+    document.querySelector('#stockPhotoModal h2').innerHTML = `Stock Photo Gallery & Assignment for Zone ${selectedZone !== 0 ? selectedZone : '---'}`;
     
     // 2. Populate Stock Images
     list.innerHTML += '<h3>Stock Photo Library</h3><p style="font-size:0.9em; color:#9CDCFE;">(Click a photo below to assign its known diagnosis to the selected zone.)</p><div class="stock-image-container" style="display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; margin-top: 10px;">';
@@ -1070,8 +1097,6 @@ function openStockPhotoModal() {
 
     Object.keys(stockPhotoData).forEach(key => {
         const data = stockPhotoData[key];
-        const visualRecData = TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS.find(t => t.severity === data.severity);
-        data.visual_rec = visualRecData ? visualRecData.visual_rec : "Simulated Visual Diagnosis";
 
         const item = document.createElement('div');
         item.style.textAlign = 'center';
@@ -1093,15 +1118,12 @@ function openStockPhotoModal() {
         stockImageContainer.appendChild(item);
     });
     
-    // 3. Display Currently Uploaded Photos (The user's requested "grid format" of uploaded photos)
-    list.innerHTML += '<h3 style="margin-top: 30px; border-top: 1px solid #3C3C3C; padding-top: 15px;">Currently Assigned Photos (Zones 1-16)</h3><p style="font-size:0.9em; color:#FF8C00;">(These are your live/manual uploads assigned to their zones, shown for reference.)</p>';
+    // 3. Display Currently Uploaded Photos in a 4x4 Grid (Requested format)
+    list.innerHTML += '<h3 style="margin-top: 30px; border-top: 1px solid #3C3C3C; padding-top: 15px;">Currently Assigned Photos (Current Trial: Zones 1-16)</h3><p style="font-size:0.9em; color:#FF8C00;">(These are your live/manual uploads assigned to their zones, shown for reference in a 4x4 grid.)</p>';
     
     const assignedPhotoGallery = document.createElement('div');
-    assignedPhotoGallery.style.display = 'grid';
-    assignedPhotoGallery.style.gridTemplateColumns = 'repeat(auto-fit, minmax(100px, 1fr))';
-    assignedPhotoGallery.style.gap = '10px';
-    assignedPhotoGallery.style.padding = '10px';
-
+    assignedPhotoGallery.className = 'assigned-photo-grid'; // STRICT 4x4 GRID
+    
     PLANT_LOCATIONS_M.forEach(plant => {
         const zoneId = plant.id;
         const photoEntry = photoData[zoneId];
@@ -1110,13 +1132,13 @@ function openStockPhotoModal() {
         item.style.backgroundColor = '#252526';
         item.style.borderRadius = '8px';
         item.style.padding = '5px';
-        item.style.height = '120px'; 
+        item.style.height = '100%'; // Ensure full height for grid cell
         item.style.position = 'relative';
 
         const base64Image = photoEntry ? (typeof photoEntry === 'object' ? photoEntry.base64 : photoEntry) : null;
         
         if (base64Image) {
-            item.innerHTML = `<img src="${base64Image}" style="width: 100%; height: 100px; object-fit: cover; border-radius: 4px;">
+            item.innerHTML = `<img src="${base64Image}" style="width: 100%; height: 80%; object-fit: cover; border-radius: 4px;">
                               <p style="margin: 3px 0 0; font-size: 0.8em; color: white;">Zone ${zoneId}</p>`;
         } else {
             item.innerHTML = `<p style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 1.5em; color: #5a5a5a;">${zoneId}</p><p style="position: absolute; bottom: 5px; width: 100%; font-size: 0.8em; color: #5a5a5a;">No Photo</p>`;
@@ -1146,15 +1168,21 @@ function assignStockPhoto(zoneId, photoKey) {
 }
 
 
-// --- 10.8: HISTORY LOGIC (Full implementation) ---
+// --- 10.8: HISTORY LOGIC (Full implementation with 50 trial limit) ---
 
 function saveCurrentTrial() {
+    if (trialHistory.length >= MAX_TRIALS) {
+        STATUS_ELEMENT.innerText = `Trial limit (${MAX_TRIALS}) reached. Please clear history to continue saving new trials.`;
+        return; 
+    }
+    
     const trialId = trialHistory.length + 1;
     const trialData = {
         id: trialId, 
         date: new Date().toLocaleString(), 
         roverData: { ...currentRoverData },
         loggedData: [...loggedData], 
+        // Photo data is saved and "redirected" with the trial
         photoData: JSON.parse(JSON.stringify(photoData)), 
         aiData: { analysisGrid: document.getElementById('plantAnalysisGrid').innerHTML } 
     };
@@ -1167,7 +1195,7 @@ function saveCurrentTrial() {
     
     loggedData = []; 
     photoData = {}; 
-    clearMapData(false); 
+    clearMapData(false); // Reset map data for the new trial
 }
 
 function openHistoryModal() {
@@ -1176,8 +1204,9 @@ function openHistoryModal() {
     list.innerHTML = '';
     
     if (trialHistory.length === 0) { 
-        list.innerHTML = '<p style="color: #FFC000; font-style: italic;">No trial data saved yet. Run some tests and press "Save & New Trial".</p>'; 
+        list.innerHTML = `<p style="color: #FFC000; font-style: italic;">No trial data saved yet. Run some tests and press "Save & New Trial". (${MAX_TRIALS} slots available)</p>`; 
     } else {
+        list.innerHTML += `<p style="color: var(--color-text-highlight);">Showing ${trialHistory.length} of ${MAX_TRIALS} possible trial slots:</p>`;
         [...trialHistory].reverse().forEach(trial => { 
             const item = document.createElement('div');
             item.className = 'trial-item';
@@ -1186,10 +1215,14 @@ function openHistoryModal() {
             item.style.borderBottom = '1px solid #3C3C3C';
             item.style.backgroundColor = '#1a1a1a';
             item.style.borderRadius = '6px';
-            item.innerHTML = `<span><strong>Trial ${trial.id}:</strong> ${trial.date} (${trial.loggedData.length} readings)</span>
-                <button onclick="loadPastTrial(${trial.id})" style="float:right; background-color:#FF8C00; color:white; padding: 6px 10px; font-size: 0.8em; margin: 0;">Load</button>`;
+            item.innerHTML = `<span><strong>Trial ${trial.id}:</strong> ${trial.date} (${Object.keys(trial.photoData).length} photos, ${trial.loggedData.length} sensor readings)</span>
+                <button onclick="loadPastTrial(${trial.id})" style="float:right; background-color:#FF8C00; color:white; padding: 6px 10px; font-size: 0.8em; margin: 0;">Load Trial ${trial.id}</button>`;
             list.appendChild(item);
         });
+        
+        if (trialHistory.length < MAX_TRIALS) {
+             list.innerHTML += `<p style="margin-top: 20px; color: #5a5a5a; font-size:0.9em;">**${MAX_TRIALS - trialHistory.length}** trial slots are still available out of **${MAX_TRIALS}** total slots.</p>`;
+        }
     }
     modal.style.display = "flex";
 }
@@ -1226,10 +1259,10 @@ function clearAllHistory() {
 }
 
 
-// --- 10.9: INITIALIZATION (CRITICAL FIX: Global Element Definitions) ---
+// --- 10.9: INITIALIZATION ---
 
 window.onload = function() {
-    // 1. Define global element variables (FIXED: Ensures all buttons/status update correctly)
+    // 1. Define global element variables
     STATUS_ELEMENT = document.getElementById('status');
     LAST_PHOTO_STATUS = document.getElementById('lastPhotoStatus');
     
@@ -1244,10 +1277,13 @@ window.onload = function() {
     // 4. Build the 4x4 photo upload grid
     generatePhotoGrid(); 
     
-    // 5. Run the first analysis (populates 'No Data' cards)
+    // 5. Load any previously saved photos (if loading history)
+    loadCurrentPhotoData();
+    
+    // 6. Run the first analysis (populates 'No Data' cards or analysis from loaded trial)
     fetchAIResults(); 
     
-    // 6. Ensure UI placeholders are set
+    // 7. Ensure UI placeholders are set
     updateRoverPositionUI(); 
     
     STATUS_ELEMENT.innerText = "System Initialized. No live connection. Ready for Movement, Data Acquisition, and Photo Logging.";
