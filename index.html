@@ -3,86 +3,129 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>S.C.O.U.T. Rover Mapping & Control (Data-Driven 3D)</title>
+<title>PROJECT S.C.O.U.T.: Fused AI & Rover Control Dashboard</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <style>
-/* BASE STYLING (Dark Theme) */
-body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background-color: #1e1e1e; color: #d4d4d4; }
-.container {
-    max-width: 1700px;
-    margin: auto;
-    background: #2d2d30;
-    padding: 25px;
-    border-radius: 10px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+/* --- 1. MODERNIZED STYLING & VARIABLE DEFINITIONS --- */
+:root {
+    --color-primary: #0078D4; /* Modern Blue for actions/highlights */
+    --color-secondary: #4EC9B0; /* Teal/Cyan for headers */
+    --color-background: #1F1F1F; /* Darkest Background */
+    --color-card: #2D2D30; /* Card/Panel Background */
+    --color-text: #E0E0E0;
+    --color-border: #3C3C3C;
+    --color-status-good: #6AA84F; /* Green */
+    --color-status-caution: #FFC000; /* Yellow */
+    --color-status-bad: #C55050; /* Red */
+    --color-text-highlight: #9CDCFE;
+}
+
+/* BASE STYLING */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    background-color: var(--color-background);
+    color: var(--color-text);
+    line-height: 1.5;
+}
+
+/* HEADER & FOOTER */
+.header-bar {
+    background-color: #1E1E1E;
+    color: var(--color-text);
+    padding: 15px 40px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.5);
     display: flex;
-    flex-wrap: wrap;
-    /* Ensure minimal blank space by adjusting layout */
     justify-content: space-between;
+    align-items: center;
 }
-/* LAYOUT PANELS */
-.controls-panel { flex: 0 0 350px; padding-right: 20px; box-sizing: border-box; }
-.map-panel { flex: 0 0 450px; }
-.photo-panel { flex: 0 0 450px; padding-left: 20px; border-left: 1px solid #3c3c3c; box-sizing: border-box; }
-.map-3d-panel { flex: 0 0 450px; margin-top: 20px; order: 4; }
-.plant-analysis-panel {
-    flex-basis: 100%;
-    margin-top: 30px;
-    padding-top: 20px;
-    border-top: 1px solid #3c3c3c;
-    order: 5;
+.header-bar h1 {
+    margin: 0;
+    color: var(--color-primary);
+    font-size: 1.8em;
+    font-weight: 300;
 }
-/* TYPOGRAPHY & HEADERS */
-h1 { color: #569cd6; border-bottom: 3px solid #3c3c3c; padding-bottom: 10px; }
-h2 { color: #4ec9b0; margin-top: 20px; }
-h3 { color: #c8c8c8; margin-top: 10px; }
-#status { font-weight: bold; color: #ffcc00; }
-/* BUTTONS */
-button { padding: 10px 15px; margin: 8px 5px; cursor: pointer; border: none; border-radius: 6px; font-weight: bold; transition: background-color 0.2s; }
-.move-controls button { background-color: #569cd6; color: white; }
-.arm-controls button { background-color: #6a9955; color: white; }
-.camera-control button { background-color: #ce4257; color: white; }
-.history-controls button { background-color: #ff9900; color: white; }
-/* DATA DISPLAY */
-.data-display { margin-top: 20px; padding: 15px; border: 1px solid #3c3c3c; border-radius: 6px; background-color: #252526; }
-.data-row strong { display: inline-block; width: 140px; color: #9cdcfe; }
-/* CANVAS MAP (2D) */
-#roverMap { border: 3px solid #6a9955; background-color: #3d3d3d; display: block; margin: 20px auto 0; }
-/* 3D MAP CANVAS */
-#threeDContainer {
-    width: 450px;
-    height: 450px;
-    border: 3px solid #569cd6;
-    background-color: #1a1a1a;
-    margin: 20px auto 0;
+
+/* --- 2. GRID LAYOUT RESTORATION (2x3 Dashboard) --- */
+.container {
+    max-width: 1700px; /* Wider for 3 columns */
+    margin: 20px auto;
+    padding: 20px;
+    border-radius: 10px;
+    
+    /* 3 Columns: 1 for controls, 2 for visuals/analysis */
+    display: grid;
+    /* Fixed control width, rest splits evenly */
+    grid-template-columns: minmax(380px, 0.25fr) minmax(380px, 1fr) minmax(380px, 1fr);
+    gap: 20px;
+}
+
+/* Panel Styles */
+.panel {
+    background: var(--color-card);
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+    overflow: hidden; /* prevents content from leaking */
+}
+.panel h2 {
+    color: var(--color-secondary);
+    font-weight: 400;
+    border-bottom: 1px solid var(--color-border);
+    padding-bottom: 5px;
+    margin-top: 0;
+}
+
+/* Specific Panel Locations (Reverting to a clearer flow) */
+/* Controls panel spans column 1 and rows 1 & 2 */
+.controls-data-panel { grid-column: 1 / 2; grid-row: 1 / 3; }
+.map-2d-panel { grid-column: 2 / 3; grid-row: 1 / 2; }
+.photo-panel { grid-column: 3 / 4; grid-row: 1 / 2; }
+.map-3d-panel { grid-column: 2 / 3; grid-row: 2 / 3; }
+.analysis-panel { grid-column: 3 / 4; grid-row: 2 / 3; }
+
+/* DATA DISPLAY & BUTTONS */
+.data-row { margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;}
+.data-row strong { color: var(--color-text-highlight); font-weight: 500; min-width: 120px;}
+.data-value { font-family: 'Consolas', monospace; color: var(--color-text); text-align: right;}
+.section-divider { border-top: 1px solid var(--color-border); margin: 20px 0; }
+button {
+    padding: 10px 15px; margin: 5px 5px 5px 0; cursor: pointer; border: none;
+    border-radius: 6px; font-weight: bold; transition: background-color 0.2s, box-shadow 0.2s;
+}
+.move-controls button { background-color: var(--color-primary); color: white; }
+.arm-controls button { background-color: var(--color-status-good); color: white; }
+.camera-control button { background-color: #C55050; color: white; } /* Dark Red */
+
+/* MAPS */
+#roverMap, #threeDContainer {
+    width: 100%;
+    /* Ensure maps are vertically aligned in their rows */
+    height: 380px;
+    background-color: #3d3d3d;
+    border: 3px solid var(--color-primary);
+    margin-top: 10px;
     display: block;
 }
-/* 4x4 PHOTO GRID STYLES */
-#photoGrid, #stockImageGrid {
+#threeDContainer { background-color: #1a1a1a; }
+
+/* PHOTO GRID */
+#photoGrid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     grid-template-rows: repeat(4, 1fr);
-    gap: 5px;
-    border: 2px solid #569cd6;
-    max-width: 450px;
-    margin: 20px auto;
+    gap: 3px;
+    max-width: 400px;
+    margin: 15px auto;
     aspect-ratio: 1 / 1;
-    background-color: #252526;
 }
-#stockImageGrid { border: none; max-width: 100%; margin: 0; }
 .grid-cell {
-    background-color: #3d3d3d;
-    border: 1px solid #4ec9b0;
-    position: relative;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    cursor: pointer;
-    overflow: hidden;
-    transition: background-color 0.1s;
+    border: 1px solid var(--color-border); background-color: #444; cursor: pointer;
+    display: flex; justify-content: center; align-items: center; font-size: 0.9em;
+    color: #bbb; position: relative; overflow: hidden;
 }
-/* Delete Photo Button Styles */
+.grid-cell img { width: 100%; height: 100%; object-fit: cover; }
 .delete-photo-btn {
     position: absolute; bottom: 2px; right: 2px;
     background-color: rgba(220, 53, 69, 0.8); color: white; border: none;
@@ -90,174 +133,159 @@ button { padding: 10px 15px; margin: 8px 5px; cursor: pointer; border: none; bor
     z-index: 20; line-height: 1; display: none;
 }
 .grid-cell:has(.cell-photo) .delete-photo-btn { display: block; }
-/* NEW: Plant Analysis Grid Styles */
+
+
+/* ANALYSIS CARDS */
 #plantAnalysisGrid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 15px;
     margin-top: 15px;
+    /* Limit height to match 3D map above */
+    max-height: 480px;
+    overflow-y: auto;
 }
 .analysis-card {
-    padding: 15px; border-radius: 8px; background-color: #3e3e42;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.3); transition: box-shadow 0.2s;
+    padding: 15px; border-radius: 8px; background-color: #3e3e42; border-left: 5px solid;
 }
 .plant-id-label {
-    font-size: 1.4em; font-weight: bold; color: #ffd700;
-    border-bottom: 2px solid #555; padding-bottom: 5px; margin-bottom: 10px;
+    font-size: 1.1em; font-weight: bold; color: var(--color-secondary);
+    border-bottom: 1px dashed var(--color-border); padding-bottom: 5px; margin-bottom: 10px;
 }
-.status-good { color: #9cdcfe; }
-/* Recommendation coloring */
-.rec-optimal, .rec-action, .rec-critical {
-    padding: 5px; border-radius: 4px; display: inline-block;
-    font-weight: bold; white-space: normal; word-break: break-word;
-    width: 100%; box-sizing: border-box;
+.rec-optimal { background-color: var(--color-status-good); color: white; }
+.rec-action { background-color: var(--color-status-caution); color: black; }
+.rec-critical { background-color: var(--color-status-bad); color: white; }
+
+/* MODAL STYLES (basic) */
+.modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.7); }
+.modal-content { background-color: var(--color-card); margin: 5% auto; padding: 25px; border-radius: 10px; width: 80%; max-width: 1100px; max-height: 90vh; overflow-y: auto; }
+.close { color: var(--color-text-highlight); float: right; font-size: 28px; font-weight: bold; }
+#stockImageGrid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; padding: 10px;
 }
-.rec-optimal { background-color: #28a745; color: white; }
-.rec-action { background-color: #ffc101; color: black; }
-.rec-critical { background-color: #dc3545; color: white; }
-/* MODAL STYLES */
-.modal {
-    display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.7);
-}
-.modal-content {
-    background-color: #2d2d30; margin: 10% auto; padding: 20px; border: 1px solid #3c3c3c; width: 80%; max-width: 1000px; border-radius: 10px;
-}
-.close-btn {
-    color: #aaa; float: right; font-size: 28px; font-weight: bold;
-}
-.close-btn:hover, .close-btn:focus {
-    color: #fff; text-decoration: none; cursor: pointer;
-}
-.trial-item {
-    padding: 10px; margin-bottom: 5px; background-color: #252526; border-radius: 5px; cursor: pointer; transition: background-color 0.2s;
-}
-.trial-item:hover { background-color: #404040; }
+#stockImageGrid img { width: 100%; height: 100px; object-fit: cover; border-radius: 5px; }
 </style>
 </head>
 <body>
-<div class="container">
-    <div class="controls-panel">
-        <h1>S.C.O.U.T. Rover Control</h1>
-        <p>System Status: <span id="status">Connecting...</span></p>
+<div class="header-bar">
+    <h1>PROJECT S.C.O.U.T.: Fused AI & Rover Control Dashboard</h1>
+    <span id="status">System Initializing...</span>
+</div>
 
-        <div class="data-display history-controls">
-            <h2>Trial Management 💾</h2>
-            <div class="data-row"><strong>Current Trial:</strong> <span id="currentTrialNumber">1</span></div>
-            <p>
-                <button onclick="saveCurrentTrial()">💾 Save Trial Data</button>
-                <button onclick="openHistoryModal()">📅 View History</button>
-            </p>
-            <p><small>Saved trials are stored in your browser's local storage.</small></p>
+<div class="container">
+
+    <div class="panel controls-data-panel">
+        <h2>Rover Control & Live ThingSpeak Data</h2>
+
+        <div>
+            <h3>Trial Management 💾</h3>
+            <div class="data-row">
+                <strong>Current Trial:</strong> <span class="data-value" id="currentTrialNumber">1</span>
+            </div>
+            <button onclick="saveCurrentTrial()"> 💾 Save & New Trial</button>
+            <button onclick="openHistoryModal()"> 📅 View History</button>
         </div>
+
+        <div class="section-divider"></div>
 
         <div class="move-controls">
-            <h2>Rover Movement</h2>
-            <button onclick="sendCommand('forward')">Forward (↑)</button>
-            <button onclick="sendCommand('stop')">🛑 STOP</button>
-            <button onclick="sendCommand('backward')">Backward (↓)</button><br>
-            <button onclick="sendCommand('left')">Left (←)</button>
-            <button onclick="sendCommand('right')">Right (→)</button>
+            <h3>Rover Movement (Mock ESP32 Commands)</h3>
+            <p>
+                <button onclick="sendCommand('forward')">Forward (↑)</button>
+                <button onclick="sendCommand('stop')"> 🛑 STOP</button>
+                <button onclick="sendCommand('backward')">Backward (↓)</button><br>
+                <button onclick="sendCommand('left')">Left (←)</button>
+                <button onclick="sendCommand('right')">Right (→)</button>
+            </p>
         </div>
-        <hr style="border-top: 1px solid #3c3c3c;">
-        <div class="arm-controls">
-            <h2>Data Acquisition</h2>
-            <button onclick="sendCommand('probe')">🔬 Probe Soil (Arm Down)</button>
-            <button onclick="sendCommand('read_sensors')">💧 Read Soil Data</button>
-            <button onclick="sendCommand('read_nav')">🧭 Get GPS/Heading</button>
-        </div>
-        <hr style="border-top: 1px solid #3c3c3c;">
 
-        <div class="data-display">
-            <h2>Live Sensor Data (ThingSpeak)</h2>
-            <h3>Navigation Data</h3>
-            <div class="data-row"><strong>Latitude:</strong> <span id="latitudeData">N/A</span></div>
-            <div class="data-row"><strong>Longitude:</strong> <span id="longitudeData">N/A</span></div>
-            <div class="data-row"><strong>GPS Fix:</strong> <span id="gpsFix">No Fix</span></div>
-            <div class="data-row"><strong>Heading:</strong> <span id="headingData">N/A</span></div>
-            <h3>Soil Data</h3>
-            <div class="data-row"><strong>Moisture:</strong> <span id="moistureData">N/A</span></div>
-            <div class="data-row"><strong>NPK (N, P, K):</strong> <span id="npkData">N/A</span></div>
+        <div class="section-divider"></div>
+
+        <div class="arm-controls">
+            <h3>Data Acquisition</h3>
+            <button onclick="sendCommand('probe')"> 🔬 Probe Soil (Arm Down)</button>
+            <button onclick="fetchData('refresh')"> 📡 Refresh ThingSpeak</button>
+        </div>
+
+        <div style="margin-top: 20px;">
+            <h3>Live Sensor Data</h3>
+            <div class="data-row"><strong>Latitude:</strong> <span id="latitudeData" class="data-value">N/A</span></div>
+            <div class="data-row"><strong>Longitude:</strong> <span id="longitudeData" class="data-value">N/A</span></div>
+            <div class="data-row"><strong>Heading:</strong> <span id="headingData" class="data-value">N/A</span></div>
+            <div class="data-row"><strong>GPS Fix:</strong> <span id="gpsFix" class="data-value">No Fix</span></div>
+            <div class="section-divider" style="margin: 10px 0;"></div>
+            <div class="data-row"><strong>Moisture:</strong> <span id="moistureData" class="data-value">N/A</span></div>
+            <div class="data-row"><strong>NPK (N/P/K):</strong> <span id="npkData" class="data-value">N/A</span></div>
         </div>
     </div>
 
-    <div class="map-panel">
+    <div class="panel map-2d-panel">
         <h2>2D Field Map ($\mathbf{4\text{m} \times 4\text{m}}$ Grid)</h2>
         <canvas id="roverMap" width="450" height="450"></canvas>
-        <p>Map Key: $\text{Grid} = 1 \text{m} \times 1 \text{m}$. $\text{Circles} = \text{Health}$. $\text{Triangle} = \text{Rover}$.</p>
-        <button onclick="clearMapData()">🗑️ Clear Map Data</button>
+        <p><small>Map Key: $\text{Grid} = 1 \text{m} \times 1 \text{m}$. $\text{Circles} = \text{Health}$. $\text{Triangle} = \text{Rover}$.</small></p>
+        <button onclick="clearMapData()"> 🗑 Clear Data & Reset Rover</button>
     </div>
 
-    <div class="photo-panel">
+    <div class="panel photo-panel">
         <div class="camera-control">
             <h2>Image Capture & Gallery</h2>
-            <button onclick="sendCommand('capture')">📸 Take Photo (to Dell Wyse)</button>
-            <button onclick="openStockImageModal()">🖼️ View/Load Stock Photos</button>
-            <p>Last photo status: <span id="lastPhotoStatus">N/A</span>. Sent to Dell Wyse server at <span id="server-ip">192.168.X.X:5000</span>.</p>
+            <button onclick="sendCommand('capture')"> 📸 Take Photo (Current Zone)</button>
+            <button onclick="openStockImageModal()"> 🖼️ Load Simulation Photos</button>
+            <p><small>Click a zone to assign a photo. Last photo status: <span id="lastPhotoStatus">N/A</span>.</small></p>
         </div>
-        <hr style="border-top: 1px solid #3c3c3c;">
-        <h2>Plant Zone Photo Assignments (Zones 1-16)</h2>
-        <p>Click a zone to upload a photo. Photos assigned here are used for the AI analysis.</p>
+
         <div id="photoGrid">
         </div>
         <input type="file" id="fileInput" accept="image/*" style="display:none;" onchange="handleFileSelect(event)">
     </div>
 
-    <div class="map-3d-panel">
+    <div class="panel map-3d-panel">
         <h2>3D Soil Metric Visualization 📊</h2>
         <div id="threeDContainer"></div>
-        <div class="three-d-controls">
-            <p>Bar Height = Soil Moisture %. Bar Color = Plant Health (Green/Yellow/Red).</p>
-        </div>
+        <p><small>Bar Height = Soil Moisture %. Bar Color = Plant Health (Green/Yellow/Red).</small></p>
     </div>
 
-    <div class="plant-analysis-panel">
-        <h2>Plant-Specific AI Analysis (16 Zones) 🔬</h2>
-        <p>This grid shows the fused analysis of **Leaf Photo (Simulated AI)** + **Local Soil Data (NPK/Moisture)** for all plant zones.</p>
+    <div class="panel analysis-panel">
+        <h2>Plant-Specific Fused AI Analysis (16 Zones) 🔬</h2>
+        <p><small>Fused analysis of **Leaf Photo (AI)** + **ThingSpeak Soil Data**.</small></p>
         <div id="plantAnalysisGrid">
         </div>
     </div>
+
 </div>
 
 <div id="historyModal" class="modal">
     <div class="modal-content">
-        <span class="close-btn" onclick="closeHistoryModal()">&times;</span>
-        <h2>Saved Trial History</h2>
-        <div id="trialHistoryList">
-        </div>
-        <hr style="border-top: 1px solid #3c3c3c; margin-top: 15px;">
-        <button onclick="clearAllHistory()" style="background-color: #dc3545;">🚨 Clear All Saved Trials</button>
+        <span class="close" onclick="closeHistoryModal()">&times;</span>
+        <h2>Trial History Log 📅</h2>
+        <div id="trialHistoryList"></div>
+        <button class="camera-control" onclick="clearAllHistory()" style="margin-top: 20px;"> ⚠️ Permanently Delete All History</button>
     </div>
 </div>
-
 <div id="stockImageModal" class="modal">
     <div class="modal-content">
-        <span class="close-btn" onclick="closeStockImageModal()">&times;</span>
-        <h2>Stock Image Gallery (16 Pre-Diagnosed Leaves)</h2>
-        <p>Click on a stock photo to assign it to your currently selected plant zone.
-        Note: Stock photo hash ensures consistent diagnosis.</p>
-        <div id="stockImageGrid">
-        </div>
+        <span class="close" onclick="closeStockImageModal()">&times;</span>
+        <h2>AI Simulation Photo Gallery 🖼️</h2>
+        <p>Select a simulated plant image to assign it to the selected plant zone.</p>
+        <div id="stockImageGrid"></div>
     </div>
 </div>
 
 <script>
 // JAVASCRIPT LOGIC
-// !!! CONFIGURE YOUR IPs & THINGSPEAK CHANNEL HERE !!!
-const ESP32_IP = '192.168.1.50'; // IP of the Rover's ESP32 web server
-const DELL_WYSE_IP = 'http://192.168.X.X:5000'; // IP of the Photo/AI server
+// !!! THING SPEAK CONFIGURATION !!!
+const ESP32_IP = '192.168.1.50'; // Placeholder for Rover IP
 const ESP32_URL_BASE = `http://${ESP32_IP}`;
 
-// --- THINGSPEAK CONFIGURATION (LIVE DATA PULL) ---
-// Note: Using a placeholder Channel ID. Please replace '254870' with your actual Channel ID.
-const THINGSPEAK_CHANNEL_ID = '254870';
-const THINGSPEAK_READ_API_KEY = '6OXH3SUQ4VNSOJX1'; // User-provided key
+// --- THINGSPEAK CONFIGURATION (USING USER'S KEY) ---
+const THINGSPEAK_CHANNEL_ID = '254870'; // Placeholder Channel ID - **MUST BE CORRECTED BY USER**
+const THINGSPEAK_READ_API_KEY = '6OXH3SUQ4VNSOJX1';
 const THINGSPEAK_URL = `https://api.thingspeak.com/channels/${THINGSPEAK_CHANNEL_ID}/feeds.json?api_key=${THINGSPEAK_READ_API_KEY}&results=1`;
 
 const STATUS_ELEMENT = document.getElementById('status');
 const LAST_PHOTO_STATUS = document.getElementById('lastPhotoStatus');
-document.getElementById('server-ip').innerText = DELL_WYSE_IP.replace('http://', '');
 
-// --- GLOBAL CONSTANTS ---
+// --- GLOBAL CONSTANTS & DATA STRUCTURES ---
 const FIELD_SIZE = 4;
 const MAP_CANVAS = document.getElementById('roverMap');
 const CTX = MAP_CANVAS.getContext('2d');
@@ -265,34 +293,31 @@ const MAP_SIZE = 450;
 const PIXELS_PER_METER = MAP_SIZE / FIELD_SIZE;
 const MAX_MOISTURE = 100;
 
-// Plant locations in meters (16 zones)
 const PLANT_LOCATIONS_M = [];
 for(let r=0; r<FIELD_SIZE; r++) for(let c=0; c<FIELD_SIZE; c++) PLANT_LOCATIONS_M.push({x: c + 0.5, y: r + 0.5, id: (r * FIELD_SIZE) + c + 1});
 
-// Global Data Structures
-let loggedData = []; // Stores historical soil/health readings
-let photoData = {}; // Stores {zoneId: base64Image} - ASSIGNED PHOTOS
-let stockPhotoData = {}; // Stores {stockId: base64Image} - GALLERY OF STOCK PHOTOS
+let loggedData = [];
+let photoData = {};
+let stockPhotoData = {};
 let selectedZone = 0;
 let trialHistory = JSON.parse(localStorage.getItem('trialHistory') || '[]');
 let currentTrialNumber = trialHistory.length + 1;
 document.getElementById('currentTrialNumber').innerText = currentTrialNumber;
 
 let currentRoverData = {
-    latitude: 'N/A',
-    longitude: 'N/A',
+    latitude: '40.7128',
+    longitude: '-74.0060',
     heading: 0,
-    x_m: 2.0, // Initial center position
-    y_m: 2.0  // Initial center position
+    x_m: 2.0,
+    y_m: 2.0
 };
 
-// --- SIMULATED LIBRARY: TOMATO DIAGNOSTIC RULES (SCIENTIFICALLY PRIORITIZED) ---
+// --- SIMULATED LIBRARY: TOMATO DIAGNOSTIC RULES (CRITICAL: DARK SPOTS PRIORITY) ---
 const TOMATO_DIAGNOSTIC_LIBRARY = {
-    // Disease Tiers (Prioritized by Severity)
     DISEASE_TIERS: [
         { name: "Mottling/Mosaic Pattern (Viral)", severity: 95, probability: 0.10, class: 'rec-critical', recommendation: "***ISOLATION REQUIRED***: Strong indicator of Tobacco Mosaic Virus (TMV) or similar. Incurable. Remove plant immediately to prevent field-wide contamination."
         },
-        { name: "Dark Spots & Lesions (Fungal/Bact)", severity: 85, probability: 0.15, class: 'rec-critical', recommendation: "***FUNGICIDE/BACTERICIDE***: Likely Early Blight or Bacterial Spot. Apply broad-spectrum fungicide and improve air circulation/reduce leaf wetness."
+        { name: "Dark Spots & Lesions (Fungal/Bact)", severity: 85, probability: 0.15, class: 'rec-critical', recommendation: "***DARK SPOT DETECTION (AI DETERMINANT)***: High probability of Early Blight or Bacterial Spot. Apply broad-spectrum fungicide and improve air circulation/reduce leaf wetness."
         },
         { name: "Leaf Curl & Wilting (Stress/Viral)", severity: 75, probability: 0.10, class: 'rec-critical', recommendation: "WILTING: Could be severe water stress, root rot, or Tomato Yellow Leaf Curl Virus (TYLCV). Check moisture urgently. If moisture is good, isolate for potential virus."
         },
@@ -301,16 +326,15 @@ const TOMATO_DIAGNOSTIC_LIBRARY = {
         { name: "Healthy, Deep Green", severity: 0, probability: 0.40, class: 'rec-optimal', recommendation: "OPTIMAL: No visual symptoms detected. Continue regular monitoring."
         }
     ],
-    // NPK Guidelines for Scoring (used in analyzePlant)
     NPK_GUIDELINES: {
-        moisture: { ideal_min: 40, ideal_max: 60, low_crit: 25, low_rec: "deep watering", high_rec: "review soil drainage/stop irrigation", penalty_minor: 10, penalty_major: 30 },
+        moisture: { ideal_min: 40, ideal_max: 60, low_crit: 25, high_crit: 75, penalty_minor: 10, penalty_major: 30, low_rec: "deep watering", high_rec: "review soil drainage/stop irrigation" },
         N: { ideal_min: 60, ideal_max: 100, low_crit: 30, high_crit: 150, penalty_minor: 15, penalty_major: 40, low_rec: "high-Nitrogen (N) liquid feed", high_rec: "stop all N-fertilizer, flush soil" },
         P: { ideal_min: 50, ideal_max: 80, low_crit: 20, high_crit: 120, penalty_minor: 10, penalty_major: 25, low_rec: "Phosphorus (P) booster for root development", high_rec: "check fertilizer blend for P excess" },
         K: { ideal_min: 70, ideal_max: 120, low_crit: 40, high_crit: 180, penalty_minor: 10, penalty_major: 25, low_rec: "Potassium (K) to boost resistance/fruit set", high_rec: "check for K salt toxicity" },
     }
 };
 
-// --- HASHING AND PRNG FOR ACCURACY/CONSISTENCY ---
+// --- UTILITY FUNCTIONS ---
 function simpleStringHash(str) {
     let hash = 0;
     for (let i = 0; i < Math.min(str.length, 1000); i++) {
@@ -328,571 +352,130 @@ function deterministicPseudoRandom(seed) {
     state = (a * state + c) % m;
     return state / m;
 }
-
-// --- 3D RENDERING SETUP (THREE.JS) ---
-let scene, camera, renderer, rover3D, controls;
-let dataCubes = {};
-
-function initThreeD() {
-    const container = document.getElementById('threeDContainer');
-    const width = container.clientWidth;
-    const height = container.clientHeight;
-
-    scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x1a1a1a);
-    camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 100);
-    camera.position.set(2, 6, 2);
-    camera.lookAt(2, 0, 2);
-
-    renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(width, height);
-    container.appendChild(renderer.domElement);
-
-    controls = new THREE.OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.05;
-    controls.screenSpacePanning = false;
-    controls.minDistance = 1;
-    controls.maxDistance = 10;
-    controls.maxPolarAngle = Math.PI / 2.2;
-
-    const gridHelper = new THREE.GridHelper(FIELD_SIZE, FIELD_SIZE, 0x444444, 0x444444);
-    gridHelper.position.set(FIELD_SIZE / 2, 0, FIELD_SIZE / 2);
-    scene.add(gridHelper);
-
-    const roverGeometry = new THREE.BoxGeometry(0.2, 0.1, 0.2);
-    const roverMaterial = new THREE.MeshPhongMaterial({ color: 0x569cd6 });
-    rover3D = new THREE.Mesh(roverGeometry, roverMaterial);
-    rover3D.position.set(currentRoverData.x_m, 0.05, currentRoverData.y_m);
-    scene.add(rover3D);
-
-    const ambientLight = new THREE.AmbientLight(0x404040, 2);
-    scene.add(ambientLight);
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.5);
-    directionalLight.position.set(5, 10, 5);
-    scene.add(directionalLight);
-
-    animate();
-}
-
-function animate() {
-    requestAnimationFrame(animate);
-    if(controls) controls.update();
-    renderer.render(scene, camera);
-}
-
-function updateRover3DPosition() {
-    if (rover3D) {
-        rover3D.position.set(
-            parseFloat(currentRoverData.x_m),
-            0.05,
-            parseFloat(currentRoverData.y_m)
-        );
-        // Convert heading (0-360) to radians for Three.js (0 = +X, positive is CCW)
-        // Adjusting for the map's coordinate system (Y is Z in 3D)
-        rover3D.rotation.y = -(currentRoverData.heading - 90) * (Math.PI / 180);
-    }
-}
-
-function clear3DDataCubes() {
-    Object.values(dataCubes).forEach(cube => {
-        scene.remove(cube);
-        cube.geometry.dispose();
-        cube.material.dispose();
-    });
-    dataCubes = {};
-}
-
 function getHealthColorHex(status) {
     switch (status) {
-        case 'Good': return 0x28a745;
-        case 'Caution': return 0xffc107;
-        case 'Bad': return 0xdc3545;
+        case 'Good': return 0x6AA84F;
+        case 'Caution': return 0xFFC000;
+        case 'Bad': return 0xC55050;
         default: return 0x5a5a5a;
     }
 }
-
-function draw3DMap() {
-    clear3DDataCubes();
-
-    loggedData.forEach((data, index) => {
-        const { x_m, y_m, moisture, healthStatus } = data;
-
-        const cubeWidth = 0.5;
-        const cubeDepth = 0.5;
-        // Map moisture (0-100) to height (0.01 - 1.0)
-        const cubeHeight = Math.max(0.01, moisture / MAX_MOISTURE);
-        const colorHex = getHealthColorHex(healthStatus);
-
-        const geometry = new THREE.BoxGeometry(cubeWidth, cubeHeight, cubeDepth);
-        const material = new THREE.MeshPhongMaterial({
-            color: colorHex,
-            opacity: 0.8,
-            transparent: true
-        });
-
-        const cube = new THREE.Mesh(geometry, material);
-        cube.position.set(
-            x_m,
-            cubeHeight / 2, // Half height so it sits on the ground
-            y_m
-        );
-        cube.name = `data-cube-${index}`;
-        dataCubes[index] = cube;
-        scene.add(cube);
-    });
-
-    updateRover3DPosition();
+function getHealthColor(status) {
+    if (status === 'Good') return 'var(--color-status-good)';
+    if (status === 'Caution') return 'var(--color-status-caution)';
+    if (status === 'Bad') return 'var(--color-status-bad)';
+    return '#888888';
 }
 
-// ------------------------------------
-// --- PHOTO GRID & MODAL FUNCTIONS ---
-// ------------------------------------
+// --- CORE ROVER & DATA FETCH FUNCTIONS ---
 
-function populateStockPhotos() {
-    if (Object.keys(stockPhotoData).length === 16) return;
-    const diseaseList = TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS;
-    for (let i = 1; i <= 16; i++) {
-        // Use index to get a specific disease from the list deterministically
-        const diseaseIndex = i % diseaseList.length;
-        const base64 = `data:image/svg+xml;base64,mocked_stock_photo_hash_${i}_diag:${diseaseList[diseaseIndex].name.replace(/\s/g, '_')}`;
-        stockPhotoData[i] = base64;
-    }
-}
-
-function openStockImageModal() {
-    populateStockPhotos();
-    renderStockImageGrid();
-    document.getElementById('stockImageModal').style.display = "block";
-    if (selectedZone === 0) {
-        STATUS_ELEMENT.innerText = "Select a stock photo, then click a zone (1-16) in the main photo grid to assign it.";
-    }
-}
-
-function closeStockImageModal() {
-    document.getElementById('stockImageModal').style.display = "none";
-}
-
-function getPhotoPrediction(base64Image) {
-    const photoHash = simpleStringHash(base64Image);
-    const randomRoll = deterministicPseudoRandom(photoHash);
-    let cumulativeProb = 0;
-    let prediction = TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS[4]; // Default to Healthy
-
-    for (const disease of TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS) {
-        cumulativeProb += disease.probability;
-        if (randomRoll <= cumulativeProb) {
-            prediction = disease;
-            break;
-        }
-    }
-    return prediction;
-}
-
-function renderStockImageGrid() {
-    const grid = document.getElementById('stockImageGrid');
-    grid.innerHTML = '';
-
-    for (let i = 1; i <= 16; i++) {
-        const base64Image = stockPhotoData[i];
-        const prediction = getPhotoPrediction(base64Image);
-
-        const cell = document.createElement('div');
-        cell.className = 'grid-cell';
-        cell.style.maxWidth = '150px';
-        cell.style.aspectRatio = '1/1';
-
-        const img = document.createElement('img');
-        img.src = base64Image;
-        img.className = 'cell-photo';
-
-        const label = document.createElement('div');
-        label.style.position = 'absolute';
-        label.style.bottom = '0';
-        label.style.backgroundColor = 'rgba(0,0,0,0.7)';
-        label.style.color = 'white';
-        label.style.padding = '5px';
-        label.style.fontSize = '10px';
-        label.innerText = `ID ${i}: ${prediction.name.split('(')[0].trim()}`;
-        cell.appendChild(img);
-        cell.appendChild(label);
-        cell.onclick = () => assignStockPhotoToZone(i);
-        grid.appendChild(cell);
-    }
-}
-
-function assignStockPhotoToZone(stockId) {
-    if (selectedZone === 0) {
-        STATUS_ELEMENT.innerText = "ERROR: Please click a zone (1-16) in the main grid first, then select a stock photo.";
-        return;
-    }
-    const base64Image = stockPhotoData[stockId];
-    photoData[selectedZone] = base64Image;
-    renderPhotoInCell(selectedZone, base64Image);
-    STATUS_ELEMENT.innerText = `Stock Photo ID ${stockId} assigned to Zone ${selectedZone}.`;
-    closeStockImageModal();
-    selectedZone = 0;
-    fetchAIResults();
-}
-
-function deletePhoto(zoneId) {
-    if (!photoData[zoneId]) return;
-    delete photoData[zoneId];
-    renderPhotoInCell(zoneId, null);
-    STATUS_ELEMENT.innerText = `Photo deleted from Zone ${zoneId}.`;
-    fetchAIResults();
-}
-
-function generatePhotoGrid() {
-    const grid = document.getElementById('photoGrid');
-    for (let i = 1; i <= 16; i++) {
-        const cell = document.createElement('div');
-        cell.className = 'grid-cell';
-        cell.id = 'zone-' + i;
-        cell.innerHTML = `
-            <span class="cell-label">${i}</span>
-            <button class="delete-photo-btn" onclick="event.stopPropagation(); deletePhoto(${i})">X</button>
-        `;
-        cell.addEventListener('click', function(e) {
-            if (e.target.className !== 'delete-photo-btn') {
-                selectedZone = i;
-                document.getElementById('fileInput').click();
-            }
-        });
-        grid.appendChild(cell);
-    }
-    loadCurrentPhotoData();
-}
-
-function handleFileSelect(event) {
-    const file = event.target.files[0];
-    if (!file || selectedZone === 0) return;
-
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const base64Image = e.target.result;
-        photoData[selectedZone] = base64Image;
-        renderPhotoInCell(selectedZone, base64Image);
-        selectedZone = 0;
-
-        // Clear the file input to allow selecting the same file again
-        event.target.value = '';
-
-        fetchAIResults();
-    };
-    reader.readAsDataURL(file);
-}
-
-function renderPhotoInCell(zoneId, base64Image) {
-    const cell = document.getElementById('zone-' + zoneId);
-    if (!cell) return;
-    const existingPhoto = cell.querySelector('.cell-photo');
-    if (existingPhoto) existingPhoto.remove();
-
-    // Remove zone number label when photo is present, re-add when cleared
-    const zoneLabel = cell.querySelector('.cell-label');
-    if (zoneLabel) zoneLabel.style.display = base64Image ? 'none' : 'block';
-
-    if (base64Image) {
-        const img = document.createElement('img');
-        img.src = base64Image;
-        img.className = 'cell-photo';
-        img.style.width = '100%';
-        img.style.height = '100%';
-        img.style.objectFit = 'cover';
-        cell.appendChild(img);
-    }
-}
-
-function clearPhotoGrid() {
-    for (let i = 1; i <= 16; i++) {
-        renderPhotoInCell(i, null);
-    }
-}
-
-function loadCurrentPhotoData() {
-    clearPhotoGrid();
-    for (const [zoneId, base64Image] of Object.entries(photoData)) {
-        renderPhotoInCell(parseInt(zoneId), base64Image);
-    }
-}
-
-// ------------------------------------
-// --- COMBINED AI ANALYSIS LOGIC (CRITICAL FUSION) ---
-// ------------------------------------
-
-function getNearestSensorData(plantX, plantY) {
-    let nearestData = null;
-    let min_dist_sq = Infinity;
-
-    loggedData.forEach(data => {
-        let dx = data.x_m - plantX;
-        let dy = data.y_m - plantY;
-        let dist_sq = dx * dx + dy * dy;
-
-        // Search radius: 0.707m (center of one grid to the edge of the next)
-        if (dist_sq < 0.707 * 0.707 && dist_sq < min_dist_sq) {
-            min_dist_sq = dist_sq;
-            nearestData = data;
-        }
-    });
-    return nearestData;
-}
-
-function analyzePlant(plant, sensorData, photoExists) {
-    let soilScore = 100;
-    let soilProblems = [];
-    let sensorDiagnosis = "Soil: Sensor Data Missing (Cannot Analyze)";
-
-    // --- 1. Sensor Data Analysis ---
-    if (sensorData) {
-        const { moisture, npk_n, npk_p, npk_k } = sensorData;
-        const data = { moisture, N: npk_n, P: npk_p, K: npk_k };
-        const keys = ['moisture', 'N', 'P', 'K'];
-
-        keys.forEach(key => {
-            const guideline = TOMATO_DIAGNOSTIC_LIBRARY.NPK_GUIDELINES[key];
-            const value = data[key];
-            let problem = '';
-
-            // Handling missing high_crit/max for moisture (uses hardcoded values from original logic)
-            const moisture_high_crit = 75;
-            const moisture_ideal_max = 60;
-
-            if (key === 'moisture') {
-                if (value < guideline.low_crit) {
-                    soilScore -= guideline.penalty_major;
-                    problem = `CRITICAL LOW ${key}`;
-                } else if (value < guideline.ideal_min) {
-                    soilScore -= guideline.penalty_minor;
-                    problem = `LOW ${key}`;
-                } else if (value > moisture_high_crit) {
-                    soilScore -= guideline.penalty_major;
-                    problem = `CRITICAL HIGH ${key}`;
-                } else if (value > moisture_ideal_max) {
-                    soilScore -= guideline.penalty_minor;
-                    problem = `HIGH ${key}`;
-                }
-            } else {
-                // NPK logic
-                if (value < guideline.low_crit) {
-                    soilScore -= guideline.penalty_major;
-                    problem = `CRITICAL LOW ${key}`;
-                } else if (value < guideline.ideal_min) {
-                    soilScore -= guideline.penalty_minor;
-                    problem = `LOW ${key}`;
-                } else if (value > guideline.high_crit) {
-                    soilScore -= guideline.penalty_major;
-                    problem = `CRITICAL HIGH ${key}`;
-                } else if (value > guideline.ideal_max) {
-                    soilScore -= guideline.penalty_minor;
-                    problem = `HIGH ${key}`;
-                }
-            }
-
-            if (problem) {
-                let rec = (problem.includes('CRITICAL') ? "Urgent " : "") +
-                          (value < (key === 'moisture' ? guideline.low_crit : guideline.low_crit) ? guideline.low_rec : guideline.high_rec);
-
-                soilProblems.push({ key, value, problem, rec });
-            }
-        });
-        sensorDiagnosis = `Soil: M=${moisture}%, NPK=${npk_n}/${npk_p}/${npk_k}`;
-    } else {
-        // Data Missing scenario
-        return {
-            id: plant.id,
-            score: 20,
-            visualDiagnosis: photoExists ? "Visual: Photo Present" : "Visual: N/A",
-            sensorDiagnosis: sensorDiagnosis,
-            recommendation: "***CRITICAL ERROR: DATA GAP***. Conduct soil probe at Zone " + plant.id + " immediately to enable fused analysis.",
-            healthClass: 'rec-critical'
-        };
-    }
-
-    // --- 2. Photo Analysis (Deterministic Lookup) ---
-    let visualDiagnosis = "Visual: No Photo Taken";
-    let prediction = TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS.find(d => d.name.includes("Healthy"));
-    let finalRecommendation = '';
-    let healthClass = 'rec-optimal';
-
-    if (photoExists) {
-        prediction = getPhotoPrediction(photoData[plant.id]);
-        visualDiagnosis = `Visual: ${prediction.name}`;
-    }
-
-    // --- 3. Fused Diagnosis (Tiers 1-7) ---
-    // Convenience lookups
-    const isYellow = prediction.name.includes('Yellowing');
-    const isLesions = prediction.name.includes('Dark Spots');
-    const isMottling = prediction.name.includes('Mottling');
-    const isWilting = prediction.name.includes('Leaf Curl');
-    const isLowN = soilProblems.some(p => p.problem.includes('CRITICAL LOW N'));
-    const isLowK = soilProblems.some(p => p.problem.includes('CRITICAL LOW K'));
-    const isCritMoisture = soilProblems.some(p => p.problem.includes('CRITICAL LOW moisture') || p.problem.includes('CRITICAL HIGH moisture'));
-
-
-    // TIER 1: INCURABLE PATHOGEN OVERRIDE
-    if (isMottling || isWilting) {
-        finalRecommendation = prediction.recommendation; // Use the fixed viral recommendation
-        healthClass = prediction.class;
-        soilScore = 5; // Force minimum score
-    }
-    // TIER 2: FUNGUS/BACTERIA OVERRIDE
-    else if (isLesions) {
-        finalRecommendation = prediction.recommendation; // Use the fixed fungal recommendation
-        healthClass = prediction.class;
-        soilScore = Math.min(25, soilScore); // Penalize severely
-    }
-    // TIER 3: CRITICAL MOISTURE STRESS
-    else if (isCritMoisture) {
-        const critMoisture = soilProblems.find(p => p.problem.includes('CRITICAL') && p.key === 'moisture');
-        finalRecommendation = `***CRITICAL WATER STRESS***: ${critMoisture.problem} (${critMoisture.value}%). ${critMoisture.rec}.`;
-        healthClass = 'rec-critical';
-        soilScore = Math.min(35, soilScore);
-    }
-    // TIER 4: N-DEFICIENCY CONFIRMATION (Visual + Soil)
-    else if (isYellow && isLowN) {
-        const critN = soilProblems.find(p => p.key === 'N');
-        finalRecommendation = `CONFIRMED N-DEFICIENCY: Yellowing is caused by ${critN.problem} (${critN.value} ppm). Apply ${critN.rec}.`;
-        healthClass = 'rec-action'; // Usually action, not critical, unless growth is severely stunted.
-    }
-    // TIER 5: SECONDARY DEFICIENCY INFERENCE
-    else if (isYellow && isLowK) {
-        const critK = soilProblems.find(p => p.key === 'K');
-        finalRecommendation = `INFERENCE: Yellowing present. Low Potassium (${critK.value} ppm) suggests K-deficiency. Supplement Potassium to boost immunity/fruit health.`;
-        healthClass = 'rec-action';
-    }
-    // TIER 6: SOIL PROBLEMS ONLY (No Major Visual)
-    else if (soilProblems.length > 0) {
-        const problemString = soilProblems.map(p => `${p.problem} (${p.value}%)`).join(', ');
-        const recString = soilProblems.map(p => p.rec).join('; ');
-
-        finalRecommendation = `CAUTION: Soil Imbalance Detected: ${problemString}. Recommended action: ${recString}`;
-        healthClass = soilScore <= 60 ? 'rec-action' : 'rec-optimal';
-    }
-    // TIER 7: OPTIMAL (Healthy leaf and good soil)
-    else {
-        finalRecommendation = prediction.recommendation; // "Optimal: Continue monitoring"
-        healthClass = prediction.class;
-    }
-
-    // Final Score Calculation
-    const finalScore = Math.max(0, Math.round(soilScore - prediction.severity * 0.3));
-
-    return {
-        id: plant.id,
-        score: finalScore.toFixed(0),
-        visualDiagnosis: visualDiagnosis,
-        sensorDiagnosis: sensorDiagnosis,
-        recommendation: finalRecommendation.trim(),
-        healthClass: healthClass
-    };
-}
-
-function fetchAIResults() {
-    const analysisGrid = document.getElementById('plantAnalysisGrid');
-    analysisGrid.innerHTML = '';
-
+function getNearestPlant(x, y) {
+    let nearest = null;
+    let minDistSq = Infinity;
     PLANT_LOCATIONS_M.forEach(plant => {
-        const sensorData = getNearestSensorData(plant.x, plant.y);
-        const photoExists = !!photoData[plant.id];
-
-        const analysis = analyzePlant(plant, sensorData, photoExists);
-
-        const recLabel = analysis.recommendation;
-        const card = `
-            <div class="analysis-card">
-                <div class="plant-id-label">Zone ${analysis.id} (P${Math.ceil(plant.id/4)}R${(plant.id-1)%4 + 1})</div>
-                <div class="analysis-row">
-                    <strong>Composite Score:</strong> <span class="status-good">${analysis.score}/100</span>
-                </div>
-                <div class="analysis-row">
-                    <strong>Leaf Analysis:</strong> ${analysis.visualDiagnosis}
-                </div>
-                <div class="analysis-row">
-                    <strong>Soil Analysis:</strong> ${analysis.sensorDiagnosis}
-                </div>
-                <div class="analysis-row" style="margin-top: 10px;">
-                    <strong>Recommendation:</strong> <span class="${analysis.healthClass}">${recLabel}</span>
-                </div>
-            </div>
-        `;
-        analysisGrid.insertAdjacentHTML('beforeend', card);
+        let dx = plant.x - x;
+        let dy = plant.y - y;
+        let distSq = dx * dx + dy * dy;
+        if (distSq < 1 * 1 && distSq < minDistSq) {
+            minDistSq = distSq;
+            nearest = plant;
+        }
     });
-    STATUS_ELEMENT.innerText = `AI Analysis Complete: ${PLANT_LOCATIONS_M.length} plants analyzed.`;
+    return nearest;
 }
-
-// ------------------------------------
-// --- COMMUNICATION FUNCTIONS (ThingSpeak Integration) ---
-// ------------------------------------
 
 function sendCommand(command) {
     let url = (command === 'capture') ? `${ESP32_URL_BASE}/capture` : `${ESP32_URL_BASE}/move?dir=${command}`;
     STATUS_ELEMENT.innerText = `Sending command: ${command}...`;
 
-    fetch(url)
+    // --- Mock Movement for UI Update ---
+    if (['forward', 'backward', 'left', 'right'].includes(command)) {
+        const step = 0.5;
+        const rad = currentRoverData.heading * Math.PI / 180;
+        let newX = parseFloat(currentRoverData.x_m);
+        let newY = parseFloat(currentRoverData.y_m);
+        let newHeading = currentRoverData.heading;
+
+        if (command === 'forward') { newX += step * Math.cos(rad); newY += step * Math.sin(rad); }
+        else if (command === 'backward') { newX -= step * Math.cos(rad); newY -= step * Math.sin(rad); }
+        else if (command === 'left') { newHeading = (newHeading - 45 + 360) % 360; }
+        else if (command === 'right') { newHeading = (newHeading + 45) % 360; }
+
+        currentRoverData.x_m = Math.min(FIELD_SIZE - 0.05, Math.max(0.05, newX)).toFixed(2);
+        currentRoverData.y_m = Math.min(FIELD_SIZE - 0.05, Math.max(0.05, newY)).toFixed(2);
+        currentRoverData.heading = newHeading;
+        updateRoverPositionUI();
+        drawMap();
+        updateRover3DPosition();
+        STATUS_ELEMENT.innerText = `Command '${command}' Success (Mock Movement).`;
+        return; // Skip API call for mock movement
+    }
+
+    // --- API Call Simulation for Probe/Capture ---
+    fetch(url) // Actual call to ESP32 (will likely fail in this browser context)
         .then(response => {
             if (!response.ok) { throw new Error(`HTTP Error: ${response.status}`); }
             return response.text();
         })
         .then(data => {
-            STATUS_ELEMENT.innerText = `Command '${command}' Success. Rover response: ${data.substring(0, 30)}...`;
-
-            if (command.startsWith('read_') || command === 'probe') {
-                // Fetch live data from ThingSpeak after the ESP32 has had time to update the channel
+            if (command === 'probe') {
+                STATUS_ELEMENT.innerText = `Probe command sent. Awaiting ThingSpeak data update...`;
+                // Wait for the ESP32 to push data to ThingSpeak
                 setTimeout(() => fetchData(command), 1000);
             } else if (command === 'capture') {
-                // Mock the photo capture process
-                LAST_PHOTO_STATUS.innerText = 'Photo captured and sent to server.';
+                LAST_PHOTO_STATUS.innerText = 'Photo captured and sent to server (simulated).';
                 const nearestPlant = getNearestPlant(currentRoverData.x_m, currentRoverData.y_m);
                 if (nearestPlant) {
-                    // Mock capture creates a unique hash for consistency
-                    photoData[nearestPlant.id] = `data:image/jpeg;base64,mocked_rover_capture_zone_${nearestPlant.id}_${Date.now()}`;
+                    photoData[nearestPlant.id] = `data:image/jpeg;base64,mocked_rover_capture_zone_${nearestPlant.id}_diag:Healthy_${Date.now()}`;
                     renderPhotoInCell(nearestPlant.id, photoData[nearestPlant.id]);
+                    fetchAIResults();
                     STATUS_ELEMENT.innerText = `Photo captured and assigned to Zone ${nearestPlant.id}.`;
                 }
-                setTimeout(() => fetchAIResults(), 1500);
+            } else {
+                 STATUS_ELEMENT.innerText = `Command '${command}' Success. Rover response: ${data.substring(0, 30)}...`;
             }
         })
         .catch(error => {
-            STATUS_ELEMENT.innerText = `ERROR: Command ${command} failed. Is ESP32 at ${ESP32_IP} online?`;
-            console.error('Error sending command:', error);
+            // Treat as successful for the sake of the demo if it's probe/capture, but log error
+            console.error('Error sending command (API failed, continuing with demo):', error);
+            if (command === 'probe') {
+                STATUS_ELEMENT.innerText = `Probe command simulated. Fetching ThingSpeak data now...`;
+                setTimeout(() => fetchData(command), 500);
+            } else if (command === 'capture') {
+                // Mock success for capture
+                LAST_PHOTO_STATUS.innerText = 'Photo captured and sent to server (mocked success).';
+                const nearestPlant = getNearestPlant(currentRoverData.x_m, currentRoverData.y_m);
+                if (nearestPlant) {
+                    photoData[nearestPlant.id] = `data:image/jpeg;base64,mocked_rover_capture_zone_${nearestPlant.id}_diag:Dark_Spots_${Date.now()}`; // Mock a disease sometimes
+                    renderPhotoInCell(nearestPlant.id, photoData[nearestPlant.id]);
+                    fetchAIResults();
+                    STATUS_ELEMENT.innerText = `Photo captured (mocked) and assigned to Zone ${nearestPlant.id}.`;
+                }
+            } else {
+                STATUS_ELEMENT.innerText = `ERROR: Command ${command} failed. Is ESP32 at ${ESP32_IP} online?`;
+            }
         });
 }
 
-/**
- * Fetches the latest single reading from ThingSpeak using the Read API Key.
- *
- * Assumed ThingSpeak Field Mapping:
- * Field 1: Soil Moisture (%)
- * Field 2: NPK - N (ppm)
- * Field 3: NPK - P (ppm)
- * Field 4: NPK - K (ppm)
- * Field 5: Rover X Position (meters)
- * Field 6: Rover Y Position (meters)
- * Field 7: Rover Heading (degrees)
- */
 async function fetchData(lastCommand = null) {
     STATUS_ELEMENT.innerText = "Fetching latest data from ThingSpeak...";
     try {
         const response = await fetch(THINGSPEAK_URL);
-        if (!response.ok) {
-            throw new Error(`ThingSpeak HTTP Error: ${response.status}`);
-        }
+        if (!response.ok) { throw new Error(`ThingSpeak HTTP Error: ${response.status}`); }
         const data = await response.json();
         const lastField = data.feeds[0];
 
         if (!lastField || !lastField.entry_id) {
-            STATUS_ELEMENT.innerText = "ThingSpeak: No recent data feed available. Ensure ESP32 is writing data.";
+            STATUS_ELEMENT.innerText = "ThingSpeak: No recent data feed available. Check API Key/Channel ID.";
             return;
         }
 
-        // --- Parse Data from ThingSpeak Fields ---
+        // --- Parse Data from ThingSpeak Fields (ASSUMED MAPPING) ---
         const moistureVal = parseFloat(lastField.field1) || 0;
         const npk_n = parseInt(lastField.field2) || 0;
         const npk_p = parseInt(lastField.field3) || 0;
         const npk_k = parseInt(lastField.field4) || 0;
+        // Mock X/Y/Heading if not available or zero
         const x_m = parseFloat(lastField.field5) || currentRoverData.x_m;
         const y_m = parseFloat(lastField.field6) || currentRoverData.y_m;
         const heading = parseFloat(lastField.field7) || currentRoverData.heading;
@@ -901,39 +484,36 @@ async function fetchData(lastCommand = null) {
         currentRoverData.heading = heading;
         currentRoverData.x_m = x_m.toFixed(2);
         currentRoverData.y_m = y_m.toFixed(2);
-        // GPS data is static/mocked as it's typically not in ThingSpeak
-        currentRoverData.latitude = "40.7128";
-        currentRoverData.longitude = "-74.0060";
 
-        document.getElementById('latitudeData').innerText = currentRoverData.latitude;
-        document.getElementById('longitudeData').innerText = currentRoverData.longitude;
-        document.getElementById('gpsFix').innerText = "3D Fix";
-        document.getElementById('headingData').innerText = heading.toFixed(0) + ' deg';
+        // Update UI
+        updateRoverPositionUI(moistureVal, npk_n, npk_p, npk_k, heading);
 
-        // --- Update Soil Data ---
-        document.getElementById('moistureData').innerText = moistureVal.toFixed(1) + '%';
-        document.getElementById('npkData').innerText = `N:${npk_n}, P:${npk_p}, K:${npk_k}`;
-
-        // --- Log Data if command was 'probe' or 'read_sensors' ---
-        if (lastCommand === 'probe' || lastCommand === 'read_sensors') {
+        // --- Log Data if command was 'probe' ---
+        if (lastCommand === 'probe') {
             let healthStatus = analyzeHealth(moistureVal, npk_n, npk_p, npk_k);
 
-            // Simple check to avoid logging the same position twice quickly
-            const isNewLogPosition = !loggedData.some(d => d.x_m.toFixed(2) === x_m.toFixed(2) && d.y_m.toFixed(2) === y_m.toFixed(2));
+            const isNewLogPosition = !loggedData.some(d =>
+                Math.abs(d.x_m - x_m) < 0.2 && Math.abs(d.y_m - y_m) < 0.2
+            );
+
+            const newLogEntry = {
+                x_m: x_m, y_m: y_m, healthStatus: healthStatus,
+                moisture: moistureVal, npk_n: npk_n, npk_p: npk_p, npk_k: npk_k,
+                timestamp: new Date().toLocaleTimeString()
+            };
 
             if (isNewLogPosition) {
-                 loggedData.push({
-                    x_m: x_m, y_m: y_m, healthStatus: healthStatus,
-                    moisture: moistureVal, npk_n: npk_n, npk_p: npk_p, npk_k: npk_k
-                });
+                 loggedData.push(newLogEntry);
                 STATUS_ELEMENT.innerText = `New data point logged from ThingSpeak! Status: ${healthStatus}`;
             } else {
-                 STATUS_ELEMENT.innerText = `Data refreshed from ThingSpeak. Status: ${healthStatus}`;
+                const existingIndex = loggedData.findIndex(d => Math.abs(d.x_m - x_m) < 0.2 && Math.abs(d.y_m - y_m) < 0.2);
+                loggedData[existingIndex] = newLogEntry; // Overwrite existing log
+                 STATUS_ELEMENT.innerText = `Data refreshed (Overwrite). Status: ${healthStatus}`;
             }
 
             fetchAIResults();
         } else {
-             STATUS_ELEMENT.innerText = "Navigation data update complete.";
+             STATUS_ELEMENT.innerText = "ThingSpeak data refreshed successfully.";
         }
 
         drawMap();
@@ -945,31 +525,26 @@ async function fetchData(lastCommand = null) {
     }
 }
 
-function getNearestPlant(x, y) {
-    let nearest = null;
-    let minDistSq = Infinity;
-    PLANT_LOCATIONS_M.forEach(plant => {
-        let dx = plant.x - x;
-        let dy = plant.y - y;
-        let distSq = dx * dx + dy * dy;
-        if (distSq < minDistSq) {
-            minDistSq = distSq;
-            nearest = plant;
-        }
-    });
-    return nearest;
+function updateRoverPositionUI(moisture = null, npk_n = null, npk_p = null, npk_k = null, heading = null) {
+    document.getElementById('latitudeData').innerText = currentRoverData.latitude;
+    document.getElementById('longitudeData').innerText = currentRoverData.longitude;
+    document.getElementById('gpsFix').innerText = "3D Fix";
+    document.getElementById('headingData').innerText = (heading !== null ? heading.toFixed(0) : currentRoverData.heading.toFixed(0)) + ' deg';
+
+    if (moisture !== null) {
+        document.getElementById('moistureData').innerText = moisture.toFixed(1) + '%';
+        document.getElementById('npkData').innerText = `N:${npk_n}, P:${npk_p}, K:${npk_k}`;
+    }
 }
 
 function analyzeHealth(moisture, npk_n, npk_p, npk_k) {
-    // This is the simplified health status for the 2D/3D map color
     let issues = 0;
-    const MIN_MOISTURE = 30;
-    const IDEAL_NPK_SUM = 150;
-    const NPK_TOLERANCE = 50;
+    const GUIDELINES = TOMATO_DIAGNOSTIC_LIBRARY.NPK_GUIDELINES;
 
-    if (moisture < MIN_MOISTURE || moisture > 80) { issues++; }
-    let npk_sum = npk_n + npk_p + npk_k;
-    if (Math.abs(npk_sum - IDEAL_NPK_SUM) > NPK_TOLERANCE) { issues++; }
+    if (moisture < GUIDELINES.moisture.low_crit || moisture > GUIDELINES.moisture.high_crit) issues++;
+    if (npk_n < GUIDELINES.N.low_crit || npk_n > GUIDELINES.N.high_crit) issues++;
+    if (npk_p < GUIDELINES.P.low_crit || npk_p > GUIDELINES.P.high_crit) issues++;
+    if (npk_k < GUIDELINES.K.low_crit || npk_k > GUIDELINES.K.high_crit) issues++;
 
     if (issues >= 2) return 'Bad';
     if (issues === 1) return 'Caution';
@@ -988,135 +563,412 @@ function clearMapData(resetRover = true) {
     draw3DMap();
     clearPhotoGrid();
     fetchAIResults();
-    STATUS_ELEMENT.innerText = "Map and photo data cleared.";
+    updateRoverPositionUI();
+    STATUS_ELEMENT.innerText = "Map data, rover logs, and photos cleared.";
 }
 
+// --- 2D Map Drawing ---
 function drawMap() {
     CTX.clearRect(0, 0, MAP_SIZE, MAP_SIZE);
-
-    // Draw Grid Lines
     CTX.strokeStyle = '#5a5a5a';
     CTX.lineWidth = 1;
-    for (let i = 1; i < FIELD_SIZE; i++) {
-        let px = i * PIXELS_PER_METER;
-        CTX.beginPath(); CTX.moveTo(px, 0); CTX.lineTo(px, MAP_SIZE); CTX.stroke();
-        CTX.beginPath(); CTX.moveTo(0, px); CTX.lineTo(MAP_SIZE, px); CTX.stroke();
+
+    // Draw Grid Lines (1m x 1m)
+    for (let i = 0; i <= FIELD_SIZE; i++) {
+        let p = i * PIXELS_PER_METER;
+        CTX.beginPath(); CTX.moveTo(p, 0); CTX.lineTo(p, MAP_SIZE); CTX.stroke();
+        CTX.beginPath(); CTX.moveTo(0, p); CTX.lineTo(MAP_SIZE, p); CTX.stroke();
     }
 
-    // Draw Grid Cell Backgrounds based on nearest log data
-    const GRID_SIZE_M = 1.0;
-    for (let row = 0; row < FIELD_SIZE; row++) {
-        for (let col = 0; col < FIELD_SIZE; col++) {
-            let center_x_m = col * GRID_SIZE_M + 0.5;
-            let center_y_m = row * GRID_SIZE_M + 0.5;
-            let nearestData = getNearestSensorData(center_x_m, center_y_m);
+    // Draw Logged Data Points (Health Status)
+    loggedData.forEach(data => {
+        let x_px = data.x_m * PIXELS_PER_METER;
+        let y_px = MAP_SIZE - (data.y_m * PIXELS_PER_METER);
 
-            if (nearestData) {
-                let moistureColor;
-                if (nearestData.moisture < 20) { moistureColor = '#0070e040'; } // Blue for dry
-                else if (nearestData.moisture > 70) { moistureColor = '#80008040'; } // Purple for wet
-                else { moistureColor = '#6a995540'; } // Greenish for optimal
-
-                CTX.fillStyle = moistureColor;
-                CTX.fillRect(
-                    col * PIXELS_PER_METER,
-                    MAP_SIZE - ((row + 1) * PIXELS_PER_METER), // Invert Y-axis for drawing
-                    PIXELS_PER_METER,
-                    PIXELS_PER_METER
-                );
-            }
-        }
-    }
-
-    // Draw Plant Locations/Health
-    PLANT_LOCATIONS_M.forEach((plant, index) => {
-        let px = plant.x * PIXELS_PER_METER;
-        let py = MAP_SIZE - (plant.y * PIXELS_PER_METER);
-
-        let nearestData = getNearestSensorData(plant.x, plant.y);
-        let plantColor = nearestData ? getHealthColor(nearestData.healthStatus) : '#5a5a5a';
-
-        CTX.fillStyle = plantColor;
         CTX.beginPath();
-        CTX.arc(px, py, 6, 0, 2 * Math.PI);
+        CTX.arc(x_px, y_px, 12, 0, 2 * Math.PI);
+        CTX.fillStyle = getHealthColor(data.healthStatus);
         CTX.fill();
-
-        // Health initial
-        if (nearestData && nearestData.healthStatus) {
-            CTX.fillStyle = 'white';
-            CTX.font = '10px Arial';
-            CTX.fillText(nearestData.healthStatus.charAt(0), px - 3, py + 3);
-        }
+        CTX.strokeStyle = 'white';
+        CTX.lineWidth = 2;
+        CTX.stroke();
     });
 
     // Draw Rover
     let rover_x_px = currentRoverData.x_m * PIXELS_PER_METER;
     let rover_y_px = MAP_SIZE - (currentRoverData.y_m * PIXELS_PER_METER);
+    // Convert heading (0=North/Y+) to map angle (0=East/X+)
     let heading_rad = (currentRoverData.heading - 90) * (Math.PI / 180);
+    let size = 15;
 
-    CTX.fillStyle = '#9cdcfe'; // Rover color
     CTX.save();
     CTX.translate(rover_x_px, rover_y_px);
     CTX.rotate(heading_rad);
-    CTX.beginPath();
-    CTX.moveTo(10, 0);   // Tip
-    CTX.lineTo(-10, -8); // Back left
-    CTX.lineTo(-10, 8);  // Back right
-    CTX.closePath();
-    CTX.fill();
-    CTX.restore();
 
-    // Draw center dot
-    CTX.fillStyle = 'white';
     CTX.beginPath();
-    CTX.arc(rover_x_px, rover_y_px, 3, 0, 2 * Math.PI);
+    CTX.moveTo(size, 0);
+    CTX.lineTo(-size * 0.5, -size * 0.7);
+    CTX.lineTo(-size * 0.5, size * 0.7);
+    CTX.closePath();
+
+    CTX.fillStyle = 'var(--color-primary)';
     CTX.fill();
+    CTX.strokeStyle = 'var(--color-text-highlight)';
+    CTX.lineWidth = 2;
+    CTX.stroke();
+    CTX.restore();
 }
 
-function getHealthColor(status) {
-    switch (status) {
-        case 'Good': return '#28a745';
-        case 'Caution': return '#ffc107';
-        case 'Bad': return '#dc3545';
-        default: return '#5a5a5a';
+// --- 3D Map Functions ---
+let scene, camera, renderer, rover3D, controls;
+let dataCubes = {};
+
+function initThreeD() {
+    const container = document.getElementById('threeDContainer');
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x1a1a1a);
+    camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 100);
+    camera.position.set(2, 6, 2);
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    container.innerHTML = '';
+    container.appendChild(renderer.domElement);
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.maxPolarAngle = Math.PI / 2.2;
+    const gridHelper = new THREE.GridHelper(FIELD_SIZE, FIELD_SIZE, 0x444444, 0x444444);
+    gridHelper.position.set(FIELD_SIZE / 2, 0, FIELD_SIZE / 2);
+    scene.add(gridHelper);
+
+    const roverGeometry = new THREE.BoxGeometry(0.2, 0.1, 0.2);
+    const roverMaterial = new THREE.MeshPhongMaterial({ color: 0x569cd6 });
+    rover3D = new THREE.Mesh(roverGeometry, roverMaterial);
+    rover3D.position.set(currentRoverData.x_m, 0.05, currentRoverData.y_m);
+    scene.add(rover3D);
+    scene.add(new THREE.AmbientLight(0x404040, 2));
+    scene.add(new THREE.DirectionalLight(0xffffff, 1.5));
+    animate();
+}
+
+function animate() {
+    requestAnimationFrame(animate);
+    if(controls) controls.update();
+    renderer.render(scene, camera);
+}
+
+function updateRover3DPosition() {
+    if (rover3D) {
+        rover3D.position.set(parseFloat(currentRoverData.x_m), 0.05, parseFloat(currentRoverData.y_m));
+        // Rotate the rover based on heading (0 deg in 3D points down -Y (North), 90 deg is -X (West))
+        rover3D.rotation.y = -(currentRoverData.heading - 90) * (Math.PI / 180);
     }
 }
 
-// ------------------------------------
-// --- HISTORY & DATA SAVING FUNCTIONS ---
-// ------------------------------------
+function draw3DMap() {
+    Object.values(dataCubes).forEach(cube => { scene.remove(cube); cube.geometry.dispose(); cube.material.dispose(); });
+    dataCubes = {};
 
+    loggedData.forEach((data, index) => {
+        const { x_m, y_m, moisture, healthStatus } = data;
+        // Map moisture (0-100) to height (0.01 - 3.0)
+        const cubeHeight = Math.max(0.01, moisture / MAX_MOISTURE * 3);
+        const colorHex = getHealthColorHex(healthStatus);
+        const geometry = new THREE.BoxGeometry(0.5, cubeHeight, 0.5);
+        const material = new THREE.MeshPhongMaterial({ color: colorHex, opacity: 0.8, transparent: true });
+        const cube = new THREE.Mesh(geometry, material);
+        cube.position.set(x_m, cubeHeight / 2, y_m);
+        dataCubes[index] = cube;
+        scene.add(cube);
+    });
+    updateRover3DPosition();
+}
+
+// --- FUSED AI ANALYSIS LOGIC ---
+function getNearestSensorData(plantX, plantY) {
+    let nearestData = null;
+    let min_dist_sq = Infinity;
+    loggedData.forEach(data => {
+        let dx = data.x_m - plantX;
+        let dy = data.y_m - plantY;
+        let dist_sq = dx * dx + dy * dy;
+        if (dist_sq < 0.707 * 0.707 && dist_sq < min_dist_sq) {
+            min_dist_sq = dist_sq;
+            nearestData = data;
+        }
+    });
+    return nearestData;
+}
+
+function getPhotoPrediction(base64Image) {
+    // Check for explicit disease tag (Simulated AI feature)
+    if (base64Image.includes('_diag:Dark_Spots')) {
+        return TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS.find(d => d.name.includes("Dark Spots"));
+    }
+    if (base64Image.includes('_diag:Mottling')) {
+        return TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS.find(d => d.name.includes("Mottling"));
+    }
+
+    // Default probabilistic roll for other symptoms
+    const photoHash = simpleStringHash(base64Image);
+    const randomRoll = deterministicPseudoRandom(photoHash);
+    let cumulativeProb = 0;
+    let prediction = TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS[4];
+
+    for (const disease of TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS) {
+        if (disease.name.includes("Dark Spots") || disease.name.includes("Mottling")) continue;
+
+        cumulativeProb += disease.probability;
+        if (randomRoll <= cumulativeProb) {
+            prediction = disease;
+            break;
+        }
+    }
+    return prediction;
+}
+
+function analyzePlant(plant, sensorData, photoExists) {
+    let soilScore = 100;
+    let soilProblems = [];
+    let sensorDiagnosis = "Soil: Sensor Data Missing";
+    let visualDiagnosis = "Visual: No Photo Taken";
+    let prediction = TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS[4]; // Default to Healthy
+    let finalRecommendation = '';
+    let healthClass = 'rec-optimal';
+
+    // 1. Sensor Data Analysis
+    if (sensorData) {
+        const { moisture, npk_n, npk_p, npk_k } = sensorData;
+        const data = { moisture, N: npk_n, P: npk_p, K: npk_k };
+        const keys = ['moisture', 'N', 'P', 'K'];
+        const guid = TOMATO_DIAGNOSTIC_LIBRARY.NPK_GUIDELINES;
+
+        keys.forEach(key => {
+            const guideline = guid[key];
+            const value = data[key];
+            let problem = '';
+
+            if (value < guideline.low_crit) { soilScore -= guideline.penalty_major; problem = `CRITICAL LOW ${key}`; }
+            else if (value < guideline.ideal_min) { soilScore -= guideline.penalty_minor; problem = `LOW ${key}`; }
+            else if (value > guideline.high_crit) { soilScore -= guideline.penalty_major; problem = `CRITICAL HIGH ${key}`; }
+            else if (value > guideline.ideal_max) { soilScore -= guideline.penalty_minor; problem = `HIGH ${key}`; }
+
+            if (problem) {
+                let rec = (problem.includes('CRITICAL') ? "Urgent " : "") +
+                (value < guideline.low_crit ? guideline.low_rec : guideline.high_rec);
+                soilProblems.push({ key, value, problem, rec });
+            }
+        });
+        sensorDiagnosis = `Soil: M=${moisture}%, NPK=${npk_n}/${npk_p}/${npk_k}`;
+    } else {
+        return { id: plant.id, score: 20, visualDiagnosis, sensorDiagnosis: "Soil: Sensor Data Missing", recommendation: "***CRITICAL ERROR: DATA GAP***. Rover has not probed this zone.", healthClass: 'rec-critical' };
+    }
+
+    // 2. Photo Analysis
+    if (photoExists) {
+        prediction = getPhotoPrediction(photoData[plant.id]);
+        visualDiagnosis = `Visual: ${prediction.name}`;
+    }
+
+    // 3. Fused Diagnosis (Logic retains dark spot priority)
+    const isMottling = prediction.name.includes('Mottling');
+    const isDarkSpots = prediction.name.includes('Dark Spots');
+
+    if (isMottling) {
+        finalRecommendation = prediction.recommendation;
+        healthClass = prediction.class;
+    } else if (isDarkSpots) {
+        finalRecommendation = prediction.recommendation;
+        healthClass = prediction.class;
+    } else if (soilProblems.length > 0) {
+        const problemString = soilProblems.map(p => p.problem).join('; ');
+        const recString = soilProblems.map(p => p.rec).join('; ');
+
+        finalRecommendation = `CAUTION: Soil Imbalance (${problemString}). Recommended action: ${recString}`;
+        healthClass = soilScore <= 60 ? 'rec-action' : 'rec-optimal';
+    } else {
+        finalRecommendation = prediction.recommendation;
+        healthClass = prediction.class;
+    }
+
+    const finalScore = Math.max(0, Math.round(soilScore - prediction.severity * 0.3));
+    return { id: plant.id, score: finalScore.toFixed(0), visualDiagnosis, sensorDiagnosis, recommendation: finalRecommendation.trim(), healthClass };
+}
+
+function fetchAIResults() {
+    const analysisGrid = document.getElementById('plantAnalysisGrid');
+    analysisGrid.innerHTML = '';
+    PLANT_LOCATIONS_M.forEach(plant => {
+        const sensorData = getNearestSensorData(plant.x, plant.y);
+        const photoExists = !!photoData[plant.id];
+        const analysis = analyzePlant(plant, sensorData, photoExists);
+
+        const card = `
+        <div class="analysis-card ${analysis.healthClass}">
+        <div class="plant-id-label">Zone ${analysis.id}</div>
+        <div class="data-row">
+            <strong>Score:</strong> <span class="data-value">${analysis.score}/100</span>
+        </div>
+        <div class="data-row">
+            <strong>Leaf:</strong> <span class="data-value">${analysis.visualDiagnosis}</span>
+        </div>
+        <div class="data-row">
+            <strong>Soil:</strong> <span class="data-value">${analysis.sensorDiagnosis.substring(0, 30)}...</span>
+        </div>
+        <div style="margin-top: 5px;">
+            <span class="${analysis.healthClass}">${analysis.recommendation}</span>
+        </div>
+        </div>
+        `;
+        analysisGrid.insertAdjacentHTML('beforeend', card);
+    });
+    draw3DMap();
+}
+
+// --- PHOTO & MODAL LOGIC ---
+function populateStockPhotos() {
+    if (Object.keys(stockPhotoData).length === 16) return;
+    const diseaseList = TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS;
+    for (let i = 1; i <= 16; i++) {
+        const diseaseIndex = i % diseaseList.length;
+        const diagTag = diseaseList[diseaseIndex].name.replace(/\s/g, '_').replace(/\//g, '-');
+        const base64 = `data:image/svg+xml;base64,mocked_stock_photo_hash_${i}_diag:${diagTag}`;
+        stockPhotoData[i] = base64;
+    }
+}
+function openStockImageModal() {
+    populateStockPhotos();
+    const container = document.getElementById('stockImageGrid');
+    container.innerHTML = '';
+    for (let id = 1; id <= 16; id++) {
+        const base64Image = stockPhotoData[id];
+        const prediction = getPhotoPrediction(base64Image);
+        const div = document.createElement('div');
+        div.className = 'grid-cell';
+        div.setAttribute('onclick', `assignStockPhotoToZone(${id})`);
+        div.style.margin = '5px';
+        div.innerHTML = `<img src="${base64Image}" alt="Stock Image ${id}" class="cell-photo" />
+            <span style="position:absolute; top:2px; right:2px; background:rgba(0,0,0,0.7); color:white; padding: 2px 5px; border-radius:3px; font-size: 0.7em;">ID ${id}</span>
+            <span style="position:absolute; bottom:2px; left:2px; background:rgba(0,0,0,0.7); color:white; padding: 2px 5px; border-radius:3px; font-size: 0.7em;">${prediction.name.split('(')[0].trim()}</span>
+        `;
+        container.appendChild(div);
+    }
+    document.getElementById('stockImageModal').style.display = "block";
+}
+function closeStockImageModal() { document.getElementById('stockImageModal').style.display = "none"; }
+function assignStockPhotoToZone(stockId) {
+    if (selectedZone === 0) {
+        STATUS_ELEMENT.innerText = "Error: Please click a Zone (1-16) on the main Photo Grid first.";
+        return;
+    }
+    const photo = stockPhotoData[stockId];
+    photoData[selectedZone] = photo;
+    renderPhotoInCell(selectedZone, photo);
+    STATUS_ELEMENT.innerText = `Assigned Stock Photo ID ${stockId} to Zone ${selectedZone}.`;
+    closeStockImageModal();
+    selectedZone = 0;
+    fetchAIResults();
+}
+function generatePhotoGrid() {
+    const grid = document.getElementById('photoGrid');
+    for (let i = 1; i <= 16; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'grid-cell';
+        cell.id = `zone-${i}`;
+        cell.innerHTML = `<span class="cell-label">${i}</span>
+        <button class="delete-photo-btn" onclick="event.stopPropagation(); deletePhoto(${i})">X</button>
+        `;
+        cell.setAttribute('onclick', `preparePhotoUpload(${i})`);
+        grid.appendChild(cell);
+    }
+}
+function preparePhotoUpload(zoneId) {
+    selectedZone = zoneId;
+    document.getElementById('fileInput').click();
+}
+function handleFileSelect(event) {
+    const file = event.target.files[0];
+    if (file && selectedZone !== 0) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            // Append a default 'Healthy' tag for user uploads
+            photoData[selectedZone] = e.target.result + "_diag:Healthy";
+            renderPhotoInCell(selectedZone, e.target.result + "_diag:Healthy");
+            STATUS_ELEMENT.innerText = `Custom photo uploaded and assigned to Zone ${selectedZone}.`;
+            selectedZone = 0;
+            event.target.value = ''; // Clear input
+            fetchAIResults();
+        };
+        reader.readAsDataURL(file);
+    }
+}
+function renderPhotoInCell(zoneId, base64Image) {
+    const cell = document.getElementById(`zone-${zoneId}`);
+    if (!cell) return;
+
+    // Clear existing content except the delete button
+    cell.querySelectorAll('.cell-photo').forEach(el => el.remove());
+    const zoneLabel = cell.querySelector('.cell-label');
+    const deleteBtn = cell.querySelector('.delete-photo-btn');
+
+    if (base64Image) {
+        // Extract base64 part only if it contains the mock tag
+        const displayImage = base64Image.split('_diag:')[0];
+        const img = document.createElement('img');
+        img.src = displayImage;
+        img.className = 'cell-photo';
+        img.style.width = '100%';
+        img.style.height = '100%';
+        img.style.objectFit = 'cover';
+        cell.appendChild(img);
+        zoneLabel.style.display = 'none';
+        deleteBtn.style.display = 'block';
+    } else {
+        zoneLabel.style.display = 'block';
+        deleteBtn.style.display = 'none';
+    }
+}
+function deletePhoto(zoneId) {
+    delete photoData[zoneId];
+    renderPhotoInCell(zoneId, null);
+    fetchAIResults();
+}
+function loadCurrentPhotoData() {
+    for (let i = 1; i <= 16; i++) {
+        renderPhotoInCell(i, photoData[i] || null);
+    }
+}
+function clearPhotoGrid() {
+    for (let i = 1; i <= 16; i++) {
+        renderPhotoInCell(i, null);
+    }
+}
+
+
+// --- HISTORY LOGIC ---
 function saveCurrentTrial() {
-    populateStockPhotos(); // Ensure stock photos are saved if they were used
+    populateStockPhotos();
+    const trialId = trialHistory.length + 1;
     const trialData = {
-        id: currentTrialNumber,
+        id: trialId,
         date: new Date().toLocaleString(),
         roverData: { ...currentRoverData },
         loggedData: [...loggedData],
         photoData: { ...photoData },
         stockPhotoData: { ...stockPhotoData },
         aiData: {
-            // Save the rendered analysis HTML to quickly restore it later
             analysisGrid: document.getElementById('plantAnalysisGrid').innerHTML
         }
     };
-
     trialHistory.push(trialData);
     localStorage.setItem('trialHistory', JSON.stringify(trialHistory));
-    STATUS_ELEMENT.innerText = `Trial ${currentTrialNumber} saved successfully! Starting new trial...`;
+    currentTrialNumber = trialId + 1;
+    document.getElementById('currentTrialNumber').innerText = currentTrialNumber;
+    STATUS_ELEMENT.innerText = `Trial ${trialId} saved successfully! Starting new trial...`;
 
     // Reset for new trial
     loggedData = [];
     photoData = {};
-    currentTrialNumber++;
-    document.getElementById('currentTrialNumber').innerText = currentTrialNumber;
-
-    // Reset UI elements
-    clearMapData(false); // Keep rover position, clear data points
-    clearPhotoGrid();
-    clear3DDataCubes();
-    fetchAIResults(); // Rerun analysis, which should show "Data Missing"
-    updateRover3DPosition();
+    clearMapData(false);
 }
 
 function openHistoryModal() {
@@ -1125,53 +977,44 @@ function openHistoryModal() {
     list.innerHTML = '';
 
     if (trialHistory.length === 0) {
-        list.innerHTML = '<p>No trials saved yet.</p>';
+        list.innerHTML = '<p style="color:#FFC000; font-weight:bold;">No trial data saved yet.</p>';
     } else {
-        // Render in reverse chronological order
         [...trialHistory].reverse().forEach(trial => {
             const item = document.createElement('div');
             item.className = 'trial-item';
-            item.innerHTML = `<strong>Trial ${trial.id}:</strong> ${trial.date} (${trial.loggedData.length} readings)`;
-            item.onclick = () => loadPastTrial(trial.id);
+            item.style.padding = '10px';
+            item.style.borderBottom = '1px solid #3C3C3C';
+            item.innerHTML = `<span><strong>Trial ${trial.id}:</strong> ${trial.date} (${trial.loggedData.length} readings)</span>
+                <button onclick="loadPastTrial(${trial.id})" style="float:right; background-color:#4EC9B0; color:black;">Load</button>`;
             list.appendChild(item);
         });
     }
     modal.style.display = "block";
 }
-
-function closeHistoryModal() {
-    document.getElementById('historyModal').style.display = "none";
-}
-
+function closeHistoryModal() { document.getElementById('historyModal').style.display = "none"; }
 function loadPastTrial(trialId) {
     const trial = trialHistory.find(t => t.id === trialId);
     if (!trial) return;
 
-    // Restore Rover/Live Data Display
     currentRoverData = trial.roverData;
     document.getElementById('latitudeData').innerText = trial.roverData.latitude;
     document.getElementById('longitudeData').innerText = trial.roverData.longitude;
-    document.getElementById('headingData').innerText = (trial.roverData.heading || 0) + ' deg';
+    document.getElementById('headingData').innerText = trial.roverData.heading + ' deg';
     document.getElementById('gpsFix').innerText = 'Historical';
 
-    // Restore Map/3D Data
     loggedData = trial.loggedData;
-    drawMap();
-    draw3DMap();
-
-    // Restore Photo Data
     photoData = trial.photoData;
-    stockPhotoData = trial.stockPhotoData || {}; // For compatibility
-    loadCurrentPhotoData();
-
-    // Restore AI Analysis
+    stockPhotoData = trial.stockPhotoData || {};
     document.getElementById('plantAnalysisGrid').innerHTML = trial.aiData.analysisGrid;
 
+    drawMap();
+    draw3DMap();
+    loadCurrentPhotoData();
+
     STATUS_ELEMENT.innerText = `Loaded data for Trial ${trialId}.`;
-    document.getElementById('currentTrialNumber').innerText = `${currentTrialNumber} (Viewing Trial ${trialId})`;
+    document.getElementById('currentTrialNumber').innerText = `${trialHistory.length + 1} (Viewing Trial ${trialId})`;
     closeHistoryModal();
 }
-
 function clearAllHistory() {
     if (confirm("Are you sure you want to clear ALL saved trial history? This cannot be undone.")) {
         localStorage.removeItem('trialHistory');
@@ -1189,10 +1032,11 @@ window.onload = function() {
     drawMap();
     generatePhotoGrid();
     populateStockPhotos();
-    // Initial data fetch to show rover on map
+    // Attempt an initial data fetch to update the live display
     fetchData();
-    // Initial analysis based on any loaded historical data or lack thereof
+    // Run AI analysis based on any restored data or empty state
     fetchAIResults();
+    updateRoverPositionUI();
 };
 </script>
 </body>
