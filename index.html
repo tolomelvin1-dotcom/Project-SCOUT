@@ -131,9 +131,20 @@ button { padding: 10px 15px; margin: 8px 5px; cursor: pointer; border: none; bor
 .status-good { color: #9cdcfe; } /* Blue for status labels */
 
 /* Recommendation coloring */
-.rec-optimal { background-color: #28a745; color: white; padding: 5px; border-radius: 4px; display: inline-block; font-weight: bold; }
-.rec-action { background-color: #ffc107; color: black; padding: 5px; border-radius: 4px; display: inline-block; font-weight: bold; }
-.rec-critical { background-color: #dc3545; color: white; padding: 5px; border-radius: 4px; display: inline-block; font-weight: bold; }
+.rec-optimal, .rec-action, .rec-critical { 
+    /* Fix: Ensure text displays fully and wraps */
+    padding: 5px; 
+    border-radius: 4px; 
+    display: inline-block; 
+    font-weight: bold;
+    white-space: normal; /* Allow text to wrap naturally */
+    word-break: break-word;
+    width: 100%; /* Take full width of parent */
+    box-sizing: border-box;
+}
+.rec-optimal { background-color: #28a745; color: white; }
+.rec-action { background-color: #ffc107; color: black; }
+.rec-critical { background-color: #dc3545; color: white; }
 
 /* MODAL (History Viewer) STYLES */
 .modal {
@@ -142,6 +153,16 @@ button { padding: 10px 15px; margin: 8px 5px; cursor: pointer; border: none; bor
 .modal-content {
     background-color: #2d2d30; margin: 10% auto; padding: 20px; border: 1px solid #3c3c3c; width: 80%; border-radius: 10px;
 }
+.close-btn {
+    color: #aaa; float: right; font-size: 28px; font-weight: bold;
+}
+.close-btn:hover, .close-btn:focus {
+    color: #fff; text-decoration: none; cursor: pointer;
+}
+.trial-item {
+    padding: 10px; margin-bottom: 5px; background-color: #252526; border-radius: 5px; cursor: pointer; transition: background-color 0.2s;
+}
+.trial-item:hover { background-color: #404040; }
 </style>
 </head>
 <body>
@@ -450,6 +471,10 @@ function handleFileSelect(event) {
         photoData[selectedZone] = base64Image;
         renderPhotoInCell(selectedZone, base64Image);
         selectedZone = 0;
+        
+        // FIX: Clear the file input value so that selecting a new file on a different zone works
+        event.target.value = '';
+        
         fetchAIResults(); // Trigger AI analysis after uploading photo
     };
     reader.readAsDataURL(file);
@@ -481,6 +506,13 @@ function loadCurrentPhotoData() {
 // ------------------------------------
 // --- COMBINED AI ANALYSIS LOGIC ---
 // ------------------------------------
+
+// FIX: Deterministic pseudo-random function using Zone ID as a seed for consistent results
+function deterministicPseudoRandom(seed) {
+    let x = Math.sin(seed * 10000);
+    return x - Math.floor(x);
+}
+
 function getNearestSensorData(plantX, plantY) {
     let nearestData = null;
     let min_dist_sq = Infinity;
@@ -506,7 +538,8 @@ function analyzePlant(plant, sensorData, photoExists) {
     let visualDiagnosis = "Visual: Healthy Leaf";
     let visualAction = "";
     if (photoExists) {
-        const randomRoll = Math.random();
+        // Use the deterministic function based on plant.id (Zone ID)
+        const randomRoll = deterministicPseudoRandom(plant.id); 
         let cumulativeProb = 0;
         let prediction = PHOTO_DISEASES[0]; // Default to Healthy
 
@@ -579,7 +612,8 @@ function fetchAIResults() {
         
         const analysis = analyzePlant(plant, sensorData, photoExists);
         
-        const recLabel = analysis.recommendation.length > 50 ? analysis.recommendation.substring(0, 50) + '...' : analysis.recommendation;
+        // FIX: Display the full recommendation text without truncation
+        const recLabel = analysis.recommendation; 
 
         const card = `
             <div class="analysis-card">
