@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>S.C.O.U.T. Rover Full-Spectrum Data Fusion & Control Console (V7 - STABILITY FIX)</title>
+<title>S.C.O.U.T. Rover Full-Spectrum Data Fusion & Control Console (V7.1 - STABILITY FIX)</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script async src="https://docs.opencv.org/4.x/opencv.js" onload="onOpenCvReady();"></script>
@@ -190,7 +190,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 <body>
 <div class="container">
 <div class="controls-panel">
-    <h1>S.C.O.U.T. Rover Control & Telemetry Bridge (V7)</h1>
+    <h1>S.C.O.U.T. Rover Control & Telemetry Bridge (V7.1)</h1>
     <p>System Diagnostic Status: <span id="status">AWAITING SYSTEM BOOT SEQUENCE COMPLETION...</span></p>
 
     <div class="data-display history-controls">
@@ -300,7 +300,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 // ----------------------------------------------------------------------------------
 /**
  * @fileoverview S.C.O.U.T. Rover Control System JavaScript Core.
- * Version 7.0: Critical fix for History Modal, Photo Upload, and Analysis Visibility.
+ * Version 7.1: Critical fix for History Modal, Photo Upload Stability, and Analysis Visibility Guarantee.
  */
 
 // --- 0.2.1 HARDWARE AND NETWORK CONFIGURATION (CRITICAL SYSTEM IDENTIFIERS) ---
@@ -713,7 +713,7 @@ function handleFileSelectedByUser(event) {
         document.querySelectorAll('.grid-cell').forEach(c => c.style.border = '1px solid #3fb950'); 
         currentlySelectedPlantZone = 0; 
         CURRENT_ZONE_SELECTION_DISPLAY.innerText = 'N/A';
-        event.target.value = ''; 
+        // event.target.value = ''; // Clean up after successful read
         
         triggerComprehensiveAnalysisCycle(); 
     };
@@ -722,7 +722,7 @@ function handleFileSelectedByUser(event) {
 }
 
 // ------------------------------------------
-// HISTORY FUNCTIONS (CRITICAL FIX - Fully Implemented)
+// HISTORY FUNCTIONS 
 // ------------------------------------------
 
 /**
@@ -853,6 +853,9 @@ function generatePhotoGrid() {
             document.querySelectorAll('.grid-cell').forEach(c => c.style.border = '1px solid #3fb950');
             document.getElementById(`zone-cell-${i}`).style.border = '3px solid #ffd700';
             CURRENT_ZONE_SELECTION_DISPLAY.innerText = i;
+            
+            // CRITICAL FIX: Reset file input value before click to allow re-upload
+            FILE_INPUT_ELEMENT.value = ''; 
             
             STATUS_ELEMENT.innerText = `Zone ${i} selected for direct upload. Opening file dialog...`;
             FILE_INPUT_ELEMENT.click(); // Trigger the file dialog
@@ -1019,11 +1022,11 @@ function resetSensorAndMapData(fullReset = true) {
     
     if (fullReset) {
         clearPhotoGrid();
-        // CRITICAL: Ensure analysis is triggered to show "AWAITING DATA" message
-        triggerComprehensiveAnalysisCycle(); 
         historyIsBeingViewed = false;
         currentlySelectedPlantZone = 0;
         CURRENT_ZONE_SELECTION_DISPLAY.innerText = 'N/A';
+        // Note: We intentionally removed the call to triggerComprehensiveAnalysisCycle here,
+        // and put a guaranteed call into onDocumentReady to avoid re-running the heavy logic twice.
     }
 }
 
@@ -1223,6 +1226,10 @@ function onDocumentReady() {
     populateStockPhotos(); 
     generatePhotoGrid();
     resetSensorAndMapData(true); 
+    
+    // CRITICAL FIX: Guarantee analysis view is rendered with the 'AWAITING DATA' message on load.
+    triggerComprehensiveAnalysisCycle(); 
+    
     STATUS_ELEMENT.innerText = "SYSTEM BOOT: DOM Ready. Awaiting OpenCV.js initialization for full CV capability.";
 }
 
