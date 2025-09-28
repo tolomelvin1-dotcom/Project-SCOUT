@@ -61,7 +61,7 @@ button { padding: 10px 15px; margin: 8px 5px; cursor: pointer; border: none; bor
 }
 
 /* 4x4 PHOTO GRID STYLES */
-#photoGrid {
+#photoGrid, #stockImageGrid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     grid-template-rows: repeat(4, 1fr);
@@ -71,6 +71,11 @@ button { padding: 10px 15px; margin: 8px 5px; cursor: pointer; border: none; bor
     margin: 20px auto;
     aspect-ratio: 1 / 1;
     background-color: #252526;
+}
+#stockImageGrid {
+    border: none;
+    max-width: 100%;
+    margin: 0;
 }
 .grid-cell {
     background-color: #3d3d3d;
@@ -98,9 +103,8 @@ button { padding: 10px 15px; margin: 8px 5px; cursor: pointer; border: none; bor
     cursor: pointer;
     z-index: 20;
     line-height: 1;
-    display: none; /* Hidden by default */
+    display: none; 
 }
-/* Show delete button only if there is a photo */
 .grid-cell:has(.cell-photo) .delete-photo-btn {
     display: block;
 }
@@ -109,7 +113,7 @@ button { padding: 10px 15px; margin: 8px 5px; cursor: pointer; border: none; bor
 /* NEW: Plant Analysis Grid Styles */
 #plantAnalysisGrid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); /* Responsive grid for analysis cards */
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); 
     gap: 20px;
     margin-top: 15px;
 }
@@ -123,12 +127,12 @@ button { padding: 10px 15px; margin: 8px 5px; cursor: pointer; border: none; bor
 .plant-id-label {
     font-size: 1.4em;
     font-weight: bold;
-    color: #ffd700; /* Gold */
+    color: #ffd700; 
     border-bottom: 2px solid #555;
     padding-bottom: 5px;
     margin-bottom: 10px;
 }
-.status-good { color: #9cdcfe; } /* Blue for status labels */
+.status-good { color: #9cdcfe; } 
 
 /* Recommendation coloring */
 .rec-optimal, .rec-action, .rec-critical { 
@@ -145,12 +149,12 @@ button { padding: 10px 15px; margin: 8px 5px; cursor: pointer; border: none; bor
 .rec-action { background-color: #ffc101; color: black; }
 .rec-critical { background-color: #dc3545; color: white; }
 
-/* MODAL (History Viewer) STYLES */
+/* MODAL STYLES */
 .modal {
     display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.7);
 }
 .modal-content {
-    background-color: #2d2d30; margin: 10% auto; padding: 20px; border: 1px solid #3c3c3c; width: 80%; border-radius: 10px;
+    background-color: #2d2d30; margin: 10% auto; padding: 20px; border: 1px solid #3c3c3c; width: 80%; max-width: 1000px; border-radius: 10px;
 }
 .close-btn {
     color: #aaa; float: right; font-size: 28px; font-weight: bold;
@@ -230,12 +234,12 @@ button { padding: 10px 15px; margin: 8px 5px; cursor: pointer; border: none; bor
         <div class="camera-control">
             <h2>Image Capture & Gallery</h2>
             <button onclick="sendCommand('capture')"> 📸  Take Photo (to Dell Wyse)</button>
-            <button onclick="loadStockPhotos()"> 🖼 ️ Load Stock Photos</button>
+            <button onclick="openStockImageModal()"> 🖼 ️ View/Load Stock Photos</button>
             <p>Last photo status: <span id="lastPhotoStatus">N/A</span>. Sent to Dell Wyse server at <span id="server-ip">192.168.X.X:5000</span>.</p>
         </div>
         <hr style="border-top: 1px solid #3c3c3c;">
-        <h2>Manual Photo Upload Map (Zones 1-16)</h2>
-        <p>Click a zone below to upload/replace the photo. Click the **X** to delete it. **Photo presence triggers AI analysis.**</p>
+        <h2>Plant Zone Photo Assignments (Zones 1-16)</h2>
+        <p>Click a zone to upload a photo. Photos assigned here are used for the AI analysis.</p>
         <div id="photoGrid">
         </div>
         <input type="file" id="fileInput" accept="image/*" style="display:none;" onchange="handleFileSelect(event)">
@@ -257,6 +261,16 @@ button { padding: 10px 15px; margin: 8px 5px; cursor: pointer; border: none; bor
         </div>
         <hr style="border-top: 1px solid #3c3c3c; margin-top: 15px;">
         <button onclick="clearAllHistory()" style="background-color: #dc3545;"> 🚨  Clear All Saved Trials</button>
+    </div>
+</div>
+
+<div id="stockImageModal" class="modal">
+    <div class="modal-content">
+        <span class="close-btn" onclick="closeStockImageModal()">&times;</span>
+        <h2>Stock Image Gallery (16 Pre-Diagnosed Leaves)</h2>
+        <p>Click on a stock photo to assign it to your currently selected plant zone. Note: Stock photo hash ensures consistent diagnosis.</p>
+        <div id="stockImageGrid">
+            </div>
     </div>
 </div>
 
@@ -286,8 +300,10 @@ const PLANT_LOCATIONS_M = [];
 for(let r=0; r<FIELD_SIZE; r++) for(let c=0; c<FIELD_SIZE; c++) PLANT_LOCATIONS_M.push({x: c + 0.5, y: r + 0.5, id: (r * FIELD_SIZE) + c + 1});
 
 // Global Data Structures
-let loggedData = []; // Stores sensor data {x_m, y_m, moisture, npk_n, npk_p, npk_k, healthStatus}
-let photoData = {}; // Stores {zoneId: base64Image}
+let loggedData = []; 
+let photoData = {}; // Stores {zoneId: base64Image} - ASSIGNED PHOTOS
+let stockPhotoData = {}; // Stores {stockId: base64Image} - GALLERY OF STOCK PHOTOS
+
 let selectedZone = 0;
 let trialHistory = JSON.parse(localStorage.getItem('trialHistory') || '[]');
 let currentTrialNumber = trialHistory.length + 1;
@@ -302,53 +318,39 @@ let currentRoverData = {
 };
 
 // --- MOCK AI PARAMETERS (Updated for Standards-Based Symptoms) ---
-// Note: Probabilities define the distribution of diagnoses across the grid when new photos are uploaded.
+// The distribution is defined by the image hash, not zone ID.
 const PHOTO_DISEASES = [
     { name: "Healthy, Deep Green", severity: 0, probability: 0.45, description: "Optimal color and structure. No visual intervention needed." },
-    { name: "General Yellowing (Chlorosis)", severity: 45, probability: 0.25, description: "Yellowing, especially on older leaves. High correlation with Nitrogen (N) deficiency." },
-    { name: "Dark Spots & Lesions", severity: 60, probability: 0.15, description: "Brown or black lesions with concentric rings. Strong indicator of Fungal infection (Early Blight)." },
-    { name: "Leaf Curl & Wilting", severity: 35, probability: 0.10, description: "Leaf edges curling upwards or downwards. Suggests heat/water stress or viral infection." },
-    { name: "Mottling/Mosaic Pattern", severity: 70, probability: 0.05, description: "Irregular light and dark green areas. Highly suggestive of a serious virus (e.g., TMV)." },
+    { name: "General Yellowing (Chlorosis)", severity: 45, probability: 0.25, description: "Yellowing, especially on older leaves. High correlation with Nitrogen (N) or Magnesium (Mg) deficiency." },
+    { name: "Dark Spots & Lesions (Early Blight)", severity: 80, probability: 0.15, description: "Brown/black lesions, strong Fungal/Bacterial indicator. Requires urgent action." },
+    { name: "Leaf Curl & Wilting (Viral/Stress)", severity: 60, probability: 0.10, description: "Edges curling up/down. Suggests heat/water stress OR viral infection (e.g., TYLCV)." },
+    { name: "Mottling/Mosaic Pattern (TMV)", severity: 90, probability: 0.05, description: "Irregular light/dark green areas. Highly suggestive of a serious, incurable virus (TMV)." },
 ];
 
 // NPK Guidelines for Scoring (used in analyzePlant)
 const NPK_GUIDELINES = {
-    moisture: { ideal_min: 40, ideal_max: 60, low_crit: 25, high_crit: 75, penalty_minor: 10, penalty_major: 25 },
-    N: { ideal_min: 60, ideal_max: 100, low_crit: 30, high_crit: 150, penalty_minor: 10, penalty_major: 25 },
-    P: { ideal_min: 50, ideal_max: 80, low_crit: 20, high_crit: 120, penalty_minor: 10, penalty_major: 20 },
-    K: { ideal_min: 70, ideal_max: 120, low_crit: 40, high_crit: 180, penalty_minor: 10, penalty_major: 20 },
+    moisture: { ideal_min: 40, ideal_max: 60, low_crit: 25, high_crit: 75, penalty_minor: 10, penalty_major: 25, low_rec: "deep watering", high_rec: "review soil drainage" },
+    N: { ideal_min: 60, ideal_max: 100, low_crit: 30, high_crit: 150, penalty_minor: 10, penalty_major: 25, low_rec: "high-Nitrogen (N) supplement", high_rec: "stop all N-fertilizer" },
+    P: { ideal_min: 50, ideal_max: 80, low_crit: 20, high_crit: 120, penalty_minor: 10, penalty_major: 20, low_rec: "Phosphorus (P) booster for root development", high_rec: "review fertilizer blend for P excess" },
+    K: { ideal_min: 70, ideal_max: 120, low_crit: 40, high_crit: 180, penalty_minor: 10, penalty_major: 20, low_rec: "Potassium (K) to boost resistance", high_rec: "check for K salt toxicity" },
 };
 
 // --- HASHING AND PRNG FOR ACCURACY/CONSISTENCY ---
 
-/**
- * Generates a simple, non-cryptographic hash of a string (Base64 content).
- * This ensures the diagnosis is consistent for the same photo, regardless of its zone.
- * @param {string} str - The string to hash.
- * @returns {number} - A positive 32-bit integer hash value.
- */
 function simpleStringHash(str) {
     let hash = 0;
-    // Limit length for performance, as small changes usually result in a different hash
     for (let i = 0; i < Math.min(str.length, 1000); i++) { 
         const char = str.charCodeAt(i);
-        // Simple polynomial rolling hash
         hash = (hash << 5) - hash + char;
-        hash |= 0; // Convert to 32bit integer
+        hash |= 0; 
     }
     return Math.abs(hash);
 }
 
-/**
- * Deterministic pseudo-random function (LCG) using a single seed.
- * @param {number} seed - The input seed (either photo hash or zone ID).
- * @returns {number} - A number between [0, 1).
- */
 function deterministicPseudoRandom(seed) {
     const a = 1664525;
     const c = 1013904223;
-    const m = 4294967296; // 2^32
-    // Ensure seed is a positive integer and normalize
+    const m = 4294967296; 
     let state = (Math.abs(Math.floor(seed)) * 101) % m; 
     state = (a * state + c) % m; 
     return state / m; 
@@ -357,7 +359,7 @@ function deterministicPseudoRandom(seed) {
 
 // --- 3D RENDERING SETUP (THREE.JS) ---
 let scene, camera, renderer, rover3D, controls;
-let dataCubes = {}; // Holds the 3D cubes for data visualization
+let dataCubes = {}; 
 
 function initThreeD() {
     const container = document.getElementById('threeDContainer');
@@ -425,9 +427,9 @@ function clear3DDataCubes() {
 }
 function getHealthColorHex(status) {
     switch (status) {
-        case 'Good': return 0x28a745; // Green
-        case 'Caution': return 0xffc107; // Yellow
-        case 'Bad': return 0xdc3545; // Red
+        case 'Good': return 0x28a745; 
+        case 'Caution': return 0xffc107; 
+        case 'Bad': return 0xdc3545; 
         default: return 0x5a5a5a;
     }
 }
@@ -462,25 +464,91 @@ function draw3DMap() {
     updateRover3DPosition();
 }
 // ------------------------------------
-// --- PHOTO GRID FUNCTIONS ---
+// --- PHOTO GRID & MODAL FUNCTIONS ---
 // ------------------------------------
-function loadStockPhotos() {
-    // A constant hash key is used for all stock photos to ensure consistency among them
-    const stockPhotoHash = 12345; 
-    const stockBase64 = `data:image/svg+xml;base64,mocked_stock_photo_hash_${stockPhotoHash}`;
-
+function populateStockPhotos() {
+    // Generate 16 unique stock image entries, each with a unique content hash
+    if (Object.keys(stockPhotoData).length === 16) return; // Already populated
     for (let i = 1; i <= 16; i++) {
-        // Create a unique stock photo placeholder image (for the user to visually distinguish)
-        const color = '#4EC9B0'; 
-        const stockImage = `<svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="${color}"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="20" fill="#fff">Zone ${i}</text></svg>`;
-        const uniqueStockBase64 = 'data:image/svg+xml;base64,' + btoa(stockImage);
-
-        // Store the content for hashing later
-        photoData[i] = uniqueStockBase64; 
-        renderPhotoInCell(i, uniqueStockBase64);
+        // Create unique base64 string for a unique, consistent hash
+        const base64 = `data:image/svg+xml;base64,mocked_stock_photo_hash_${i}_diag:${PHOTO_DISEASES[i % PHOTO_DISEASES.length].name.replace(/\s/g, '_')}`;
+        stockPhotoData[i] = base64;
     }
-    LAST_PHOTO_STATUS.innerText = '16 stock photos loaded.';
-    fetchAIResults(); // Trigger analysis after loading photos
+}
+
+function openStockImageModal() {
+    populateStockPhotos();
+    renderStockImageGrid();
+    document.getElementById('stockImageModal').style.display = "block";
+    
+    // Set a prompt if no zone is selected
+    if (selectedZone === 0) {
+        STATUS_ELEMENT.innerText = "Select a stock photo, then click a zone (1-16) in the main photo grid to assign it.";
+    }
+}
+
+function closeStockImageModal() {
+    document.getElementById('stockImageModal').style.display = "none";
+}
+
+function renderStockImageGrid() {
+    const grid = document.getElementById('stockImageGrid');
+    grid.innerHTML = '';
+    
+    for (let i = 1; i <= 16; i++) {
+        const base64Image = stockPhotoData[i];
+        
+        // Use hash to get the diagnosis name to label the stock image
+        const photoHash = simpleStringHash(base64Image);
+        const randomRoll = deterministicPseudoRandom(photoHash);
+        let cumulativeProb = 0;
+        let prediction = PHOTO_DISEASES[0]; 
+        for (const disease of PHOTO_DISEASES) {
+            cumulativeProb += disease.probability;
+            if (randomRoll <= cumulativeProb) {
+                prediction = disease;
+                break;
+            }
+        }
+        
+        const cell = document.createElement('div');
+        cell.className = 'grid-cell';
+        cell.style.maxWidth = '150px';
+        cell.style.aspectRatio = '1/1';
+        
+        const img = document.createElement('img');
+        img.src = base64Image;
+        img.className = 'cell-photo';
+        
+        const label = document.createElement('div');
+        label.style.position = 'absolute';
+        label.style.bottom = '0';
+        label.style.backgroundColor = 'rgba(0,0,0,0.7)';
+        label.style.color = 'white';
+        label.style.padding = '5px';
+        label.style.fontSize = '10px';
+        label.innerText = `ID ${i}: ${prediction.name.split('(')[0].trim()}`;
+
+        cell.appendChild(img);
+        cell.appendChild(label);
+
+        cell.onclick = () => assignStockPhotoToZone(i);
+        grid.appendChild(cell);
+    }
+}
+
+function assignStockPhotoToZone(stockId) {
+    if (selectedZone === 0) {
+        STATUS_ELEMENT.innerText = "ERROR: Please click a zone (1-16) in the main grid first, then select a stock photo.";
+        return;
+    }
+    const base64Image = stockPhotoData[stockId];
+    photoData[selectedZone] = base64Image;
+    renderPhotoInCell(selectedZone, base64Image);
+    STATUS_ELEMENT.innerText = `Stock Photo ID ${stockId} assigned to Zone ${selectedZone}.`;
+    closeStockImageModal();
+    selectedZone = 0; 
+    fetchAIResults(); 
 }
 
 function deletePhoto(zoneId) {
@@ -488,7 +556,7 @@ function deletePhoto(zoneId) {
     delete photoData[zoneId];
     renderPhotoInCell(zoneId, null);
     STATUS_ELEMENT.innerText = `Photo deleted from Zone ${zoneId}.`;
-    fetchAIResults(); // Trigger analysis after deleting photo
+    fetchAIResults(); 
 }
 
 function generatePhotoGrid() {
@@ -519,17 +587,13 @@ function handleFileSelect(event) {
     const reader = new FileReader();
     reader.onload = function(e) {
         const base64Image = e.target.result;
-        
-        // --- PHOTO CONTENT HASHING KEY IMPLEMENTATION ---
         photoData[selectedZone] = base64Image;
-        // ------------------------------------------------
-
         renderPhotoInCell(selectedZone, base64Image);
         selectedZone = 0;
         
         event.target.value = '';
         
-        fetchAIResults(); // Trigger AI analysis after uploading photo
+        fetchAIResults(); 
     };
     reader.readAsDataURL(file);
 }
@@ -558,7 +622,7 @@ function loadCurrentPhotoData() {
     }
 }
 // ------------------------------------
-// --- COMBINED AI ANALYSIS LOGIC ---
+// --- COMBINED AI ANALYSIS LOGIC (REFINED) ---
 // ------------------------------------
 
 function getNearestSensorData(plantX, plantY) {
@@ -568,7 +632,6 @@ function getNearestSensorData(plantX, plantY) {
         let dx = data.x_m - plantX;
         let dy = data.y_m - plantY;
         let dist_sq = dx * dx + dy * dy;
-        // Only consider data within the same 1m x 1m grid cell (0.707m is max dist to center)
         if (dist_sq < 0.707 * 0.707 && dist_sq < min_dist_sq) {
             min_dist_sq = dist_sq;
             nearestData = data;
@@ -578,9 +641,8 @@ function getNearestSensorData(plantX, plantY) {
 }
 
 
-// REFINED Analysis function incorporating guidelines
 function analyzePlant(plant, sensorData, photoExists) {
-    let soilScore = 100; // Max soil score
+    let soilScore = 100; 
     let soilAction = "";
     
     // --- 1. Sensor Data Analysis (NPK/Moisture) ---
@@ -610,12 +672,12 @@ function analyzePlant(plant, sensorData, photoExists) {
             
             if (problem) {
                 let rec = '';
-                if (key === 'moisture') rec = (value < guideline.ideal_min) ? "Immediate deep watering is required." : "Soil drainage needs urgent review.";
-                else if (key === 'N') rec = (value < guideline.ideal_min) ? "Apply high-Nitrogen (N) supplement for leaf growth." : "Stop all N-fertilizer to prevent burn/overgrowth.";
-                else if (key === 'P') rec = (value < guideline.ideal_min) ? "Apply Phosphorus (P) booster for root development." : "Review fertilizer blend for P excess.";
-                else if (key === 'K') rec = (value < guideline.ideal_min) ? "Apply Potassium (K) to boost stress/disease resistance." : "Check for K salt toxicity.";
+                if (key === 'moisture') rec = (value < guideline.low_crit) ? "Urgent " + guideline.low_rec : (value > guideline.high_crit ? guideline.high_rec : guideline.low_rec);
+                else if (key === 'N') rec = (value < guideline.low_crit) ? "Immediate " + guideline.low_rec : (value > guideline.high_crit ? guideline.high_rec : guideline.low_rec);
+                else if (key === 'P') rec = (value < guideline.low_crit) ? "Immediate " + guideline.low_rec : guideline.low_rec;
+                else if (key === 'K') rec = (value < guideline.low_crit) ? "Immediate " + guideline.low_rec : guideline.low_rec;
                 
-                soilAction += `${problem} (${value}%/ppm). ${rec} `;
+                soilAction += `${problem} (${value}%/ppm). ${rec}. `;
             }
         });
 
@@ -629,17 +691,16 @@ function analyzePlant(plant, sensorData, photoExists) {
     
     // --- 2. Photo Analysis (Simulated AI) ---
     let visualDiagnosis = "Visual: No Photo";
-    let visualAction = "Missing leaf photo. Recommend 'Capture Photo' at this location.";
-    let visualPenalty = 15; // Penalty for missing data
-    
+    let visualAction = "";
+    let visualPenalty = 15; 
+    let prediction = PHOTO_DISEASES[0]; // Default prediction
+
     if (photoExists) {
-        // The core of the accuracy fix: use the hash of the photo content for consistency
         const photoHash = simpleStringHash(photoData[plant.id]);
         const randomRoll = deterministicPseudoRandom(photoHash); 
 
         let cumulativeProb = 0;
-        let prediction = PHOTO_DISEASES[0]; 
-
+        
         for (const disease of PHOTO_DISEASES) {
             cumulativeProb += disease.probability;
             if (randomRoll <= cumulativeProb) {
@@ -657,39 +718,54 @@ function analyzePlant(plant, sensorData, photoExists) {
         }
     }
 
-    // --- 3. Combined Score & Recommendation (Fusing Logic) ---
-    const totalScore = Math.max(0, Math.round(soilScore - (visualPenalty * 0.7))); // Weighted Fusing
+    // --- 3. Combined Score & Recommendation (REFINED FUSING LOGIC) ---
+    const totalScore = Math.max(0, Math.round(soilScore - (visualPenalty * 0.7)));
 
     let recommendation = '';
-
-    // FUSING PRIORITY 1: Yellowing Confirmation (Yellow photo + Low N soil)
     const isYellow = visualDiagnosis.includes('Yellowing');
-    const isLowN = sensorData && sensorData.N < NPK_GUIDELINES.N.ideal_min;
-
-    if (isYellow && isLowN) {
-        recommendation = `CONFIRMED DIAGNOSIS: The ${visualDiagnosis.toLowerCase()} is caused by a serious Nitrogen (N) deficiency. Apply a high-N liquid feed immediately.`;
+    const isLesions = visualDiagnosis.includes('Dark Spots') || visualDiagnosis.includes('Mottling');
+    const isWilting = visualDiagnosis.includes('Wilting');
+    const isLowN = sensorData && sensorData.N < NPK_GUIDELINES.N.low_crit;
+    const isCriticalMoisture = soilAction.includes('CRITICAL LOW moisture');
+    const isCriticalNutrient = soilAction.includes('CRITICAL LOW N') || soilAction.includes('CRITICAL LOW P') || soilAction.includes('CRITICAL LOW K');
+    
+    // PRIORITY 1: CRITICAL PATHOGEN/VIRUS
+    if (isLesions) {
+        recommendation = `***CRITICAL DISEASE WARNING***: ${visualDiagnosis} detected. This requires urgent action. Isolate plant and apply broad-spectrum treatment.`;
     } 
-    // FUSING PRIORITY 2: Critical Sensor Data (Moisture/NPK)
-    else if (soilAction.includes('CRITICAL')) {
-        recommendation = soilAction.trim() + (visualAction.includes('LEAF ISSUE') ? ` (Visual issue: ${visualDiagnosis})` : '');
-    } 
-    // FUSING PRIORITY 3: Visual Disease/Major Nutrient Issue
+    // PRIORITY 2: CONFIRMED N DEFICIENCY (Yellow leaf + Low N)
+    else if (isYellow && isLowN) {
+        recommendation = `CONFIRMED N-DEFICIENCY: ${visualDiagnosis} is caused by critical low Nitrogen (${sensorData.N} ppm). Immediate high-N liquid feed required.`;
+    }
+    // PRIORITY 3: CONFIRMED WATER STRESS (Wilting + Low Moisture)
+    else if (isWilting && isCriticalMoisture) {
+        recommendation = `CONFIRMED WATER STRESS: Wilting is combined with critical low moisture. Urgent, deep, slow watering required.`;
+    }
+    // PRIORITY 4: OTHER CRITICAL ISSUES (Either soil or visual, not fused above)
+    else if (isCriticalNutrient) {
+        recommendation = `CRITICAL SOIL ISSUE: ${soilAction}. (Visual Status: ${prediction.name}).`;
+    }
+    // PRIORITY 5: SYMPTOM without PRIMARY CONFIRMATION (Suspect secondary deficiency)
+    else if (isYellow) {
+        recommendation = `CAUTION: General yellowing detected, but primary NPK is adequate. Consider testing for secondary deficiencies like Magnesium or Iron. ${soilAction.trim()}`;
+    }
+    // PRIORITY 6: Everything else
     else if (visualAction.includes('LEAF ISSUE DETECTED')) {
-        recommendation = visualAction + " " + (soilAction.includes('LOW') ? ` (Soil condition: ${soilAction})` : '');
-    } 
-    // Standard Action/Caution
-    else if (soilAction.includes('LOW') || soilAction.includes('HIGH')) {
-        recommendation = soilAction.trim();
+        recommendation = visualAction + " " + (soilAction ? ` (Soil condition: ${soilAction})` : '');
+    }
+    else if (soilAction) {
+        recommendation = `Soil Management Required: ${soilAction}`;
     }
     // Optimal
     else {
         recommendation = "Optimal: Continue monitoring. Conditions are within ideal range.";
     }
 
+
     // Final Health Classification
     let healthClass = 'rec-optimal';
-    if (totalScore <= 65) healthClass = 'rec-critical';
-    else if (totalScore <= 85) healthClass = 'rec-action';
+    if (totalScore <= 65 || isLesions) healthClass = 'rec-critical';
+    else if (totalScore <= 85 || isCriticalNutrient || isYellow) healthClass = 'rec-action';
 
     return {
         id: plant.id,
@@ -704,7 +780,7 @@ function analyzePlant(plant, sensorData, photoExists) {
 
 function fetchAIResults() {
     const analysisGrid = document.getElementById('plantAnalysisGrid');
-    analysisGrid.innerHTML = ''; // Clear previous results
+    analysisGrid.innerHTML = ''; 
 
     PLANT_LOCATIONS_M.forEach(plant => {
         const sensorData = getNearestSensorData(plant.x, plant.y);
@@ -738,7 +814,7 @@ function fetchAIResults() {
 }
 
 // ------------------------------------
-// --- COMMUNICATION AND MOCK DATA FUNCTIONS (Unchanged) ---
+// --- COMMUNICATION, MAP, AND HISTORY FUNCTIONS (Minor Changes) ---
 // ------------------------------------
 
 function sendCommand(command) {
@@ -756,7 +832,6 @@ function sendCommand(command) {
             setTimeout(() => fetchData(command), 500);
         } else if (command === 'capture') {
             LAST_PHOTO_STATUS.innerText = 'Photo captured and sent to server.';
-            // Assume rover is near a plant, simulate adding a photo for the nearest zone.
             const nearestPlant = getNearestPlant(currentRoverData.x_m, currentRoverData.y_m);
             if (nearestPlant) {
                 // Mock image data that is distinguishable from stock photos
@@ -801,7 +876,6 @@ function fetchData(lastCommand = null) {
         document.getElementById('gpsFix').innerText = "3D Fix";
         document.getElementById('headingData').innerText = headingStr;
 
-        // Simulate Rover Movement (random walk)
         if (lastCommand !== 'read_nav' && lastCommand !== 'stop') {
             currentRoverData.x_m = Math.min(FIELD_SIZE, Math.max(0, parseFloat(currentRoverData.x_m) + (Math.random() - 0.5) * 0.1)).toFixed(2);
             currentRoverData.y_m = Math.min(FIELD_SIZE, Math.max(0, parseFloat(currentRoverData.y_m) + (Math.random() - 0.5) * 0.1)).toFixed(2);
@@ -820,7 +894,6 @@ function fetchData(lastCommand = null) {
         if (lastCommand === 'probe' || lastCommand === 'read_sensors') {
             let healthStatus = analyzeHealth(parseFloat(moistureVal), npk_n, npk_p, npk_k);
             
-            // Log the data to the global array at the current rover position
             loggedData.push({
                 x_m: parseFloat(currentRoverData.x_m),
                 y_m: parseFloat(currentRoverData.y_m),
@@ -829,7 +902,7 @@ function fetchData(lastCommand = null) {
                 npk_n: npk_n, npk_p: npk_p, npk_k: npk_k
             });
             STATUS_ELEMENT.innerText = `Data logged! Status: ${healthStatus}`;
-            fetchAIResults(); // Trigger analysis to update grid with new sensor data
+            fetchAIResults(); 
         }
 
         drawMap();
@@ -839,7 +912,6 @@ function fetchData(lastCommand = null) {
 }
 
 
-// --- 2D MAP LOGIC (Unchanged) ---
 function analyzeHealth(moisture, npk_n, npk_p, npk_k) {
     let issues = 0;
     const MIN_MOISTURE = 30;
@@ -856,7 +928,7 @@ function analyzeHealth(moisture, npk_n, npk_p, npk_k) {
 
 function clearMapData(resetRover = true) {
     loggedData = [];
-    photoData = {}; // Clear photos as well
+    photoData = {}; 
     if (resetRover) {
         currentRoverData.x_m = 2.0;
         currentRoverData.y_m = 2.0;
@@ -864,15 +936,14 @@ function clearMapData(resetRover = true) {
     }
     drawMap();
     draw3DMap();
-    clearPhotoGrid(); // Clear photo grid display
-    fetchAIResults(); // Update analysis grid to show no data
+    clearPhotoGrid(); 
+    fetchAIResults(); 
     STATUS_ELEMENT.innerText = "Map and photo data cleared.";
 }
 
 function drawMap() {
     CTX.clearRect(0, 0, MAP_SIZE, MAP_SIZE);
 
-    // 1. Draw the 4x4 Grid
     CTX.strokeStyle = '#5a5a5a';
     CTX.lineWidth = 1;
     for (let i = 1; i < FIELD_SIZE; i++) {
@@ -881,7 +952,6 @@ function drawMap() {
         CTX.beginPath(); CTX.moveTo(0, px); CTX.lineTo(MAP_SIZE, px); CTX.stroke();
     }
     
-    // 2. Map Soil Condition (Background Squares)
     const GRID_SIZE_M = 1.0;
     for (let row = 0; row < FIELD_SIZE; row++) {
         for (let col = 0; col < FIELD_SIZE; col++) {
@@ -891,9 +961,9 @@ function drawMap() {
 
             if (nearestData) {
                 let moistureColor;
-                if (nearestData.moisture < 20) { moistureColor = '#0070e040'; } // Low Moisture (Blue)
-                else if (nearestData.moisture > 70) { moistureColor = '#80008040'; } // High Moisture (Purple)
-                else { moistureColor = '#6a995540'; } // Optimal Moisture (Green)
+                if (nearestData.moisture < 20) { moistureColor = '#0070e040'; } 
+                else if (nearestData.moisture > 70) { moistureColor = '#80008040'; } 
+                else { moistureColor = '#6a995540'; } 
 
                 CTX.fillStyle = moistureColor;
                 CTX.fillRect(
@@ -906,7 +976,6 @@ function drawMap() {
         }
     }
 
-    // 3. Draw Plant Health Circles
     PLANT_LOCATIONS_M.forEach((plant, index) => {
         let px = plant.x * PIXELS_PER_METER;
         let py = MAP_SIZE - (plant.y * PIXELS_PER_METER);
@@ -925,7 +994,6 @@ function drawMap() {
         }
     });
 
-    // 4. Draw Rover Position and Heading (Triangle)
     let rover_x_px = currentRoverData.x_m * PIXELS_PER_METER;
     let rover_y_px = MAP_SIZE - (currentRoverData.y_m * PIXELS_PER_METER);
     let heading_rad = (currentRoverData.heading - 90) * (Math.PI / 180);
@@ -955,16 +1023,20 @@ function getHealthColor(status) {
     }
 }
 // ------------------------------------
-// --- HISTORY & DATA SAVING FUNCTIONS (Unchanged) ---
+// --- HISTORY & DATA SAVING FUNCTIONS ---
 // ------------------------------------
 
 function saveCurrentTrial() {
+    // Ensure stock photos are generated before saving
+    populateStockPhotos();
+
     const trialData = {
         id: currentTrialNumber,
         date: new Date().toLocaleString(),
         roverData: { ...currentRoverData },
         loggedData: [...loggedData],
-        photoData: { ...photoData },
+        photoData: { ...photoData }, 
+        stockPhotoData: { ...stockPhotoData }, // Save stock photo content to ensure historical consistency
         aiData: { 
             analysisGrid: document.getElementById('plantAnalysisGrid').innerHTML
         }
@@ -974,7 +1046,6 @@ function saveCurrentTrial() {
 
     STATUS_ELEMENT.innerText = `Trial ${currentTrialNumber} saved successfully! Starting new trial...`;
 
-    // Reset for new trial
     loggedData = [];
     photoData = {};
     currentTrialNumber++;
@@ -1009,23 +1080,21 @@ function loadPastTrial(trialId) {
     const trial = trialHistory.find(t => t.id === trialId);
     if (!trial) return;
     
-    // 1. Load Rover Data
     currentRoverData = trial.roverData;
     document.getElementById('latitudeData').innerText = trial.roverData.latitude;
     document.getElementById('longitudeData').innerText = trial.roverData.longitude;
     document.getElementById('headingData').innerText = trial.roverData.heading + ' deg';
     document.getElementById('gpsFix').innerText = 'Historical';
 
-    // 2. Load Logged Data & Maps
     loggedData = trial.loggedData;
     drawMap();
     draw3DMap();
 
-    // 3. Load Photo Data
+    // Load Photo Data and Historical Stock Data
     photoData = trial.photoData;
+    stockPhotoData = trial.stockPhotoData || {}; // Load historical stock photos
     loadCurrentPhotoData();
 
-    // 4. Load AI Analysis Data
     document.getElementById('plantAnalysisGrid').innerHTML = trial.aiData.analysisGrid;
 
     STATUS_ELEMENT.innerText = `Loaded data for Trial ${trialId}.`;
@@ -1047,6 +1116,7 @@ window.onload = function() {
     initThreeD();
     drawMap();
     generatePhotoGrid();
+    populateStockPhotos(); // Generate stock photos on load
     fetchAIResults();
 };
 </script>
