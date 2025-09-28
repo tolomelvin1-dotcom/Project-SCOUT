@@ -26,7 +26,7 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; 
 .photo-panel { flex: 1; min-width: 450px; padding-left: 20px; border-left: 1px solid #3c3c3c; }
 .map-3d-panel { flex: 1; min-width: 450px; margin-top: 20px; }
 .plant-analysis-panel { 
-    flex-basis: 100%; /* Take full width */
+    flex-basis: 100%; 
     margin-top: 30px; 
     padding-top: 20px; 
     border-top: 1px solid #3c3c3c;
@@ -318,21 +318,21 @@ let currentRoverData = {
 };
 
 // --- MOCK AI PARAMETERS (Updated for Standards-Based Symptoms) ---
-// The distribution is defined by the image hash, not zone ID.
+// Increased severity scores for pathogens
 const PHOTO_DISEASES = [
-    { name: "Healthy, Deep Green", severity: 0, probability: 0.45, description: "Optimal color and structure. No visual intervention needed." },
-    { name: "General Yellowing (Chlorosis)", severity: 45, probability: 0.25, description: "Yellowing, especially on older leaves. High correlation with Nitrogen (N) or Magnesium (Mg) deficiency." },
-    { name: "Dark Spots & Lesions (Early Blight)", severity: 80, probability: 0.15, description: "Brown/black lesions, strong Fungal/Bacterial indicator. Requires urgent action." },
-    { name: "Leaf Curl & Wilting (Viral/Stress)", severity: 60, probability: 0.10, description: "Edges curling up/down. Suggests heat/water stress OR viral infection (e.g., TYLCV)." },
-    { name: "Mottling/Mosaic Pattern (TMV)", severity: 90, probability: 0.05, description: "Irregular light/dark green areas. Highly suggestive of a serious, incurable virus (TMV)." },
+    { name: "Healthy, Deep Green", severity: 0, probability: 0.40, description: "Optimal color and structure. No visual intervention needed." },
+    { name: "General Yellowing (Chlorosis)", severity: 50, probability: 0.25, description: "Yellowing, especially on older leaves. Needs confirmation with NPK." },
+    { name: "Dark Spots & Lesions (Early Blight)", severity: 85, probability: 0.15, description: "Brown/black lesions with concentric rings. Strong indicator of Fungal/Bacterial infection." },
+    { name: "Leaf Curl & Wilting (Stress/Viral)", severity: 75, probability: 0.10, description: "Edges curling up/down. Suggests severe heat/water stress OR viral infection." },
+    { name: "Mottling/Mosaic Pattern (TMV)", severity: 95, probability: 0.10, description: "Irregular light/dark green areas. Highly suggestive of a serious, often incurable virus." },
 ];
 
 // NPK Guidelines for Scoring (used in analyzePlant)
 const NPK_GUIDELINES = {
     moisture: { ideal_min: 40, ideal_max: 60, low_crit: 25, high_crit: 75, penalty_minor: 10, penalty_major: 25, low_rec: "deep watering", high_rec: "review soil drainage" },
-    N: { ideal_min: 60, ideal_max: 100, low_crit: 30, high_crit: 150, penalty_minor: 10, penalty_major: 25, low_rec: "high-Nitrogen (N) supplement", high_rec: "stop all N-fertilizer" },
-    P: { ideal_min: 50, ideal_max: 80, low_crit: 20, high_crit: 120, penalty_minor: 10, penalty_major: 20, low_rec: "Phosphorus (P) booster for root development", high_rec: "review fertilizer blend for P excess" },
-    K: { ideal_min: 70, ideal_max: 120, low_crit: 40, high_crit: 180, penalty_minor: 10, penalty_major: 20, low_rec: "Potassium (K) to boost resistance", high_rec: "check for K salt toxicity" },
+    N: { ideal_min: 60, ideal_max: 100, low_crit: 30, high_crit: 150, penalty_minor: 15, penalty_major: 30, low_rec: "high-Nitrogen (N) supplement", high_rec: "stop all N-fertilizer" },
+    P: { ideal_min: 50, ideal_max: 80, low_crit: 20, high_crit: 120, penalty_minor: 10, penalty_major: 25, low_rec: "Phosphorus (P) booster for root development", high_rec: "review fertilizer blend for P excess" },
+    K: { ideal_min: 70, ideal_max: 120, low_crit: 40, high_crit: 180, penalty_minor: 10, penalty_major: 25, low_rec: "Potassium (K) to boost resistance", high_rec: "check for K salt toxicity" },
 };
 
 // --- HASHING AND PRNG FOR ACCURACY/CONSISTENCY ---
@@ -467,10 +467,8 @@ function draw3DMap() {
 // --- PHOTO GRID & MODAL FUNCTIONS ---
 // ------------------------------------
 function populateStockPhotos() {
-    // Generate 16 unique stock image entries, each with a unique content hash
-    if (Object.keys(stockPhotoData).length === 16) return; // Already populated
+    if (Object.keys(stockPhotoData).length === 16) return; 
     for (let i = 1; i <= 16; i++) {
-        // Create unique base64 string for a unique, consistent hash
         const base64 = `data:image/svg+xml;base64,mocked_stock_photo_hash_${i}_diag:${PHOTO_DISEASES[i % PHOTO_DISEASES.length].name.replace(/\s/g, '_')}`;
         stockPhotoData[i] = base64;
     }
@@ -481,7 +479,6 @@ function openStockImageModal() {
     renderStockImageGrid();
     document.getElementById('stockImageModal').style.display = "block";
     
-    // Set a prompt if no zone is selected
     if (selectedZone === 0) {
         STATUS_ELEMENT.innerText = "Select a stock photo, then click a zone (1-16) in the main photo grid to assign it.";
     }
@@ -622,7 +619,7 @@ function loadCurrentPhotoData() {
     }
 }
 // ------------------------------------
-// --- COMBINED AI ANALYSIS LOGIC (REFINED) ---
+// --- COMBINED AI ANALYSIS LOGIC (FINAL REFINEMENT) ---
 // ------------------------------------
 
 function getNearestSensorData(plantX, plantY) {
@@ -650,6 +647,7 @@ function analyzePlant(plant, sensorData, photoExists) {
         const { moisture, npk_n, npk_p, npk_k } = sensorData;
         const data = { moisture, N: npk_n, P: npk_p, K: npk_k };
         const keys = ['moisture', 'N', 'P', 'K'];
+        const soilProblems = [];
 
         keys.forEach(key => {
             const guideline = NPK_GUIDELINES[key];
@@ -658,16 +656,16 @@ function analyzePlant(plant, sensorData, photoExists) {
             
             if (value < guideline.low_crit) {
                 soilScore -= guideline.penalty_major;
-                problem = `CRITICAL LOW ${key}.`;
+                problem = `CRITICAL LOW ${key}`;
             } else if (value < guideline.ideal_min) {
                 soilScore -= guideline.penalty_minor;
-                problem = `LOW ${key}.`;
+                problem = `LOW ${key}`;
             } else if (value > guideline.high_crit) {
                  soilScore -= guideline.penalty_major;
-                problem = `CRITICAL HIGH ${key}.`;
+                problem = `CRITICAL HIGH ${key}`;
             } else if (value > guideline.ideal_max) {
                 soilScore -= guideline.penalty_minor;
-                problem = `HIGH ${key}.`;
+                problem = `HIGH ${key}`;
             }
             
             if (problem) {
@@ -677,29 +675,39 @@ function analyzePlant(plant, sensorData, photoExists) {
                 else if (key === 'P') rec = (value < guideline.low_crit) ? "Immediate " + guideline.low_rec : guideline.low_rec;
                 else if (key === 'K') rec = (value < guideline.low_crit) ? "Immediate " + guideline.low_rec : guideline.low_rec;
                 
+                soilProblems.push({ key, value, problem, rec });
                 soilAction += `${problem} (${value}%/ppm). ${rec}. `;
             }
         });
-
         diagnosis = `Soil: M=${moisture}%, NPK=${npk_n}/${npk_p}/${npk_k}`;
 
     } else {
         soilScore = 50; 
         diagnosis = "Soil: Sensor Data Missing";
         soilAction = "REQUIRED: Conduct soil probe near this plant (Rover at Zone " + plant.id + ").";
+        // Cannot proceed with fusion, return base analysis
+        return {
+            id: plant.id,
+            score: Math.max(0, soilScore - 30), // Penalize heavily for missing data
+            visualDiagnosis: "Visual: N/A",
+            sensorDiagnosis: diagnosis,
+            recommendation: "Cannot perform fused analysis. Acquire soil data immediately.",
+            healthClass: 'rec-critical'
+        };
     }
     
     // --- 2. Photo Analysis (Simulated AI) ---
     let visualDiagnosis = "Visual: No Photo";
     let visualAction = "";
-    let visualPenalty = 15; 
-    let prediction = PHOTO_DISEASES[0]; // Default prediction
+    let visualPenalty = 0; 
+    let prediction = null; 
 
     if (photoExists) {
         const photoHash = simpleStringHash(photoData[plant.id]);
         const randomRoll = deterministicPseudoRandom(photoHash); 
 
         let cumulativeProb = 0;
+        prediction = PHOTO_DISEASES[0]; // Default to healthy
         
         for (const disease of PHOTO_DISEASES) {
             cumulativeProb += disease.probability;
@@ -716,63 +724,90 @@ function analyzePlant(plant, sensorData, photoExists) {
         } else {
              visualAction = "Leaf appears healthy.";
         }
-    }
-
-    // --- 3. Combined Score & Recommendation (REFINED FUSING LOGIC) ---
-    const totalScore = Math.max(0, Math.round(soilScore - (visualPenalty * 0.7)));
-
-    let recommendation = '';
-    const isYellow = visualDiagnosis.includes('Yellowing');
-    const isLesions = visualDiagnosis.includes('Dark Spots') || visualDiagnosis.includes('Mottling');
-    const isWilting = visualDiagnosis.includes('Wilting');
-    const isLowN = sensorData && sensorData.N < NPK_GUIDELINES.N.low_crit;
-    const isCriticalMoisture = soilAction.includes('CRITICAL LOW moisture');
-    const isCriticalNutrient = soilAction.includes('CRITICAL LOW N') || soilAction.includes('CRITICAL LOW P') || soilAction.includes('CRITICAL LOW K');
-    
-    // PRIORITY 1: CRITICAL PATHOGEN/VIRUS
-    if (isLesions) {
-        recommendation = `***CRITICAL DISEASE WARNING***: ${visualDiagnosis} detected. This requires urgent action. Isolate plant and apply broad-spectrum treatment.`;
-    } 
-    // PRIORITY 2: CONFIRMED N DEFICIENCY (Yellow leaf + Low N)
-    else if (isYellow && isLowN) {
-        recommendation = `CONFIRMED N-DEFICIENCY: ${visualDiagnosis} is caused by critical low Nitrogen (${sensorData.N} ppm). Immediate high-N liquid feed required.`;
-    }
-    // PRIORITY 3: CONFIRMED WATER STRESS (Wilting + Low Moisture)
-    else if (isWilting && isCriticalMoisture) {
-        recommendation = `CONFIRMED WATER STRESS: Wilting is combined with critical low moisture. Urgent, deep, slow watering required.`;
-    }
-    // PRIORITY 4: OTHER CRITICAL ISSUES (Either soil or visual, not fused above)
-    else if (isCriticalNutrient) {
-        recommendation = `CRITICAL SOIL ISSUE: ${soilAction}. (Visual Status: ${prediction.name}).`;
-    }
-    // PRIORITY 5: SYMPTOM without PRIMARY CONFIRMATION (Suspect secondary deficiency)
-    else if (isYellow) {
-        recommendation = `CAUTION: General yellowing detected, but primary NPK is adequate. Consider testing for secondary deficiencies like Magnesium or Iron. ${soilAction.trim()}`;
-    }
-    // PRIORITY 6: Everything else
-    else if (visualAction.includes('LEAF ISSUE DETECTED')) {
-        recommendation = visualAction + " " + (soilAction ? ` (Soil condition: ${soilAction})` : '');
-    }
-    else if (soilAction) {
-        recommendation = `Soil Management Required: ${soilAction}`;
-    }
-    // Optimal
-    else {
-        recommendation = "Optimal: Continue monitoring. Conditions are within ideal range.";
+    } else {
+        visualDiagnosis = "Visual: No Photo";
+        visualAction = "Missing leaf photo.";
+        visualPenalty = 15; // Minor penalty for missing visual data
     }
 
 
-    // Final Health Classification
+    // --- 3. Combined Score & Recommendation (CRITICAL FUSING LOGIC) ---
+    let finalRecommendation = '';
     let healthClass = 'rec-optimal';
-    if (totalScore <= 65 || isLesions) healthClass = 'rec-critical';
-    else if (totalScore <= 85 || isCriticalNutrient || isYellow) healthClass = 'rec-action';
+    
+    const isYellow = prediction && prediction.name.includes('Yellowing');
+    const isLesions = prediction && prediction.name.includes('Dark Spots');
+    const isMottling = prediction && prediction.name.includes('Mottling');
+    const isWilting = prediction && prediction.name.includes('Leaf Curl');
+    const isLowN = soilProblems.some(p => p.problem.includes('CRITICAL LOW N'));
+    const isLowK = soilProblems.some(p => p.problem.includes('CRITICAL LOW K'));
+    const isCriticalMoisture = soilProblems.some(p => p.problem.includes('CRITICAL LOW moisture'));
+    
+    
+    // TIER 1: INCURABLE PATHOGEN OVERRIDE (High Risk)
+    if (isMottling || isWilting) {
+        finalRecommendation = `***IMMEDIATE DESTRUCTION/ISOLATION REQUIRED***: The presence of ${prediction.name} strongly indicates a viral infection (e.g., TMV, TYLCV). This is incurable. Isolate or remove the plant to prevent spread.`;
+        healthClass = 'rec-critical';
+        soilScore = 0; // Maximum penalty
+    } 
+    // TIER 2: FUNGUS/BACTERIA OVERRIDE
+    else if (isLesions) {
+        finalRecommendation = `***SEVERE FUNGAL/BACTERIAL WARNING***: ${prediction.name} is a major risk (likely Early Blight). Apply a targeted fungicide/bactericide immediately and reduce leaf wetness.`;
+        healthClass = 'rec-critical';
+        // Minor penalty to allow soil conditions to be secondary info
+        soilScore = Math.max(20, soilScore - 30); 
+    }
+    // TIER 3: CONFIRMED PRIMARY N-DEFICIENCY FUSION
+    else if (isYellow && isLowN) {
+        finalRecommendation = `CONFIRMED N-DEFICIENCY: ${visualDiagnosis} is caused by ${soilProblems.find(p => p.key === 'N').problem}. Apply immediate high-N liquid feed.`;
+        healthClass = 'rec-critical';
+    }
+    // TIER 4: SECONDARY DEFICIENCY INFERENCE
+    else if (isYellow && isLowK) {
+        finalRecommendation = `INFERENCE: Yellowing is present, but Nitrogen is adequate. The low Potassium (${soilProblems.find(p => p.key === 'K').value} ppm) suggests a K-deficiency or a secondary micronutrient issue (e.g., Mg). Supplement Potassium.`;
+        healthClass = 'rec-action';
+    }
+    // TIER 5: CRITICAL SOIL/WATER EXTREMES
+    else if (isCriticalMoisture) {
+        finalRecommendation = `CRITICAL WATER/MOISTURE STRESS: ${soilProblems.find(p => p.key === 'moisture').problem}. ${soilProblems.find(p => p.key === 'moisture').rec}.`;
+        healthClass = 'rec-critical';
+    }
+    else if (soilAction.includes('CRITICAL')) {
+        finalRecommendation = `CRITICAL SOIL IMBALANCE: ${soilAction.trim()} (Visual: ${prediction ? prediction.name : 'N/A'}).`;
+        healthClass = 'rec-critical';
+    }
+    // TIER 6: CAUTIONARY/MINOR ISSUES
+    else if (soilAction.includes('LOW') || soilAction.includes('HIGH')) {
+        finalRecommendation = `CAUTION: ${soilAction.trim()} Monitor visual symptoms closely.`;
+        healthClass = 'rec-action';
+    }
+    else if (visualAction.includes('LEAF ISSUE DETECTED')) {
+        finalRecommendation = `MINOR VISUAL CAUTION: ${visualDiagnosis}. Soil data is optimal, but monitor for disease progression.`;
+        healthClass = 'rec-action';
+    }
+    // TIER 7: OPTIMAL
+    else {
+        finalRecommendation = "Optimal: All conditions are within the ideal range. Continue monitoring weekly.";
+        healthClass = 'rec-optimal';
+    }
+
+    // Final Score Calculation (Use the adjusted soilScore/visualPenalty)
+    const finalVisualPenalty = prediction ? prediction.severity : 0;
+    const totalScore = Math.max(0, Math.round(soilScore - (finalVisualPenalty * 0.5)));
+
+    // Override score if pathogen was detected
+    if (healthClass === 'rec-critical' && (isMottling || isLesions || isWilting)) {
+         // Force score based on severity (e.g., 20/100 for a severe virus)
+        finalScore = Math.min(totalScore, 30); 
+    }
+
 
     return {
         id: plant.id,
         score: totalScore.toFixed(0),
         visualDiagnosis: visualDiagnosis,
         sensorDiagnosis: diagnosis,
-        recommendation: recommendation.trim(),
+        recommendation: finalRecommendation.trim(),
         healthClass: healthClass
     };
 }
@@ -834,7 +869,6 @@ function sendCommand(command) {
             LAST_PHOTO_STATUS.innerText = 'Photo captured and sent to server.';
             const nearestPlant = getNearestPlant(currentRoverData.x_m, currentRoverData.y_m);
             if (nearestPlant) {
-                // Mock image data that is distinguishable from stock photos
                 photoData[nearestPlant.id] = `data:image/jpeg;base64,mocked_rover_capture_zone_${nearestPlant.id}_${Date.now()}`;
                 renderPhotoInCell(nearestPlant.id, photoData[nearestPlant.id]);
             }
@@ -1027,7 +1061,6 @@ function getHealthColor(status) {
 // ------------------------------------
 
 function saveCurrentTrial() {
-    // Ensure stock photos are generated before saving
     populateStockPhotos();
 
     const trialData = {
@@ -1036,7 +1069,7 @@ function saveCurrentTrial() {
         roverData: { ...currentRoverData },
         loggedData: [...loggedData],
         photoData: { ...photoData }, 
-        stockPhotoData: { ...stockPhotoData }, // Save stock photo content to ensure historical consistency
+        stockPhotoData: { ...stockPhotoData }, 
         aiData: { 
             analysisGrid: document.getElementById('plantAnalysisGrid').innerHTML
         }
@@ -1090,9 +1123,8 @@ function loadPastTrial(trialId) {
     drawMap();
     draw3DMap();
 
-    // Load Photo Data and Historical Stock Data
     photoData = trial.photoData;
-    stockPhotoData = trial.stockPhotoData || {}; // Load historical stock photos
+    stockPhotoData = trial.stockPhotoData || {}; 
     loadCurrentPhotoData();
 
     document.getElementById('plantAnalysisGrid').innerHTML = trial.aiData.analysisGrid;
@@ -1116,7 +1148,7 @@ window.onload = function() {
     initThreeD();
     drawMap();
     generatePhotoGrid();
-    populateStockPhotos(); // Generate stock photos on load
+    populateStockPhotos(); 
     fetchAIResults();
 };
 </script>
