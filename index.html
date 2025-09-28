@@ -302,19 +302,19 @@ let currentRoverData = {
     y_m: 2.0
 };
 
-// --- MOCK AI PARAMETERS ---
-// Disease probabilities for simulated AI
+// --- MOCK AI PARAMETERS (Updated for Standards-Based Symptoms) ---
 const PHOTO_DISEASES = [
-    { name: "Healthy Leaf", severity: 0, probability: 0.70 },
-    { name: "Early Blight", severity: 40, probability: 0.15 },
-    { name: "Septoria Leaf Spot", severity: 30, probability: 0.10 },
-    { name: "Bacterial Spot", severity: 50, probability: 0.05 },
+    { name: "Healthy, Deep Green", severity: 0, probability: 0.45, description: "Optimal color and structure. No visual intervention needed." },
+    { name: "General Yellowing (Chlorosis)", severity: 45, probability: 0.25, description: "Yellowing, especially on older leaves. High correlation with Nitrogen (N) deficiency." },
+    { name: "Dark Spots & Lesions", severity: 60, probability: 0.15, description: "Brown or black lesions with concentric rings. Strong indicator of Fungal infection (Early Blight)." },
+    { name: "Leaf Curl & Wilting", severity: 35, probability: 0.10, description: "Leaf edges curling upwards or downwards. Suggests heat/water stress or viral infection." },
+    { name: "Mottling/Mosaic Pattern", severity: 70, probability: 0.05, description: "Irregular light and dark green areas. Highly suggestive of a serious virus (e.g., TMV)." },
 ];
 
 // NPK Guidelines for Scoring (used in analyzePlant)
 const NPK_GUIDELINES = {
-    moisture: { ideal_min: 40, ideal_max: 60, low_crit: 25, high_crit: 75, penalty_minor: 10, penalty_major: 20 },
-    N: { ideal_min: 60, ideal_max: 100, low_crit: 30, high_crit: 150, penalty_minor: 10, penalty_major: 20 },
+    moisture: { ideal_min: 40, ideal_max: 60, low_crit: 25, high_crit: 75, penalty_minor: 10, penalty_major: 25 },
+    N: { ideal_min: 60, ideal_max: 100, low_crit: 30, high_crit: 150, penalty_minor: 10, penalty_major: 25 },
     P: { ideal_min: 50, ideal_max: 80, low_crit: 20, high_crit: 120, penalty_minor: 10, penalty_major: 20 },
     K: { ideal_min: 70, ideal_max: 120, low_crit: 40, high_crit: 180, penalty_minor: 10, penalty_major: 20 },
 };
@@ -430,7 +430,8 @@ function draw3DMap() {
 // ------------------------------------
 function loadStockPhotos() {
     for (let i = 1; i <= 16; i++) {
-        const color = '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0');
+        // Use a fixed color for stock photos for visual consistency
+        const color = '#4EC9B0'; 
         const stockImage = `<svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="${color}"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="20" fill="#fff">Zone ${i}</text></svg>`;
         const base64StockImage = 'data:image/svg+xml;base64,' + btoa(stockImage);
         photoData[i] = base64StockImage;
@@ -516,7 +517,7 @@ function loadCurrentPhotoData() {
 // --- COMBINED AI ANALYSIS LOGIC ---
 // ------------------------------------
 
-// FIX: Improved deterministic pseudo-random function using LCG for consistent seeding
+// FIX: Deterministic pseudo-random function using LCG for consistent seeding
 function deterministicPseudoRandom(seed) {
     const a = 1664525;
     const c = 1013904223;
@@ -557,9 +558,8 @@ function analyzePlant(plant, sensorData, photoExists) {
 
         // Iterate through each metric and apply guideline-based penalties
         keys.forEach(key => {
-            const guideline = NPK_GUIDELINES[key.toLowerCase()];
+            const guideline = NPK_GUIDELINES[key];
             const value = data[key];
-
             let problem = '';
             
             if (value < guideline.low_crit) {
@@ -615,25 +615,36 @@ function analyzePlant(plant, sensorData, photoExists) {
 
         visualDiagnosis = `Visual: ${prediction.name}`;
         visualPenalty = prediction.severity;
-        if (prediction.name !== "Healthy Leaf") {
-            visualAction = `LEAF DISEASE DETECTED: ${prediction.name}. Treat immediately with a general spectrum fungicide.`;
+        if (prediction.name !== "Healthy, Deep Green") {
+            visualAction = `LEAF ISSUE DETECTED: ${prediction.name}. ${prediction.description}`;
         }
     } else {
-        visualScore = 5; // Minor penalty for missing visual data
         visualAction = "Missing leaf photo. Recommend 'Capture Photo' at this location.";
     }
 
-    // --- 3. Combined Score & Recommendation ---
+    // --- 3. Combined Score & Recommendation (Fusing Logic) ---
     const totalScore = Math.max(0, Math.round(soilScore - (visualPenalty * 0.7))); // Weighted Fusing
 
-    // Combine actions, prioritizing the most critical issue (Soil critical > Visual disease)
     let recommendation = '';
-    if (soilAction.includes('CRITICAL')) {
-        recommendation = soilAction.trim();
-    } else if (visualAction.includes('LEAF DISEASE')) {
-        recommendation = visualAction + " " + (soilAction || '');
-    } else {
-        recommendation = (soilAction + visualAction).trim() || "Optimal: Continue monitoring. Conditions are within ideal range.";
+
+    // FUSING PRIORITY 1: Yellowing Confirmation (Yellow photo + Low N soil)
+    const isYellow = visualDiagnosis.includes('Yellowing');
+    const isLowN = sensorData && sensorData.N < NPK_GUIDELINES.N.ideal_min;
+
+    if (isYellow && isLowN) {
+        recommendation = `CONFIRMED DIAGNOSIS: The ${visualDiagnosis.toLowerCase()} is caused by a serious Nitrogen (N) deficiency. Apply a high-N liquid feed immediately.`;
+    } 
+    // FUSING PRIORITY 2: Critical Sensor Data (Moisture/NPK)
+    else if (soilAction.includes('CRITICAL')) {
+        recommendation = soilAction.trim() + (visualAction ? ` (Visual diagnosis: ${visualDiagnosis})` : '');
+    } 
+    // FUSING PRIORITY 3: Visual Disease/Major Nutrient Issue
+    else if (visualAction.includes('LEAF ISSUE DETECTED') || soilAction.includes('LOW')) {
+        recommendation = (visualAction + " " + soilAction).trim();
+    } 
+    // Optimal
+    else {
+        recommendation = "Optimal: Continue monitoring. Conditions are within ideal range.";
     }
 
     // Final Health Classification
