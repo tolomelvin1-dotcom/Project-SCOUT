@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>S.C.O.U.T. Rover Full-Spectrum Data Fusion & Control Console (V8.0 - STABILITY OVERLOAD)</title>
+<title>S.C.O.U.T. Rover Full-Spectrum Data Fusion & Control Console (V9.0 - THE NUCLEAR OPTION)</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script async src="https://docs.opencv.org/4.x/opencv.js" onload="onOpenCvReady();"></script>
@@ -191,7 +191,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 <body>
 <div class="container">
 <div class="controls-panel">
-    <h1>S.C.O.U.T. Rover Control & Telemetry Bridge (V8.0)</h1>
+    <h1>S.C.O.U.T. Rover Control & Telemetry Bridge (V9.0)</h1>
     <p>System Diagnostic Status: <span id="status">AWAITING SYSTEM BOOT SEQUENCE COMPLETION...</span></p>
 
     <div class="data-display history-controls">
@@ -257,7 +257,8 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
     <h2>Plant Zone Photo Assignments (16 Zones)</h2>
     <div id="photoGrid">
     </div>
-    </div>
+    <input type="file" id="superFileInput" accept="image/*" style="position: absolute; left: -9999px;" onchange="handleSuperFileSelectedByUser(event)">
+</div>
 
 <div class="map-3d-panel">
     <h2>3D Soil Metric Visualization 📊 (Height=Moisture, Color=Health)</h2>
@@ -300,7 +301,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 // ----------------------------------------------------------------------------------
 /**
  * @fileoverview S.C.O.U.T. Rover Control System JavaScript Core.
- * Version 8.0: Critical fix for Dynamic Photo Upload and Guaranteed Analysis Card Visibility.
+ * Version 9.0: The Nuclear Option - Static File Input & Guaranteed Initial Analysis Render.
  */
 
 // --- 0.2.1 HARDWARE AND NETWORK CONFIGURATION (CRITICAL SYSTEM IDENTIFIERS) ---
@@ -323,13 +324,14 @@ const MAP_CONTEXT = document.getElementById('roverMap').getContext('2d');
 const HISTORY_MODAL = document.getElementById('historyModal');
 const STOCK_MODAL = document.getElementById('stockImageModal');
 const CURRENT_ZONE_SELECTION_DISPLAY = document.getElementById('currentZoneSelection');
+const FILE_INPUT_ELEMENT = document.getElementById('superFileInput'); // CRITICAL V9.0 REFERENCE
 
 // --- 0.2.4 GLOBAL STATE VARIABLES (Clean Initial State Definition) ---
 let openCvLibraryIsReady = false;
 let systemLoggedSensorDataArray = []; 
 let currentPhotoAssignmentData = {}; 
 let stockPhotoLibraryData = {}; 
-let currentlySelectedPlantZone = 0; 
+let currentlySelectedPlantZone = 0; // CRITICAL: Used by V9.0 file input
 let historyIsBeingViewed = false;
 
 let currentRoverKinematicState = {
@@ -355,7 +357,7 @@ for(let r=0; r<FIELD_GRID_SIZE_M; r++) {
 
 
 // ==================================================================================
-// SECTION 1.0: HARDWARE COMMUNICATIONS & SENSOR DATA LOGGING (No changes to logic)
+// SECTION 1.0: HARDWARE COMMUNICATIONS & SENSOR DATA LOGGING (Standard Logic)
 // ----------------------------------------------------------------------------------
 function transmitSensorDataViaESP32ToThingSpeak(dataPacket) {
     const apiEndpointUrl = "https://api.thingspeak.com/update";
@@ -447,7 +449,7 @@ function executeDataAcquisition(acquisitionType) {
 
 
 // ==================================================================================
-// SECTION 2.0: DIAGNOSTIC KNOWLEDGE BASE & FUSED ANALYSIS CORE (No changes to logic)
+// SECTION 2.0: DIAGNOSTIC KNOWLEDGE BASE & FUSED ANALYSIS CORE (Standard Logic)
 // ----------------------------------------------------------------------------------
 
 const TOMATO_DIAGNOSTIC_KB = {
@@ -595,7 +597,6 @@ function executeCoreCVAnalysis(base64Image) {
         const imageElement = document.createElement('img');
         imageElement.onload = function() {
             // Placeholder for actual OpenCV processing logic...
-            // Mock result used if actual OpenCV is too slow or fails on the user's machine
             const calculatedScore = Math.floor(Math.random() * 50) + 50; // 50-100 score
             let predictionTier = TOMATO_DIAGNOSTIC_KB.DISEASE_TIERS.find(d => d.name.includes("Healthy"));
             if (calculatedScore < 70) predictionTier = TOMATO_DIAGNOSTIC_KB.DISEASE_TIERS.find(d => d.name.includes("Yellowing"));
@@ -634,12 +635,14 @@ function executePhotoPrediction(base64Image) {
  */
 async function triggerComprehensiveAnalysisCycle() {
     const analysisGridContainer = document.getElementById('plantAnalysisGrid');
+    
+    // Check if we have enough data to move past the initial 'No Data' state.
     const hasAnyData = systemLoggedSensorDataArray.length > 0 || Object.keys(currentPhotoAssignmentData).length > 0;
     
     if (!hasAnyData && !historyIsBeingViewed) {
-        analysisGridContainer.innerHTML = '<h2><strong style="color: #f08047;">DATA FUSION ENGINE: AWAITING GATHERED DATA.</strong> (No sensor logs or photo assignments yet.) </h2>';
+        // If no data, ensure the "No Data" cards are rendered (they were already rendered in onDocumentReady, but this handles reset).
+        renderNoDataCards();
         STATUS_ELEMENT.innerText = `DATA FUSION STANDBY: Awaiting initial sensor or photo data. Rover is STANDBY.`;
-        draw3DMap(); 
         return; 
     }
     
@@ -661,7 +664,7 @@ async function triggerComprehensiveAnalysisCycle() {
     const finalAnalysesResults = await Promise.all(fusionPromises); 
     analysisGridContainer.innerHTML = ''; 
 
-    // CRITICAL FIX: Render all 16 cards, even the "no data" ones, for guaranteed UI visibility
+    // Render all 16 definitive cards.
     finalAnalysesResults.forEach(renderAnalysisCard);
 
     draw3DMap(); 
@@ -669,11 +672,52 @@ async function triggerComprehensiveAnalysisCycle() {
     STATUS_ELEMENT.innerText = `DATA FUSION COMPLETE: All 16 zones checked and results rendered. Rover is STANDBY.`;
 }
 
+/**
+ * CRITICAL V9.0 FIX: Renders 16 specific 'No Data' cards to guarantee the Analysis Grid visibility.
+ */
+function renderNoDataCards() {
+    const analysisGridContainer = document.getElementById('plantAnalysisGrid');
+    analysisGridContainer.innerHTML = ''; 
+    
+    FIELD_PLANT_LOCATIONS_M.forEach(plant => {
+        const analysisResult = {
+            id: plant.id,
+            fusedScore: 'N/A',
+            preAssessmentVisual: "Leaf Pre-Assessment: No Photo Taken.",
+            preAssessmentSensor: "Soil Data: Sensor Data Missing (N/A) - **HIGH PRIORITY GAP**",
+            finalRecommendation: "Awaiting photo assignment or sensor log in this zone. Please collect data to generate a diagnosis.",
+            healthClassification: 'rec-no-data'
+        };
+
+        const noDataCardHTML = `
+        <div class="analysis-card" style="border: 2px solid #58a6ff;">
+            <div class="plant-id-label">ZONE ${analysisResult.id} DIAGNOSTIC REPORT</div>
+            <div class="assessment-section pre-assessment">
+                <strong>Data Status:</strong>
+                <p>Status: **Awaiting Data Collection**</p>
+                <p>Action: **${analysisResult.finalRecommendation}**</p>
+            </div>
+            <hr style="border-top: 2px solid #30363d; margin: 25px 0;">
+            <div class="assessment-section final-recommendation">
+                <strong>FINAL COMPOSITE HEALTH SCORE:</strong> 
+                <span class="${analysisResult.healthClassification}">N/A</span>
+                <h4 style="color: #c9d1d9; margin-top: 20px;">Priority Action:</h4>
+                <span class="${analysisResult.healthClassification}">Begin data acquisition (take photo or log sensor reading).</span>
+            </div>
+        </div>
+        `;
+        analysisGridContainer.insertAdjacentHTML('beforeend', noDataCardHTML);
+    });
+}
+
+
 function renderAnalysisCard(analysisResult) {
     const analysisGridContainer = document.getElementById('plantAnalysisGrid');
     
-    // Customize rendering for the "No Data Collected" case
+    // We keep this function for rendering actual data-driven cards
     if (analysisResult.healthClassification === 'rec-no-data') {
+        // If we reach here, it means we ran the full cycle but this specific card
+        // still had no data, so we render the no-data template.
         const noDataCardHTML = `
         <div class="analysis-card" style="border: 2px solid #58a6ff;">
             <div class="plant-id-label">ZONE ${analysisResult.id} DIAGNOSTIC REPORT</div>
@@ -719,21 +763,22 @@ function renderAnalysisCard(analysisResult) {
 }
 
 /**
- * CRITICAL FIX: Dynamic creation and handling of the file input.
- * This function is ONLY called via the dynamically created input's listener.
+ * CRITICAL V9.0 FIX: Handler for the static file input. It relies on the global
+ * `currentlySelectedPlantZone` set by the grid cell click.
  */
-function handleFileSelectedByUser(event, targetZoneId) {
+function handleSuperFileSelectedByUser(event) {
     const file = event.target.files[0];
+    const targetZoneId = currentlySelectedPlantZone;
     
-    // Clean up the dynamically created input immediately
-    document.body.removeChild(event.target);
+    // Clear the file input value immediately to allow the user to select the same file again
+    event.target.value = '';
 
     if (!file || targetZoneId === 0) {
-        STATUS_ELEMENT.innerText = "ERROR: File selection canceled or target zone lost. Re-click the zone to try again.";
+        STATUS_ELEMENT.innerText = "ERROR: File selection canceled or target zone lost (Zone ID: 0). Please re-click the zone to try again.";
         return;
     }
 
-    STATUS_ELEMENT.innerText = `Processing file ${file.name} for Zone ${targetZoneId}... (This is the final step)`;
+    STATUS_ELEMENT.innerText = `Processing file ${file.name} for Zone ${targetZoneId}... (Reading base64)`;
     
     try {
         const reader = new FileReader();
@@ -861,6 +906,7 @@ function executeTrialSaveOperation() {
         sensorLogs: [...systemLoggedSensorDataArray],
         photoAssignments: JSON.parse(JSON.stringify(currentPhotoAssignmentData)), 
         aiData: {
+            // Save the current analysis HTML to ensure history recall is instant
             analysisGridHTML: document.getElementById('plantAnalysisGrid').innerHTML 
         }
     };
@@ -875,11 +921,11 @@ function executeTrialSaveOperation() {
     HISTORY_TRIAL_COUNTER.innerText = currentIncrementalTrialID;
     resetSensorAndMapData(true);
     clearPhotoGrid();
-    triggerComprehensiveAnalysisCycle();
+    triggerComprehensiveAnalysisCycle(); // Immediately render 'No Data' state for new trial
 }
 
 /**
- * CRITICAL FIX: Implement the dynamic file input creation inside the click handler.
+ * CRITICAL V9.0 FIX: Grid cell click now only sets the target zone and forces the static input click.
  */
 function generatePhotoGrid() {
     const photoGrid = document.getElementById('photoGrid');
@@ -891,32 +937,17 @@ function generatePhotoGrid() {
         cell.innerText = `Zone ${i} - AWAITING PHOTO`;
         
         cell.onclick = () => {
+            // 1. Set the target zone ID
             currentlySelectedPlantZone = i; 
             
+            // 2. Highlight the selected cell
             document.querySelectorAll('.grid-cell').forEach(c => c.style.border = '1px solid #3fb950');
             document.getElementById(`zone-cell-${i}`).style.border = '3px solid #ffd700';
             CURRENT_ZONE_SELECTION_DISPLAY.innerText = i;
             
-            // --- AGGRESSIVE DYNAMIC FILE INPUT FIX START ---
-            
-            // 1. Create a brand-new file input element
-            const dynamicFileInput = document.createElement('input');
-            dynamicFileInput.type = 'file';
-            dynamicFileInput.accept = 'image/*';
-            dynamicFileInput.style.display = 'none';
-            
-            // 2. Attach the specific handler with the target zone ID
-            // We use an anonymous function to ensure the correct 'i' is passed
-            dynamicFileInput.onchange = (event) => handleFileSelectedByUser(event, i);
-
-            // 3. Attach it to the body (necessary for some browsers to allow the programmatic click)
-            document.body.appendChild(dynamicFileInput);
-
-            // 4. Trigger the click
-            STATUS_ELEMENT.innerText = `Zone ${i} selected for direct upload. Opening DYNAMIC file dialog...`;
-            dynamicFileInput.click(); 
-            
-            // --- AGGRESSIVE DYNAMIC FILE INPUT FIX END ---
+            // 3. Force the click on the hidden static input
+            STATUS_ELEMENT.innerText = `Zone ${i} selected. Triggering STATIC file dialog...`;
+            FILE_INPUT_ELEMENT.click(); 
         };
         
         photoGrid.appendChild(cell);
@@ -1085,8 +1116,7 @@ function resetSensorAndMapData(fullReset = true) {
         currentlySelectedPlantZone = 0;
         CURRENT_ZONE_SELECTION_DISPLAY.innerText = 'N/A';
     }
-    // Analysis is triggered on document ready and explicitly after data acquisition/history load.
-    // No need to call here unless a full UI refresh is mandatory.
+    // The analysis is handled by onDocumentReady/triggerComprehensiveAnalysisCycle
 }
 
 function updateMapVisualization() {
@@ -1228,7 +1258,6 @@ function draw3DMap() {
 
         if (sensorData) {
             // Logic to determine color based on health class from the analysis card
-            // We use the same coloring logic as in performFinalDataFusionAndDiagnosis
             const dummyAnalysis = performFinalDataFusionAndDiagnosis(plant, sensorData, null);
             
             if (dummyAnalysis.healthClassification === 'rec-optimal') color = 0x3fb950;
@@ -1263,8 +1292,7 @@ function updateRover3DPosition() {
 // FINAL INITIALIZATION
 // ------------------------------------------
 
-// Small utility to allow querySelector to use :contains for the 3D map coloring logic
-// (Kept for robustness, though not strictly needed for the 3D map coloring in V8.0)
+// Small utility for robustness
 (function(D){
     D.querySelector = function(s){
         if(s.indexOf(':contains') === -1) return D.querySelector(s);
@@ -1287,8 +1315,12 @@ function onDocumentReady() {
     generatePhotoGrid();
     resetSensorAndMapData(false); // Do not clear sensor/photo data on soft init
     
-    // CRITICAL FIX: Guarantee analysis view is rendered with the 16 card structure on load.
-    triggerComprehensiveAnalysisCycle(); 
+    // CRITICAL V9.0 FIX: Guarantee analysis view is rendered with the 16 card structure on load.
+    if (systemLoggedSensorDataArray.length === 0 && Object.keys(currentPhotoAssignmentData).length === 0) {
+        renderNoDataCards(); // Ensure the UI is populated even with no data
+    } else {
+        triggerComprehensiveAnalysisCycle(); // Load state if history was found in localStorage
+    }
     
     STATUS_ELEMENT.innerText = "SYSTEM BOOT: DOM Ready. Awaiting OpenCV.js initialization for full CV capability.";
 }
