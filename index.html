@@ -132,14 +132,13 @@ button { padding: 10px 15px; margin: 8px 5px; cursor: pointer; border: none; bor
 
 /* Recommendation coloring */
 .rec-optimal, .rec-action, .rec-critical { 
-    /* Fix: Ensure text displays fully and wraps */
     padding: 5px; 
     border-radius: 4px; 
     display: inline-block; 
     font-weight: bold;
-    white-space: normal; /* Allow text to wrap naturally */
+    white-space: normal; 
     word-break: break-word;
-    width: 100%; /* Take full width of parent */
+    width: 100%; 
     box-sizing: border-box;
 }
 .rec-optimal { background-color: #28a745; color: white; }
@@ -303,6 +302,7 @@ let currentRoverData = {
 };
 
 // --- MOCK AI PARAMETERS (Updated for Standards-Based Symptoms) ---
+// Note: Probabilities define the distribution of diagnoses across the grid when new photos are uploaded.
 const PHOTO_DISEASES = [
     { name: "Healthy, Deep Green", severity: 0, probability: 0.45, description: "Optimal color and structure. No visual intervention needed." },
     { name: "General Yellowing (Chlorosis)", severity: 45, probability: 0.25, description: "Yellowing, especially on older leaves. High correlation with Nitrogen (N) deficiency." },
@@ -318,6 +318,42 @@ const NPK_GUIDELINES = {
     P: { ideal_min: 50, ideal_max: 80, low_crit: 20, high_crit: 120, penalty_minor: 10, penalty_major: 20 },
     K: { ideal_min: 70, ideal_max: 120, low_crit: 40, high_crit: 180, penalty_minor: 10, penalty_major: 20 },
 };
+
+// --- HASHING AND PRNG FOR ACCURACY/CONSISTENCY ---
+
+/**
+ * Generates a simple, non-cryptographic hash of a string (Base64 content).
+ * This ensures the diagnosis is consistent for the same photo, regardless of its zone.
+ * @param {string} str - The string to hash.
+ * @returns {number} - A positive 32-bit integer hash value.
+ */
+function simpleStringHash(str) {
+    let hash = 0;
+    // Limit length for performance, as small changes usually result in a different hash
+    for (let i = 0; i < Math.min(str.length, 1000); i++) { 
+        const char = str.charCodeAt(i);
+        // Simple polynomial rolling hash
+        hash = (hash << 5) - hash + char;
+        hash |= 0; // Convert to 32bit integer
+    }
+    return Math.abs(hash);
+}
+
+/**
+ * Deterministic pseudo-random function (LCG) using a single seed.
+ * @param {number} seed - The input seed (either photo hash or zone ID).
+ * @returns {number} - A number between [0, 1).
+ */
+function deterministicPseudoRandom(seed) {
+    const a = 1664525;
+    const c = 1013904223;
+    const m = 4294967296; // 2^32
+    // Ensure seed is a positive integer and normalize
+    let state = (Math.abs(Math.floor(seed)) * 101) % m; 
+    state = (a * state + c) % m; 
+    return state / m; 
+}
+
 
 // --- 3D RENDERING SETUP (THREE.JS) ---
 let scene, camera, renderer, rover3D, controls;
@@ -429,13 +465,19 @@ function draw3DMap() {
 // --- PHOTO GRID FUNCTIONS ---
 // ------------------------------------
 function loadStockPhotos() {
+    // A constant hash key is used for all stock photos to ensure consistency among them
+    const stockPhotoHash = 12345; 
+    const stockBase64 = `data:image/svg+xml;base64,mocked_stock_photo_hash_${stockPhotoHash}`;
+
     for (let i = 1; i <= 16; i++) {
-        // Use a fixed color for stock photos for visual consistency
+        // Create a unique stock photo placeholder image (for the user to visually distinguish)
         const color = '#4EC9B0'; 
         const stockImage = `<svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="${color}"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="20" fill="#fff">Zone ${i}</text></svg>`;
-        const base64StockImage = 'data:image/svg+xml;base64,' + btoa(stockImage);
-        photoData[i] = base64StockImage;
-        renderPhotoInCell(i, base64StockImage);
+        const uniqueStockBase64 = 'data:image/svg+xml;base64,' + btoa(stockImage);
+
+        // Store the content for hashing later
+        photoData[i] = uniqueStockBase64; 
+        renderPhotoInCell(i, uniqueStockBase64);
     }
     LAST_PHOTO_STATUS.innerText = '16 stock photos loaded.';
     fetchAIResults(); // Trigger analysis after loading photos
@@ -461,7 +503,6 @@ function generatePhotoGrid() {
         `;
 
         cell.addEventListener('click', function(e) {
-            // Check if the click target is the delete button itself before triggering upload
             if (e.target.className !== 'delete-photo-btn') {
                 selectedZone = i;
                 document.getElementById('fileInput').click();
@@ -478,11 +519,14 @@ function handleFileSelect(event) {
     const reader = new FileReader();
     reader.onload = function(e) {
         const base64Image = e.target.result;
+        
+        // --- PHOTO CONTENT HASHING KEY IMPLEMENTATION ---
         photoData[selectedZone] = base64Image;
+        // ------------------------------------------------
+
         renderPhotoInCell(selectedZone, base64Image);
         selectedZone = 0;
         
-        // FIX: Clear the file input value so that selecting a new file on a different zone works
         event.target.value = '';
         
         fetchAIResults(); // Trigger AI analysis after uploading photo
@@ -517,17 +561,6 @@ function loadCurrentPhotoData() {
 // --- COMBINED AI ANALYSIS LOGIC ---
 // ------------------------------------
 
-// FIX: Deterministic pseudo-random function using LCG for consistent seeding
-function deterministicPseudoRandom(seed) {
-    const a = 1664525;
-    const c = 1013904223;
-    const m = 4294967296; // 2^32
-    let state = (seed * 101) % m; // Initialize state based on the seed (Zone ID)
-    state = (a * state + c) % m; // Run one iteration
-    return state / m; // Normalize to [0, 1)
-}
-
-
 function getNearestSensorData(plantX, plantY) {
     let nearestData = null;
     let min_dist_sq = Infinity;
@@ -556,7 +589,6 @@ function analyzePlant(plant, sensorData, photoExists) {
         const data = { moisture, N: npk_n, P: npk_p, K: npk_k };
         const keys = ['moisture', 'N', 'P', 'K'];
 
-        // Iterate through each metric and apply guideline-based penalties
         keys.forEach(key => {
             const guideline = NPK_GUIDELINES[key];
             const value = data[key];
@@ -590,18 +622,21 @@ function analyzePlant(plant, sensorData, photoExists) {
         diagnosis = `Soil: M=${moisture}%, NPK=${npk_n}/${npk_p}/${npk_k}`;
 
     } else {
-        soilScore = 50; // Heavy penalty for missing sensor data
+        soilScore = 50; 
         diagnosis = "Soil: Sensor Data Missing";
         soilAction = "REQUIRED: Conduct soil probe near this plant (Rover at Zone " + plant.id + ").";
     }
     
     // --- 2. Photo Analysis (Simulated AI) ---
     let visualDiagnosis = "Visual: No Photo";
-    let visualAction = "";
-    let visualPenalty = 0;
+    let visualAction = "Missing leaf photo. Recommend 'Capture Photo' at this location.";
+    let visualPenalty = 15; // Penalty for missing data
     
     if (photoExists) {
-        const randomRoll = deterministicPseudoRandom(plant.id); // Guarantees consistent diagnosis for this Zone ID
+        // The core of the accuracy fix: use the hash of the photo content for consistency
+        const photoHash = simpleStringHash(photoData[plant.id]);
+        const randomRoll = deterministicPseudoRandom(photoHash); 
+
         let cumulativeProb = 0;
         let prediction = PHOTO_DISEASES[0]; 
 
@@ -617,9 +652,9 @@ function analyzePlant(plant, sensorData, photoExists) {
         visualPenalty = prediction.severity;
         if (prediction.name !== "Healthy, Deep Green") {
             visualAction = `LEAF ISSUE DETECTED: ${prediction.name}. ${prediction.description}`;
+        } else {
+             visualAction = "Leaf appears healthy.";
         }
-    } else {
-        visualAction = "Missing leaf photo. Recommend 'Capture Photo' at this location.";
     }
 
     // --- 3. Combined Score & Recommendation (Fusing Logic) ---
@@ -636,12 +671,16 @@ function analyzePlant(plant, sensorData, photoExists) {
     } 
     // FUSING PRIORITY 2: Critical Sensor Data (Moisture/NPK)
     else if (soilAction.includes('CRITICAL')) {
-        recommendation = soilAction.trim() + (visualAction ? ` (Visual diagnosis: ${visualDiagnosis})` : '');
+        recommendation = soilAction.trim() + (visualAction.includes('LEAF ISSUE') ? ` (Visual issue: ${visualDiagnosis})` : '');
     } 
     // FUSING PRIORITY 3: Visual Disease/Major Nutrient Issue
-    else if (visualAction.includes('LEAF ISSUE DETECTED') || soilAction.includes('LOW')) {
-        recommendation = (visualAction + " " + soilAction).trim();
+    else if (visualAction.includes('LEAF ISSUE DETECTED')) {
+        recommendation = visualAction + " " + (soilAction.includes('LOW') ? ` (Soil condition: ${soilAction})` : '');
     } 
+    // Standard Action/Caution
+    else if (soilAction.includes('LOW') || soilAction.includes('HIGH')) {
+        recommendation = soilAction.trim();
+    }
     // Optimal
     else {
         recommendation = "Optimal: Continue monitoring. Conditions are within ideal range.";
@@ -673,7 +712,6 @@ function fetchAIResults() {
         
         const analysis = analyzePlant(plant, sensorData, photoExists);
         
-        // FIX: Display the full recommendation text without truncation
         const recLabel = analysis.recommendation; 
 
         const card = `
@@ -700,7 +738,7 @@ function fetchAIResults() {
 }
 
 // ------------------------------------
-// --- COMMUNICATION FUNCTIONS ---
+// --- COMMUNICATION AND MOCK DATA FUNCTIONS (Unchanged) ---
 // ------------------------------------
 
 function sendCommand(command) {
@@ -722,7 +760,7 @@ function sendCommand(command) {
             const nearestPlant = getNearestPlant(currentRoverData.x_m, currentRoverData.y_m);
             if (nearestPlant) {
                 // Mock image data that is distinguishable from stock photos
-                photoData[nearestPlant.id] = `data:image/jpeg;base64,mocked_rover_capture_zone_${nearestPlant.id}`;
+                photoData[nearestPlant.id] = `data:image/jpeg;base64,mocked_rover_capture_zone_${nearestPlant.id}_${Date.now()}`;
                 renderPhotoInCell(nearestPlant.id, photoData[nearestPlant.id]);
             }
             setTimeout(() => fetchAIResults(), 1000);
@@ -749,7 +787,6 @@ function getNearestPlant(x, y) {
     return nearest;
 }
 
-// --- MOCK/SIMULATED DATA FETCH (Called manually by 'read' buttons) ---
 function fetchData(lastCommand = null) {
     STATUS_ELEMENT.innerText = "Fetching latest data...";
 
@@ -802,9 +839,7 @@ function fetchData(lastCommand = null) {
 }
 
 
-// ------------------------------------
-// --- 2D MAP LOGIC (for visualization only) ---
-// ------------------------------------
+// --- 2D MAP LOGIC (Unchanged) ---
 function analyzeHealth(moisture, npk_n, npk_p, npk_k) {
     let issues = 0;
     const MIN_MOISTURE = 30;
@@ -920,7 +955,7 @@ function getHealthColor(status) {
     }
 }
 // ------------------------------------
-// --- HISTORY & DATA SAVING FUNCTIONS ---
+// --- HISTORY & DATA SAVING FUNCTIONS (Unchanged) ---
 // ------------------------------------
 
 function saveCurrentTrial() {
@@ -930,7 +965,7 @@ function saveCurrentTrial() {
         roverData: { ...currentRoverData },
         loggedData: [...loggedData],
         photoData: { ...photoData },
-        aiData: { // Save the entire current analysis for history viewing
+        aiData: { 
             analysisGrid: document.getElementById('plantAnalysisGrid').innerHTML
         }
     };
@@ -947,7 +982,7 @@ function saveCurrentTrial() {
     clearMapData(false);
     clearPhotoGrid();
     clear3DDataCubes();
-    fetchAIResults(); // Clear the analysis grid too
+    fetchAIResults(); 
     updateRover3DPosition();
 }
 function openHistoryModal() {
