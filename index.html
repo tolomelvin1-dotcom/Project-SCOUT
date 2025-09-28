@@ -358,7 +358,7 @@ button:active {
             <button onclick="sendCommand('capture')">📸 Request Photo (Current Zone)</button>
         </div>
         <div class="stock-control">
-            <button onclick="openStockPhotoModal()">📚 Use Stock Images</button>
+            <button onclick="openStockPhotoModal()">📚 Stock Photo Gallery</button>
             <p><small>Click a zone cell below to assign a photo (Manual or Stock). Last photo status: <span id="lastPhotoStatus">---</span>.</small></p>
         </div>
         <div style="border-top: 1px solid var(--color-border); margin: 15px 0;"></div>
@@ -399,9 +399,8 @@ button:active {
 <div id="stockPhotoModal" class="modal">
     <div class="modal-content" style="max-width: 900px;">
         <span class="close-btn" onclick="closeStockPhotoModal()">&times;</span>
-        <h2>Stock Photo Library 📚 (Assigning to Zone <span id="currentStockZone">None</span>)</h2>
-        <p>Select a stock image to assign to the current zone. This simulates the AI prediction for visual diagnosis.</p>
-        <div id="stockPhotoList" style="display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; margin-top: 25px;">
+        <h2>Photo Gallery & Assignment for Zone <span id="currentStockZone">None</span></h2> 
+        <div id="stockPhotoList" style="margin-top: 25px;">
             </div>
     </div>
 </div>
@@ -640,6 +639,7 @@ function sendCommand(command) {
              
              // Log a mock photo data (as a string to signify manual/live capture)
              const tempPhotoBase64 = 'data:image/svg+xml;utf8,<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#3D3D3D"/><text x="50" y="55" font-family="Arial" font-size="12" fill="#9CDCFE" text-anchor="middle">LIVE PHOTO</text></svg>';
+             // Store the data as a simple string for manual/live capture
              photoData[nearestPlant.id] = tempPhotoBase64;
              renderPhotoInCell(nearestPlant.id, tempPhotoBase64);
              fetchAIResults();
@@ -782,6 +782,14 @@ function drawMap() {
 
 // --- 10.6: FUSED AI ANALYSIS LOGIC (UPDATED for Recommendation Separation) ---
 
+function getNearestSensorData(x, y) {
+    const nearest = getNearestPlant(x, y);
+    if (nearest) {
+        return loggedData.find(d => d.zoneId === nearest.id);
+    }
+    return null;
+}
+
 function getPhotoPrediction(photoEntry) {
     // Case 1: Stock Photo (object with predictionKey)
     if (typeof photoEntry === 'object' && photoEntry.predictionKey) {
@@ -795,6 +803,7 @@ function getPhotoPrediction(photoEntry) {
     }
     
     // Case 2: Manual Upload (Base64 string) or Live Photo Capture
+    // We treat it as a generic photo that has been uploaded but not yet AI-analyzed
     return {
         name: "Photo Uploaded (AI Analysis Pending)",
         severity: 50, // Default severity for unanalyzed manual photo
@@ -825,6 +834,7 @@ function analyzePlant(plant, sensorData, photoEntry) {
         visualPrediction = getPhotoPrediction(photoEntry);
         visualDiagnosis = `Visual: ${visualPrediction.name}`;
         visualRecommendation = visualPrediction.visual_rec;
+        // Start final score based on visual severity, max 95 to allow for a perfect 100 with soil
         finalScore = Math.max(10, 100 - visualPrediction.severity); 
         healthClass = visualPrediction.class;
     }
@@ -851,28 +861,31 @@ function analyzePlant(plant, sensorData, photoEntry) {
         keys.forEach(key => {
             const guideline = guid[key]; 
             const value = data[key]; 
-            if (value < guideline.low_crit || value > guideline.high_crit) { 
+            if (key !== 'moisture' && (value < guideline.low_crit || value > guideline.high_crit)) { 
                 soilScore -= guideline.penalty_major; 
                 soilProblems.push({ problem: `CRITICAL ${key}`, rec: value < guideline.low_crit ? guideline.low_rec : guideline.high_rec });
+            } else if (key === 'moisture' && (value < guideline.low_crit || value > guideline.high_crit)) { 
+                 soilScore -= (guideline.penalty_major / 2); // Less penalty for moisture
+                 soilProblems.push({ problem: `Moisture CRITICAL`, rec: value < guideline.low_crit ? guideline.low_rec : guideline.high_rec });
             } else if (value < guideline.ideal_min || value > guideline.ideal_max) { 
-                soilScore -= (guideline.penalty_major / 2); 
+                soilScore -= (guideline.penalty_major / 4); // Minor penalty
                 soilProblems.push({ problem: `${key} Imbalance`, rec: value < guideline.ideal_min ? guideline.low_rec : guideline.high_rec });
             }
         });
         sensorDiagnosis = `Soil: M=${moisture}%, NPK=${npk_n}/${npk_p}/${npk_k}`;
 
         // C2. Combine Scores (Take the lower of the two systems: Visual vs. Soil)
-        finalScore = Math.min(finalScore, soilScore);
+        finalScore = photoExists ? Math.min(finalScore, soilScore) : soilScore;
 
         // C3. Final Fused Recommendation Logic
-        if (visualPrediction && visualPrediction.severity >= 80) {
+        if (photoExists && visualPrediction && visualPrediction.severity >= 80) {
             // High-Priority Override: Critical Visual Disease
             fusedRecommendation = `***FUSED CRITICAL***: ${visualPrediction.name}. **Soil check:** ${soilProblems.length > 0 ? soilProblems.map(p => p.problem).join(', ') : 'OK'}. VISUAL DIAGNOSIS OVERRIDES. Follow isolation protocol.`;
             healthClass = visualPrediction.class;
         } else if (soilProblems.length > 0) {
             // Secondary Priority: Soil Issues
-            const recString = soilProblems.map(p => `${p.problem} (${data[p.problem.split(' ')[1]]}): ${p.rec}`).join('; ');
-            fusedRecommendation = `***FUSED ACTION REQUIRED***: ${recString}. **Visual check:** ${visualDiagnosis}. Address soil imbalance first.`;
+            const recString = soilProblems.map(p => `${p.problem}: ${p.rec}`).join('; ');
+            fusedRecommendation = `***FUSED ACTION REQUIRED***: ${recString}. **Visual check:** ${visualDiagnosis.replace('Visual:', '')}. Address soil imbalance first.`;
             healthClass = finalScore <= 60 ? 'rec-action' : 'rec-optimal';
         } else {
             // Default: Healthy/Optimal
@@ -882,11 +895,11 @@ function analyzePlant(plant, sensorData, photoEntry) {
         }
     }
     
-    // Case where data exists, but no photo (The visual rec remains the default, but fused should provide soil analysis)
+    // Case D: Data exists, but no photo
     if (!photoExists && realSensorDataAvailable) {
-        visualRecommendation = 'No photo provided. Soil data suggests:';
+        visualRecommendation = 'No photo provided. Visual diagnosis pending.';
         if (soilProblems.length > 0) {
-            const recString = soilProblems.map(p => `${p.problem} (${data[p.problem.split(' ')[1]]}): ${p.rec}`).join('; ');
+            const recString = soilProblems.map(p => `${p.problem}: ${p.rec}`).join('; ');
             fusedRecommendation = `***FUSED ACTION REQUIRED (Soil Only)***: ${recString}. Deploy camera to check for visual symptoms.`;
             healthClass = finalScore <= 60 ? 'rec-action' : 'rec-optimal';
         } else {
@@ -895,6 +908,8 @@ function analyzePlant(plant, sensorData, photoEntry) {
         }
     }
 
+    // Set a minimum score
+    finalScore = Math.max(10, finalScore);
 
     return { 
         id: plant.id, 
@@ -919,6 +934,7 @@ function fetchAIResults() {
         if (sensorData) {
             const loggedIndex = loggedData.findIndex(d => d.zoneId === plant.id);
             if (loggedIndex !== -1) {
+                // Update health status on the map based on the analysis
                 loggedData[loggedIndex].healthStatus = analysis.healthClass.replace('rec-', '').charAt(0).toUpperCase() + analysis.healthClass.slice(4);
             }
         }
@@ -968,7 +984,7 @@ function generatePhotoGrid() {
 
 function preparePhotoUpload(zoneId) { 
     selectedZone = zoneId; 
-    STATUS_ELEMENT.innerText = `Zone ${zoneId} selected. Select a file for manual upload or click '📚 Use Stock Images'.`;
+    STATUS_ELEMENT.innerText = `Zone ${zoneId} selected. Select a file for manual upload or click '📚 Stock Photo Gallery'.`;
     // Automatically trigger file input for manual upload flow
     document.getElementById('fileInput').click(); 
 }
@@ -978,6 +994,7 @@ function handleFileSelect(event) {
     if (file && selectedZone !== 0) {
         const reader = new FileReader();
         reader.onload = function(e) {
+            // Store as string for manual/live upload
             photoData[selectedZone] = e.target.result;
             renderPhotoInCell(selectedZone, e.target.result);
             STATUS_ELEMENT.innerText = `Custom photo uploaded and assigned to Zone ${selectedZone}. Analysis running...`;
@@ -993,6 +1010,7 @@ function handleFileSelect(event) {
 }
 
 function renderPhotoInCell(zoneId, photoEntry) {
+    // Check if it's the object format (stock photo) or string format (manual/live)
     const base64Image = typeof photoEntry === 'object' ? photoEntry.base64 : photoEntry; 
     const cell = document.getElementById(`zone-${zoneId}`); 
     if (!cell) return;
@@ -1027,30 +1045,31 @@ function loadCurrentPhotoData() {
     } 
 }
 
-// --- Stock Photo Functions (FIXED: ensures selection happens) ---
+// --- Stock Photo/Gallery Functions (FIXED & Renamed) ---
 function openStockPhotoModal() {
     
-    // Check if a zone is selected (from clicking the cell)
+    // 1. Check/Set Selected Zone
     if (selectedZone === 0) {
-        // Fallback: If not selected, try to infer the zone from the Rover's position
         const nearest = getNearestPlant(currentRoverData.x_m, currentRoverData.y_m);
         if (nearest) {
             selectedZone = nearest.id;
-            STATUS_ELEMENT.innerText = `Zone ${selectedZone} automatically selected based on Rover position. Proceeding to Stock Library.`;
-        } else {
-            STATUS_ELEMENT.innerText = "🚨 ACTION REQUIRED: Please click a zone cell (1-16) on the grid first to select where the photo should be assigned.";
-            return;
-        }
+        } 
     }
     
-    document.getElementById('currentStockZone').innerText = selectedZone;
+    document.getElementById('currentStockZone').innerText = selectedZone !== 0 ? selectedZone : '---';
     const list = document.getElementById('stockPhotoList');
     list.innerHTML = '';
     
-    // Populate the list
+    // Update modal title to reflect the zone selection
+    document.querySelector('#stockPhotoModal h2').innerHTML = `Photo Gallery & Assignment for Zone ${selectedZone !== 0 ? selectedZone : '---'}`;
+    
+    // 2. Populate Stock Images
+    list.innerHTML += '<h3>Stock Photo Library</h3><p style="font-size:0.9em; color:#9CDCFE;">(Click a photo below to assign its known diagnosis to the selected zone.)</p><div class="stock-image-container" style="display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; margin-top: 10px;">';
+    
+    const stockImageContainer = list.querySelector('.stock-image-container');
+
     Object.keys(stockPhotoData).forEach(key => {
         const data = stockPhotoData[key];
-        // Ensure visual_rec is available for a full-featured stock photo
         const visualRecData = TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS.find(t => t.severity === data.severity);
         data.visual_rec = visualRecData ? visualRecData.visual_rec : "Simulated Visual Diagnosis";
 
@@ -1058,12 +1077,54 @@ function openStockPhotoModal() {
         item.style.textAlign = 'center';
         item.style.cursor = 'pointer';
         item.style.width = '150px';
-        item.innerHTML = `<img src="${data.data}" style="width: 150px; height: 150px; border: 3px solid ${data.class === 'rec-action' ? '#FFC000' : (data.class === 'rec-critical' ? '#C55050' : '#6AA84F')}; border-radius: 10px;">
+        item.style.border = '2px solid #5a5a5a';
+        item.style.borderRadius = '10px';
+        item.style.padding = '5px';
+        item.innerHTML = `<img src="${data.data}" style="width: 140px; height: 140px; object-fit: cover; border-radius: 6px; border: 3px solid ${data.class === 'rec-action' ? '#FFC000' : (data.class === 'rec-critical' ? '#C55050' : '#6AA84F')};">
                           <p style="margin: 8px 0 0; font-size: 1.0em; font-weight: bold; color: var(--color-text-highlight);">${data.name.split('(')[0]}</p>`;
-        item.onclick = () => assignStockPhoto(selectedZone, key);
-        list.appendChild(item);
+        item.onclick = () => {
+            if (selectedZone !== 0) {
+                assignStockPhoto(selectedZone, key);
+            } else {
+                STATUS_ELEMENT.innerText = '🚨 Please select a Zone (1-16) on the main grid first or move the rover closer to a plant zone!';
+                alert('Please select a Zone (1-16) on the main grid first!');
+            }
+        };
+        stockImageContainer.appendChild(item);
     });
     
+    // 3. Display Currently Uploaded Photos (The user's requested "grid format" of uploaded photos)
+    list.innerHTML += '<h3 style="margin-top: 30px; border-top: 1px solid #3C3C3C; padding-top: 15px;">Currently Assigned Photos (Zones 1-16)</h3><p style="font-size:0.9em; color:#FF8C00;">(These are your live/manual uploads assigned to their zones, shown for reference.)</p>';
+    
+    const assignedPhotoGallery = document.createElement('div');
+    assignedPhotoGallery.style.display = 'grid';
+    assignedPhotoGallery.style.gridTemplateColumns = 'repeat(auto-fit, minmax(100px, 1fr))';
+    assignedPhotoGallery.style.gap = '10px';
+    assignedPhotoGallery.style.padding = '10px';
+
+    PLANT_LOCATIONS_M.forEach(plant => {
+        const zoneId = plant.id;
+        const photoEntry = photoData[zoneId];
+        const item = document.createElement('div');
+        item.style.textAlign = 'center';
+        item.style.backgroundColor = '#252526';
+        item.style.borderRadius = '8px';
+        item.style.padding = '5px';
+        item.style.height = '120px'; 
+        item.style.position = 'relative';
+
+        const base64Image = photoEntry ? (typeof photoEntry === 'object' ? photoEntry.base64 : photoEntry) : null;
+        
+        if (base64Image) {
+            item.innerHTML = `<img src="${base64Image}" style="width: 100%; height: 100px; object-fit: cover; border-radius: 4px;">
+                              <p style="margin: 3px 0 0; font-size: 0.8em; color: white;">Zone ${zoneId}</p>`;
+        } else {
+            item.innerHTML = `<p style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 1.5em; color: #5a5a5a;">${zoneId}</p><p style="position: absolute; bottom: 5px; width: 100%; font-size: 0.8em; color: #5a5a5a;">No Photo</p>`;
+        }
+        assignedPhotoGallery.appendChild(item);
+    });
+    list.appendChild(assignedPhotoGallery);
+
     document.getElementById('stockPhotoModal').style.display = "flex";
 }
 function closeStockPhotoModal() { document.getElementById('stockPhotoModal').style.display = "none"; }
