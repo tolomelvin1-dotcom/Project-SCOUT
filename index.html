@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PROJECT SCOUT - Rover Control & Fused AI Analysis (v1.5)</title>
+<title>PROJECT SCOUT - Rover Control & Fused AI Analysis (v1.6)</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -147,7 +147,7 @@ button:active {
 }
 .data-row strong { 
     display: inline-block; 
-    width: 160px; 
+    width: 180px; 
     color: var(--color-text-highlight); 
     font-weight: normal;
 }
@@ -282,16 +282,17 @@ button:active {
     padding: 40px; 
     border: 3px solid var(--color-primary); 
     width: 90%; 
-    max-width: 1000px; 
+    max-width: 1200px; /* Increased size for history/gallery content */
     border-radius: 15px; 
     box-shadow: var(--shadow-deep);
 }
 .close-btn { 
-    color: #aaa; 
+    color: #FFC000; 
     float: right; 
-    font-size: 36px; 
+    font-size: 40px; /* Made larger */
     font-weight: bold; 
     transition: color 0.2s;
+    line-height: 1;
 }
 .close-btn:hover, .close-btn:focus {
     color: white;
@@ -299,14 +300,14 @@ button:active {
     cursor: pointer;
 }
 
-/* New CSS for Assigned Photos 4x4 Grid in Modal */
+/* CSS for Assigned Photos 4x4 Grid in Modal */
 .assigned-photo-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr); /* Enforces 4 columns */
     grid-template-rows: repeat(4, 1fr);    /* Enforces 4 rows */
     gap: 10px;
     padding: 10px;
-    max-width: 500px; /* Constrain the overall size for better visibility */
+    max-width: 500px; 
     margin: 15px auto;
     aspect-ratio: 1/1;
 }
@@ -328,7 +329,7 @@ button:active {
             <div class="data-row"><strong>Current Trial #:</strong> <span id="currentTrialNumber">1</span></div>
             <p>
                 <button onclick="saveCurrentTrial()">💾 Save & New Trial</button>
-                <button onclick="openHistoryModal()">📅 View History</button>
+                <button onclick="openHistoryModal()">📅 View History (50 Slots)</button>
             </p>
         </div>
 
@@ -374,7 +375,7 @@ button:active {
             <button onclick="sendCommand('capture')">📸 Request Photo (Current Zone)</button>
         </div>
         <div class="stock-control">
-            <button onclick="openStockPhotoModal()">📚 Stock Photo Gallery</button>
+            <button onclick="openStockPhotoModal()">📚 Photo Gallery & Assignment</button>
             <p><small>Click a zone cell below to assign a photo (Manual or Stock). Last photo status: <span id="lastPhotoStatus">---</span>.</small></p>
         </div>
         <div style="border-top: 1px solid var(--color-border); margin: 15px 0;"></div>
@@ -394,7 +395,7 @@ button:active {
         <h2>Plant-Specific Fused AI Analysis (16 Zones) 🔬</h2>
         <p>
             <small>
-                **Fused analysis** combines visual data and soil data. **If only a photo is present, a PARTIAL recommendation is provided based on a Crop Health Assessment.**
+                The **Partial Score** is calculated based on the **CNN Crop Health Assessment (100 - Visual Severity)**. The Fused Recommendation combines this score with the Soil Sensor Data.
             </small>
         </p>
         <div id="plantAnalysisGrid">
@@ -404,16 +405,16 @@ button:active {
 
 <div id="historyModal" class="modal">
     <div class="modal-content">
-        <span class="close-btn" onclick="closeHistoryModal()">&times;</span>
-        <h2>Saved Trial History</h2>
+        <span class="close-btn" onclick="closeHistoryModal()">&times;</span> 
+        <h2>Saved Trial History (Full Data)</h2>
         <div id="trialHistoryList"></div>
-        <div style="border-top: 1px solid var(--color-border); margin-top: 20px;"></div>
+        <div style="border-top: 1px solid var(--color-border); margin: 20px 0;"></div>
         <button onclick="clearAllHistory()" style="background-color: var(--color-status-bad);">🚨 Clear All Saved Trials</button>
     </div>
 </div>
 
 <div id="stockPhotoModal" class="modal">
-    <div class="modal-content" style="max-width: 900px;">
+    <div class="modal-content" style="max-width: 1000px;">
         <span class="close-btn" onclick="closeStockPhotoModal()">&times;</span> 
         <h2>Stock Photo Gallery & Assignment for Zone <span id="currentStockZone">---</span></h2> 
         <div id="stockPhotoList" style="margin-top: 25px;">
@@ -423,7 +424,7 @@ button:active {
 
 
 <div class="footer" style="text-align: center; color: #5a5a5a; margin-top: 30px; font-size: 0.8em;">
-    All Rights Reserved: BanScie RIM Team 2025 | Fused AI Logic v1.5
+    All Rights Reserved: BanScie RIM Team 2025 | Fused AI Logic v1.6
 </div>
 
 <script>
@@ -449,7 +450,6 @@ const MAX_TRIALS = 50; // New constant for the trial limit
 const PLANT_LOCATIONS_M = [];
 for(let r = 0; r < FIELD_SIZE; r++) {
     for(let c = 0; c < FIELD_SIZE; c++) {
-        // x and y coordinates are the center of the 1m x 1m zone
         PLANT_LOCATIONS_M.push({x: c + 0.5, y: r + 0.5, id: (r * FIELD_SIZE) + c + 1});
     }
 }
@@ -459,7 +459,7 @@ let loggedData = [];
 let photoData = {};      
 let selectedZone = 0;    
 let trialHistory = JSON.parse(localStorage.getItem('trialHistory') || '[]');
-let currentTrialNumber = trialHistory.length + 1; // Dynamic trial number
+let currentTrialNumber = trialHistory.length + 1; 
 
 // Global element variables (Defined in window.onload for reliability)
 let STATUS_ELEMENT;
@@ -474,14 +474,14 @@ let currentRoverData = {
     y_m: 2.0  
 };
 
-// --- 10.2: FUSED AI DIAGNOSTIC KNOWLEDGE BASE ---
+// --- 10.2: FUSED AI DIAGNOSTIC KNOWLEDGE BASE (Updated Text) ---
 const TOMATO_DIAGNOSTIC_LIBRARY = {
     DISEASE_TIERS: [
         { name: "Mottling/Mosaic Pattern (Viral)", severity: 95, class: 'rec-critical', 
-          visual_rec: "***CRITICAL (Viral Threat)***: High certainty of viral disease. Requires immediate isolation and removal to prevent field contamination."
+          // REMOVED *** visual_rec: "CRITICAL (Viral Threat): High certainty of viral disease. Requires immediate isolation and removal to prevent field contamination."
         },
         { name: "Dark Spots & Lesions (Fungal/Bact)", severity: 85, class: 'rec-critical', 
-          visual_rec: "***ACTION REQUIRED (Fungal/Bacterial)***: High probability of Blight or Bacterial Spot. Apply appropriate anti-fungal/bacterial treatment immediately."
+          // REMOVED *** visual_rec: "ACTION REQUIRED (Fungal/Bacterial): High probability of Blight or Bacterial Spot. Apply appropriate anti-fungal/bacterial treatment immediately."
         },
         { name: "General Yellowing (Chlorosis)", severity: 50, class: 'rec-action', 
           visual_rec: "ACTION: Indicates potential nutrient deficiency (N, Mg, Fe) or pH imbalance. Soil data is essential to confirm the nutrient root cause."
@@ -555,7 +555,7 @@ function getNearestPlant(x, y) {
         let dx = plant.x - x; 
         let dy = plant.y - y; 
         let distSq = dx * dx + dy * dy;
-        if (distSq < 0.707 * 0.707 && distSq < minDistSq) { // 0.707m is approx half the diagonal of a 1m square
+        if (distSq < 0.707 * 0.707 && distSq < minDistSq) { 
             minDistSq = distSq; 
             nearest = plant; 
         }
@@ -566,7 +566,6 @@ function getNearestPlant(x, y) {
 async function checkConnectionStatus() {
      STATUS_ELEMENT.innerText = `Attempting to connect to Rover API at ${ESP32_IP}...`;
     try {
-        // Mock connection check
         await new Promise(resolve => setTimeout(resolve, 500)); 
         STATUS_ELEMENT.innerText = `Connection successful (API responded). Ready for commands.`;
     } catch (error) {
@@ -575,9 +574,6 @@ async function checkConnectionStatus() {
     }
 }
 
-/** * @function sendCommand
- * @description Sends a command to the Rover unit (includes arm controls and mock data acquisition).
- **/
 function sendCommand(command) {
     
     // 1. Movement Commands (Simulated)
@@ -605,10 +601,10 @@ function sendCommand(command) {
     
     // 2. Data Acquisition Commands
     else if (command === 'extendArm') {
-        STATUS_ELEMENT.innerText = `Arm **EXTEND** command sent. Preparing for probe sequence.`;
+        STATUS_ELEMENT.innerText = `Arm EXTEND command sent. Preparing for probe sequence.`;
     }
     else if (command === 'retractArm') {
-        STATUS_ELEMENT.innerText = `Arm **RETRACT** command sent. Stowing probe.`;
+        STATUS_ELEMENT.innerText = `Arm RETRACT command sent. Stowing probe.`;
     }
     else if (command === 'probe') {
         STATUS_ELEMENT.innerText = `Probe command sent. Awaiting data push to ThingSpeak/Rover API...`;
@@ -617,7 +613,6 @@ function sendCommand(command) {
         if (nearestPlant) {
             let dataIndex = loggedData.findIndex(d => d.zoneId === nearestPlant.id);
 
-            // Case A: Log a placeholder if new
             if (dataIndex === -1) {
                 loggedData.push({
                     zoneId: nearestPlant.id,
@@ -657,14 +652,12 @@ function sendCommand(command) {
         if (nearestPlant) {
              STATUS_ELEMENT.innerText += ` Photo request tagged to Zone ${nearestPlant.id}.`;
              
-             // Log a mock photo data (as a string to signify manual/live capture)
              const tempPhotoBase64 = 'data:image/svg+xml;utf8,<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#3D3D3D"/><text x="50" y="55" font-family="Arial" font-size="12" fill="#9CDCFE" text-anchor="middle">LIVE PHOTO</text></svg>';
-             // Store the data as a simple string for manual/live capture
              photoData[nearestPlant.id] = tempPhotoBase64;
              renderPhotoInCell(nearestPlant.id, tempPhotoBase64);
              fetchAIResults();
              LAST_PHOTO_STATUS.innerText = `Photo Received and Logged for Zone ${nearestPlant.id}`;
-             selectedZone = 0; // Clear zone selection after capture
+             selectedZone = 0; 
         } else {
              STATUS_ELEMENT.innerText += ` Photo request sent (Not close to any plant zone).`;
              LAST_PHOTO_STATUS.innerText = 'Request received, but no zone assigned.';
@@ -688,7 +681,7 @@ function clearMapData(resetRover = true) {
     STATUS_ELEMENT.innerText = "Map data, rover logs, and photos cleared. System ready.";
 }
 
-// --- 10.5: 2D/3D MAP DRAWING FUNCTIONS (Verbose Implementation) ---
+// --- 10.5: 2D/3D MAP DRAWING FUNCTIONS ---
 
 let scene, camera, renderer, rover3D, controls;
 let dataCubes = {};
@@ -800,7 +793,7 @@ function drawMap() {
 }
 
 
-// --- 10.6: FUSED AI ANALYSIS LOGIC (UPDATED for PARTIAL ANALYSIS) ---
+// --- 10.6: FUSED AI ANALYSIS LOGIC (Finalized Partial and Fused Text) ---
 
 function getNearestSensorData(x, y) {
     const nearest = getNearestPlant(x, y);
@@ -811,7 +804,6 @@ function getNearestSensorData(x, y) {
 }
 
 function getPhotoPrediction(photoEntry) {
-    // Case 1: Stock Photo (object with predictionKey)
     if (typeof photoEntry === 'object' && photoEntry.predictionKey) {
         const data = stockPhotoData[photoEntry.predictionKey];
         return {
@@ -822,20 +814,15 @@ function getPhotoPrediction(photoEntry) {
         };
     }
     
-    // Case 2: Manual Upload (Base64 string) or Live Photo Capture
-    // We assign a default low severity score for an unanalyzed photo.
     return {
         name: "Photo Uploaded (AI Analysis Pending)",
-        severity: 20, // Low severity (80 score) for an unanalyzed photo indicating "better than nothing"
+        severity: 20, 
         class: 'rec-initial',
         visual_rec: "Photo successfully logged. Visual analysis is PENDING the AI backend system response."
     };
 }
 
 
-/** * @function analyzePlant
- * @description Core logic for Fused Analysis, generating separate visual/partial and fused/final recommendations.
- **/
 function analyzePlant(plant, sensorData, photoEntry) {
     let soilScore = 100; 
     let soilProblems = [];
@@ -844,7 +831,7 @@ function analyzePlant(plant, sensorData, photoEntry) {
     let visualRecommendation = 'No photo provided. Visual diagnosis cannot be performed.'; 
     let fusedRecommendation = 'Awaiting both photo and soil sensor data for a comprehensive fused recommendation.'; 
     let healthClass = 'rec-initial';
-    let finalScore = 0; // **FIXED: Default score set to 0**
+    let finalScore = 0; 
     let photoExists = !!photoEntry;
     let visualPrediction = null;
     const realSensorDataAvailable = sensorData && sensorData.moisture > 0;
@@ -855,26 +842,24 @@ function analyzePlant(plant, sensorData, photoEntry) {
         visualDiagnosis = `Visual: ${visualPrediction.name}`;
         visualRecommendation = visualPrediction.visual_rec;
         
-        // **FIXED: Score calculated based on photo analysis (100 - severity)**
+        // Score based on CNN Crop Health (100 - Severity)
         finalScore = Math.max(0, 100 - visualPrediction.severity); 
         healthClass = visualPrediction.class;
     }
 
     // --- 2. Fused Recommendation Logic ---
     if (!photoExists && !realSensorDataAvailable) {
-        // Case A: No data at all (Default initial values and score=0 are already set)
         finalScore = 0; 
     }
     else if (photoExists && !realSensorDataAvailable) {
-        // Case B: Photo exists, but no real sensor data (PARTIAL ANALYSIS - FIXED TEXT/SCORE)
+        // Case B: Photo exists, but no real sensor data (PARTIAL ANALYSIS - SCORE TIED TO CNN)
         const assessment = visualPrediction.name.split('(')[0].trim();
         const recClass = visualPrediction.class;
         
-        // finalScore is already calculated as (100 - severity)
         healthClass = recClass; 
         
-        // **FIXED: Explicit Partial Analysis Recommendation**
-        fusedRecommendation = `***PARTIAL ANALYSIS (${finalScore}/100)***: **Crop Health Assessment:** Plant visually assessed as '${assessment}'. **ACTION REQUIRED:** To ensure diagnosis accuracy and provide a full recommendation, deploy the **Soil Probe** to fuse NPK and Moisture data.`;
+        // **FIXED: Clearer Partial Analysis Recommendation and Score tie-in**
+        fusedRecommendation = `PARTIAL ANALYSIS: Score ${finalScore}/100 based on **CNN Crop Health Assessment**. Plant is visually assessed as '${assessment}'. ACTION REQUIRED: To provide a full diagnosis and final recommendation, deploy the **Soil Probe** to fuse NPK and Moisture data.`;
 
     }
     else if (realSensorDataAvailable) {
@@ -903,22 +888,22 @@ function analyzePlant(plant, sensorData, photoEntry) {
         sensorDiagnosis = `Soil: M=${moisture}%, NPK=${npk_n}/${npk_p}/${npk_k}`;
 
         // C2. Combine Scores (Take the lower of the two systems: Visual vs. Soil)
-        let visualScore = photoExists ? (100 - visualPrediction.severity) : 100; // If no photo, assume visual is perfect (100)
+        let visualScore = photoExists ? (100 - visualPrediction.severity) : 100; 
         finalScore = Math.min(visualScore, soilScore);
 
-        // C3. Final Fused Recommendation Logic
+        // C3. Final Fused Recommendation Logic (Removed asterisks)
         if (photoExists && visualPrediction && visualPrediction.severity >= 80) {
             // High-Priority Override: Critical Visual Disease
-            fusedRecommendation = `***FUSED CRITICAL***: ${visualPrediction.name}. **Soil check:** ${soilProblems.length > 0 ? soilProblems.map(p => p.problem).join(', ') : 'OK'}. VISUAL DIAGNOSIS OVERRIDES. Follow isolation protocol.`;
+            fusedRecommendation = `CRITICAL FUSED DIAGNOSIS: ${visualPrediction.name}. Soil check: ${soilProblems.length > 0 ? soilProblems.map(p => p.problem).join(', ') : 'OK'}. VISUAL DIAGNOSIS OVERRIDES. Follow isolation protocol.`;
             healthClass = visualPrediction.class;
         } else if (soilProblems.length > 0) {
             // Secondary Priority: Soil Issues
             const recString = soilProblems.map(p => `${p.problem}: ${p.rec}`).join('; ');
-            fusedRecommendation = `***FUSED ACTION REQUIRED***: ${recString}. **Visual check:** ${photoExists ? visualDiagnosis.replace('Visual:', '') : 'No photo provided'}. Address soil imbalance first.`;
+            fusedRecommendation = `ACTION REQUIRED FUSED DIAGNOSIS: ${recString}. Visual check: ${photoExists ? visualDiagnosis.replace('Visual:', '') : 'No photo provided'}. Address soil imbalance first.`;
             healthClass = finalScore <= 60 ? 'rec-action' : 'rec-optimal';
         } else {
             // Default: Healthy/Optimal
-            fusedRecommendation = "OPTIMAL: All sensor and visual metrics are within healthy parameters. Continue regular monitoring.";
+            fusedRecommendation = "OPTIMAL FUSED DIAGNOSIS: All sensor and visual metrics are within healthy parameters. Continue regular monitoring.";
             healthClass = 'rec-optimal';
             finalScore = 95;
         }
@@ -930,15 +915,14 @@ function analyzePlant(plant, sensorData, photoEntry) {
         visualRecommendation = 'No photo provided. Visual diagnosis pending.';
         if (soilProblems.length > 0) {
             const recString = soilProblems.map(p => `${p.problem}: ${p.rec}`).join('; ');
-            fusedRecommendation = `***FUSED ACTION REQUIRED (Soil Only)***: ${recString}. Deploy camera to check for visual symptoms.`;
+            fusedRecommendation = `ACTION REQUIRED FUSED DIAGNOSIS (Soil Only): ${recString}. Deploy camera to check for visual symptoms.`;
             healthClass = finalScore <= 60 ? 'rec-action' : 'rec-optimal';
         } else {
-            fusedRecommendation = "OPTIMAL: Soil sensor data is perfect. Deploy camera for visual confirmation.";
+            fusedRecommendation = "OPTIMAL FUSED DIAGNOSIS: Soil sensor data is perfect. Deploy camera for visual confirmation.";
             healthClass = 'rec-optimal';
         }
     }
 
-    // Set a minimum score
     finalScore = Math.max(0, Math.min(100, finalScore));
 
     return { 
@@ -964,14 +948,13 @@ function fetchAIResults() {
         if (sensorData) {
             const loggedIndex = loggedData.findIndex(d => d.zoneId === plant.id);
             if (loggedIndex !== -1) {
-                // Update health status on the map based on the analysis
                 loggedData[loggedIndex].healthStatus = analysis.healthClass.replace('rec-', '').charAt(0).toUpperCase() + analysis.healthClass.slice(4);
             }
         }
 
         const card = `
         <div class="analysis-card">
-            <div class="plant-id-label">Zone ${analysis.id}</div>
+            <div class="plant-id-label" style="font-size: 1.5em; color: var(--color-primary);">Zone ${analysis.id}</div>
             <div class="data-row">
                 <strong>Overall Health Score:</strong> <span>${analysis.score}/100</span>
             </div>
@@ -982,11 +965,11 @@ function fetchAIResults() {
                 <strong>Soil Sensor Data:</strong> <span>${analysis.sensorDiagnosis}</span>
             </div>
             <div style="margin-top: 15px;">
-                <strong>1. VISUAL/PARTIAL REC:</strong> 
+                <strong>1. VISUAL/PARTIAL RECOMMENDATION:</strong> 
                 <span class="rec-text rec-initial">${analysis.visualRecommendation}</span>
             </div>
             <div style="margin-top: 10px;">
-                <strong>2. FUSED/FINAL REC:</strong> 
+                <strong>2. FUSED/FINAL RECOMMENDATION:</strong> 
                 <span class="rec-text ${analysis.healthClass}">${analysis.fusedRecommendation}</span>
             </div>
         </div>
@@ -997,7 +980,7 @@ function fetchAIResults() {
     draw3DMap(); 
 }
 
-// --- 10.7: PHOTO & MODAL LOGIC (FIXED Photo X Button) ---
+// --- 10.7: PHOTO & MODAL LOGIC ---
 
 function generatePhotoGrid() {
     const grid = document.getElementById('photoGrid');
@@ -1005,9 +988,8 @@ function generatePhotoGrid() {
         const cell = document.createElement('div');
         cell.className = 'grid-cell'; 
         cell.id = `zone-${i}`;
-        // Ensure event.stopPropagation is called to prevent the click from propagating to the cell's main click handler
+        // Delete button uses event.stopPropagation() to not trigger parent click
         cell.innerHTML = `<span class="cell-label">${i}</span><button class="delete-photo-btn" onclick="event.stopPropagation(); deletePhoto(${i})">X</button>`;
-        // Click sets zone AND triggers manual file input
         cell.setAttribute('onclick', `preparePhotoUpload(${i})`); 
         grid.appendChild(cell);
     }
@@ -1015,8 +997,7 @@ function generatePhotoGrid() {
 
 function preparePhotoUpload(zoneId) { 
     selectedZone = zoneId; 
-    STATUS_ELEMENT.innerText = `Zone ${zoneId} selected. Select a file for manual upload or click '📚 Stock Photo Gallery'.`;
-    // Automatically trigger file input for manual upload flow
+    STATUS_ELEMENT.innerText = `Zone ${zoneId} selected. Select a file for manual upload or click '📚 Photo Gallery & Assignment'.`;
     document.getElementById('fileInput').click(); 
 }
 
@@ -1025,7 +1006,6 @@ function handleFileSelect(event) {
     if (file && selectedZone !== 0) {
         const reader = new FileReader();
         reader.onload = function(e) {
-            // Store as string for manual/live upload
             photoData[selectedZone] = e.target.result;
             renderPhotoInCell(selectedZone, e.target.result);
             STATUS_ELEMENT.innerText = `Custom photo uploaded and assigned to Zone ${selectedZone}. Analysis running...`;
@@ -1035,13 +1015,11 @@ function handleFileSelect(event) {
         };
         reader.readAsDataURL(file);
     } else {
-        // File selection cancelled
         selectedZone = 0;
     }
 }
 
 function renderPhotoInCell(zoneId, photoEntry) {
-    // Check if it's the object format (stock photo) or string format (manual/live)
     const base64Image = typeof photoEntry === 'object' ? photoEntry.base64 : photoEntry; 
     const cell = document.getElementById(`zone-${zoneId}`); 
     if (!cell) return;
@@ -1064,9 +1042,8 @@ function renderPhotoInCell(zoneId, photoEntry) {
 }
 
 function deletePhoto(zoneId) { 
-    // This is the function called by the 'X' button
     delete photoData[zoneId]; 
-    renderPhotoInCell(zoneId, null); // Render the cell without a photo
+    renderPhotoInCell(zoneId, null); 
     fetchAIResults(); 
     STATUS_ELEMENT.innerText = `Photo cleared from Zone ${zoneId}. Analysis updated to 'No Photo'.`;
 }
@@ -1077,10 +1054,9 @@ function loadCurrentPhotoData() {
     } 
 }
 
-// --- Stock Photo/Gallery Functions (FIXED & Renamed) ---
+// --- Photo Gallery/Stock Assignment Functions ---
 function openStockPhotoModal() {
     
-    // 1. Check/Set Selected Zone
     if (selectedZone === 0) {
         const nearest = getNearestPlant(currentRoverData.x_m, currentRoverData.y_m);
         if (nearest) {
@@ -1092,11 +1068,10 @@ function openStockPhotoModal() {
     const list = document.getElementById('stockPhotoList');
     list.innerHTML = '';
     
-    // Update modal title to reflect the zone selection
     document.querySelector('#stockPhotoModal h2').innerHTML = `Stock Photo Gallery & Assignment for Zone ${selectedZone !== 0 ? selectedZone : '---'}`;
     
-    // 2. Populate Stock Images
-    list.innerHTML += '<h3>Stock Photo Library</h3><p style="font-size:0.9em; color:#9CDCFE;">(Click a photo below to assign its known diagnosis to the selected zone.)</p><div class="stock-image-container" style="display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; margin-top: 10px;">';
+    // 1. Stock Images Section
+    list.innerHTML += '<h3>Stock Photo Library (Known Diagnoses)</h3><p style="font-size:0.9em; color:#9CDCFE;">(Click a photo to assign its known diagnosis to the selected zone.)</p><div class="stock-image-container" style="display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; margin-top: 10px;">';
     
     const stockImageContainer = list.querySelector('.stock-image-container');
 
@@ -1117,17 +1092,16 @@ function openStockPhotoModal() {
                 assignStockPhoto(selectedZone, key);
             } else {
                 STATUS_ELEMENT.innerText = '🚨 Please select a Zone (1-16) on the main grid first or move the rover closer to a plant zone!';
-                alert('Please select a Zone (1-16) on the main grid first!');
             }
         };
         stockImageContainer.appendChild(item);
     });
     
-    // 3. Display Currently Uploaded Photos in a 4x4 Grid (Requested format)
-    list.innerHTML += '<h3 style="margin-top: 30px; border-top: 1px solid #3C3C3C; padding-top: 15px;">Currently Assigned Photos (Current Trial: Zones 1-16)</h3><p style="font-size:0.9em; color:#FF8C00;">(These are your live/manual uploads assigned to their zones, shown for reference in a 4x4 grid.)</p>';
+    // 2. Currently Assigned Photos (The 4x4 Grid in the Gallery)
+    list.innerHTML += '<h3 style="margin-top: 30px; border-top: 1px solid #3C3C3C; padding-top: 15px;">Currently Assigned Photos (Current Trial: Zones 1-16)</h3><p style="font-size:0.9em; color:#FF8C00;">(View the photos assigned to the 16 zones in the current trial. This is your active gallery.)</p>';
     
     const assignedPhotoGallery = document.createElement('div');
-    assignedPhotoGallery.className = 'assigned-photo-grid'; // STRICT 4x4 GRID
+    assignedPhotoGallery.className = 'assigned-photo-grid'; 
     
     PLANT_LOCATIONS_M.forEach(plant => {
         const zoneId = plant.id;
@@ -1137,7 +1111,7 @@ function openStockPhotoModal() {
         item.style.backgroundColor = '#252526';
         item.style.borderRadius = '8px';
         item.style.padding = '5px';
-        item.style.height = '100%'; // Ensure full height for grid cell
+        item.style.height = '100%'; 
         item.style.position = 'relative';
 
         const base64Image = photoEntry ? (typeof photoEntry === 'object' ? photoEntry.base64 : photoEntry) : null;
@@ -1154,12 +1128,14 @@ function openStockPhotoModal() {
 
     document.getElementById('stockPhotoModal').style.display = "flex";
 }
-function closeStockPhotoModal() { document.getElementById('stockPhotoModal').style.display = "none"; }
+function closeStockPhotoModal() { 
+    selectedZone = 0; // Clear zone selection on close
+    document.getElementById('stockPhotoModal').style.display = "none"; 
+}
 
 function assignStockPhoto(zoneId, photoKey) {
     const data = stockPhotoData[photoKey];
     if (data) {
-        // Store the image data and the key for prediction lookup (as an object)
         photoData[zoneId] = {
             base64: data.data,
             predictionKey: photoKey
@@ -1173,7 +1149,7 @@ function assignStockPhoto(zoneId, photoKey) {
 }
 
 
-// --- 10.8: HISTORY LOGIC (Full implementation with 50 trial limit and slot display) ---
+// --- 10.8: HISTORY LOGIC (50 Slots Full Data) ---
 
 function saveCurrentTrial() {
     if (trialHistory.length >= MAX_TRIALS) {
@@ -1187,7 +1163,6 @@ function saveCurrentTrial() {
         date: new Date().toLocaleString(), 
         roverData: { ...currentRoverData },
         loggedData: [...loggedData], 
-        // Photo data is saved and "redirected" with the trial
         photoData: JSON.parse(JSON.stringify(photoData)), 
         aiData: { analysisGrid: document.getElementById('plantAnalysisGrid').innerHTML } 
     };
@@ -1200,7 +1175,7 @@ function saveCurrentTrial() {
     
     loggedData = []; 
     photoData = {}; 
-    clearMapData(false); // Reset map data for the new trial
+    clearMapData(false); 
 }
 
 function openHistoryModal() {
@@ -1209,9 +1184,9 @@ function openHistoryModal() {
     list.innerHTML = '';
     
     if (trialHistory.length === 0) { 
-        list.innerHTML = `<p style="color: #FFC000; font-style: italic;">No trial data saved yet. Run some tests and press "Save & New Trial". (${MAX_TRIALS} slots available)</p>`; 
+        list.innerHTML = `<p style="color: #FFC000; font-style: italic;">No trial data saved yet. Run some tests and press "Save & New Trial". (0/${MAX_TRIALS} slots used)</p>`; 
     } else {
-        list.innerHTML += `<p style="color: var(--color-text-highlight);">Showing **${trialHistory.length}** of **${MAX_TRIALS}** possible trial slots:</p>`;
+        list.innerHTML += `<h3 style="margin-bottom: 5px;">Summary of Saved Trials (${trialHistory.length} of ${MAX_TRIALS} Slots Used)</h3>`;
         [...trialHistory].reverse().forEach(trial => { 
             const item = document.createElement('div');
             item.className = 'trial-item';
@@ -1220,39 +1195,45 @@ function openHistoryModal() {
             item.style.borderBottom = '1px solid #3C3C3C';
             item.style.backgroundColor = '#1a1a1a';
             item.style.borderRadius = '6px';
-            item.innerHTML = `<span><strong>Trial ${trial.id}:</strong> ${trial.date} (${Object.keys(trial.photoData).length} photos, ${trial.loggedData.length} sensor readings)</span>
-                <button onclick="loadPastTrial(${trial.id})" style="float:right; background-color:#FF8C00; color:white; padding: 6px 10px; font-size: 0.8em; margin: 0;">Load Trial ${trial.id}</button>`;
+            item.innerHTML = `<span><strong>Trial ${trial.id}:</strong> ${trial.date} | Photos: ${Object.keys(trial.photoData).length} | Sensor Logs: ${trial.loggedData.length}</span>
+                <button onclick="loadPastTrial(${trial.id})" style="float:right; background-color:#FF8C00; color:white; padding: 6px 10px; font-size: 0.8em; margin: 0;">Load Full History</button>`;
             list.appendChild(item);
         });
     }
     
-    // **FIXED: 50 Trial Slots / 4x4 Grid Visualization**
+    // **FIXED: 50 Trial Slots Full History & Photo Summary Visualization**
     const trialSlotsContainer = document.createElement('div');
     trialSlotsContainer.style.borderTop = '2px solid var(--color-primary)';
     trialSlotsContainer.style.paddingTop = '20px';
-    trialSlotsContainer.innerHTML += '<h3>50 Pre-labeled Trial Slots (4x4 Grid Trial Zones)</h3>';
+    trialSlotsContainer.innerHTML += '<h3>50 Total Trial Slots (4x4 Grid Trial Zones)</h3>';
     
     const gridDiv = document.createElement('div');
     gridDiv.style.display = 'grid';
-    gridDiv.style.gridTemplateColumns = 'repeat(5, 1fr)'; // 5 columns x 10 rows = 50 slots
+    gridDiv.style.gridTemplateColumns = 'repeat(5, 1fr)'; 
     gridDiv.style.gap = '10px';
     gridDiv.style.maxWidth = '100%';
     
     for (let i = 1; i <= MAX_TRIALS; i++) {
         const slot = document.createElement('div');
-        const isSaved = trialHistory.find(t => t.id === i);
-        
-        slot.style.padding = '10px 5px';
+        const trial = trialHistory.find(t => t.id === i);
+        const isSaved = !!trial;
+        const photoCount = isSaved ? Object.keys(trial.photoData).length : 0;
+        const sensorCount = isSaved ? trial.loggedData.length : 0;
+
+        slot.style.padding = '8px';
         slot.style.border = isSaved ? '2px solid #6AA84F' : '1px dashed #5a5a5a';
         slot.style.borderRadius = '6px';
         slot.style.backgroundColor = isSaved ? '#1a3a1a' : '#2d2d30';
         slot.style.color = isSaved ? 'white' : '#aaa';
         slot.style.textAlign = 'center';
-        slot.style.fontSize = '0.9em';
+        slot.style.fontSize = '0.7em';
         
-        slot.innerHTML = `<strong>Trial ${i}</strong><br>
-                          <small>${isSaved ? 'SAVED' : 'READY'}</small><br>
-                          <small>4x4 Grid Trial Zones</small>`;
+        slot.innerHTML = `
+            <strong>Trial ${i}</strong><br>
+            <small>${isSaved ? 'SAVED' : 'READY'}</small>
+            ${isSaved ? `<p style="margin: 3px 0;">📸 ${photoCount} Photos<br>🔬 ${sensorCount} Sensors</p>` : ''}
+            ${isSaved ? `<button onclick="loadPastTrial(${i})" style="padding: 4px 8px; margin-top: 5px; font-size: 0.7em; background-color: #FF8C00; color: white;">Load Full</button>` : ''}
+        `;
         gridDiv.appendChild(slot);
     }
     
@@ -1267,17 +1248,19 @@ function loadPastTrial(trialId) {
     const trial = trialHistory.find(t => t.id === trialId); 
     if (!trial) return;
     
+    // Load ALL Data: Rover position, Sensor Logs, Photo Assignments, and Final Analysis Cards
     currentRoverData = trial.roverData;
     updateRoverPositionUI(null, null, null, null, currentRoverData.heading); 
     loggedData = trial.loggedData; 
     photoData = trial.photoData; 
     
+    // Re-render the analysis section directly from saved HTML
     document.getElementById('plantAnalysisGrid').innerHTML = trial.aiData.analysisGrid;
     drawMap(); 
     draw3DMap(); 
-    loadCurrentPhotoData();
+    loadCurrentPhotoData(); // Rerender the 4x4 photo grid on the main page
 
-    STATUS_ELEMENT.innerText = `Loaded data for Trial ${trialId}.`;
+    STATUS_ELEMENT.innerText = `Loaded ALL historical data for Trial ${trialId}.`;
     document.getElementById('currentTrialNumber').innerText = `${currentTrialNumber} (Viewing Trial ${trialId})`;
     closeHistoryModal();
 }
