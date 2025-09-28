@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>S.C.O.U.T. Rover Full-Spectrum Data Fusion & Control Console (V10.0 - THE DIRECT INPUT OVERLAP HACK)</title>
+<title>S.C.O.U.T. Rover Full-Spectrum Data Fusion & Control Console (V11.0 - THE PURE OVERLAP HACK)</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script async src="https://docs.opencv.org/4.x/opencv.js" onload="onOpenCvReady();"></script>
@@ -188,14 +188,14 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
     border-radius: 10px;
 }
 
-/* CRITICAL V10.0 CSS: The input is positioned absolutely over the container */
+/* CRITICAL V11.0 CSS: The input is positioned absolutely over the container */
 #superFileInput {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    opacity: 0; /* Make it invisible */
+    opacity: 0.001; /* CRITICAL CHANGE: Must be non-zero for direct click to register in strict environments */
     z-index: 100; /* Ensure it's on top of the grid cell */
     cursor: pointer;
     margin: 0;
@@ -207,7 +207,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 <body>
 <div class="container">
 <div class="controls-panel">
-    <h1>S.C.O.U.T. Rover Control & Telemetry Bridge (V10.0)</h1>
+    <h1>S.C.O.U.T. Rover Control & Telemetry Bridge (V11.0)</h1>
     <p>System Diagnostic Status: <span id="status">AWAITING SYSTEM BOOT SEQUENCE COMPLETION...</span></p>
 
     <div class="data-display history-controls">
@@ -264,7 +264,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 <div class="photo-panel">
     <div class="camera-control data-display">
         <h2>Image Capture & Stock Library</h2>
-        <p>To assign a photo, **click a Zone (1-16)** to prepare the upload, or use the buttons below.</p>
+        <p>TO UPLOAD: **Click a Zone (1-16)**, then **CLICK IT AGAIN** immediately.</p>
         <button onclick="dispatchRoverMovementCommand('capture')" class="photo-controls"> 📸 TRIGGER CAMERA CAPTURE</button>
         <button onclick="openStockImageGalleryModal()" class="photo-controls"> 🖼️ VIEW STOCK PHOTOS (50 Presets)</button>
         <p>Current Target Zone: **Zone <span id="currentZoneSelection">N/A</span>**</p>
@@ -317,7 +317,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 // ----------------------------------------------------------------------------------
 /**
  * @fileoverview S.C.O.U.T. Rover Control System JavaScript Core.
- * Version 10.0: The Direct Input Overlap Hack - Guarantees file upload by direct user click.
+ * Version 11.0: The Pure Overlap Hack - Guarantees file upload by direct user click.
  */
 
 // --- 0.2.1 HARDWARE AND NETWORK CONFIGURATION (CRITICAL SYSTEM IDENTIFIERS) ---
@@ -340,14 +340,14 @@ const MAP_CONTEXT = document.getElementById('roverMap').getContext('2d');
 const HISTORY_MODAL = document.getElementById('historyModal');
 const STOCK_MODAL = document.getElementById('stockImageModal');
 const CURRENT_ZONE_SELECTION_DISPLAY = document.getElementById('currentZoneSelection');
-const FILE_INPUT_ELEMENT = document.getElementById('superFileInput'); // CRITICAL V10.0 REFERENCE
+const FILE_INPUT_ELEMENT = document.getElementById('superFileInput'); // CRITICAL V11.0 REFERENCE
 
 // --- 0.2.4 GLOBAL STATE VARIABLES (Clean Initial State Definition) ---
 let openCvLibraryIsReady = false;
 let systemLoggedSensorDataArray = []; 
 let currentPhotoAssignmentData = {}; 
 let stockPhotoLibraryData = {}; 
-let currentlySelectedPlantZone = 0; // CRITICAL: Used by V10.0 file input
+let currentlySelectedPlantZone = 0; // CRITICAL: Used by V11.0 file input
 let historyIsBeingViewed = false;
 
 let currentRoverKinematicState = {
@@ -643,7 +643,7 @@ function executePhotoPrediction(base64Image) {
 
 
 // ==================================================================================
-// SECTION 3.0: USER INTERFACE, RENDERING, AND INITIALIZATION (FIXES APPLIED)
+// SECTION 3.0: USER INTERFACE, RENDERING, AND INITIALIZATION (V11.0 FIXES APPLIED)
 // ----------------------------------------------------------------------------------
 
 /**
@@ -779,7 +779,7 @@ function renderAnalysisCard(analysisResult) {
 }
 
 /**
- * CRITICAL V10.0 FIX: Handler for the file input.
+ * CRITICAL V11.0 FIX: Handler for the file input.
  */
 function handleSuperFileSelectedByUser(event) {
     const file = event.target.files[0];
@@ -788,7 +788,7 @@ function handleSuperFileSelectedByUser(event) {
     // Clear the file input value immediately to allow the user to select the same file again
     event.target.value = '';
 
-    // CRITICAL V10.0 CLEANUP: Hide the input immediately after file dialog closes
+    // CRITICAL V11.0 CLEANUP: Hide the input immediately after file dialog closes
     FILE_INPUT_ELEMENT.style.display = 'none';
     FILE_INPUT_ELEMENT.style.width = '0';
     FILE_INPUT_ELEMENT.style.height = '0';
@@ -949,7 +949,7 @@ function executeTrialSaveOperation() {
 }
 
 /**
- * CRITICAL V10.0 FIX: Grid cell click now prepares the file input for overlap and direct click.
+ * CRITICAL V11.0 FIX: Grid cell click now prepares the file input for overlap and direct click.
  */
 function generatePhotoGrid() {
     const photoGrid = document.getElementById('photoGrid');
@@ -975,7 +975,7 @@ function generatePhotoGrid() {
             currentlySelectedPlantZone = i; 
             CURRENT_ZONE_SELECTION_DISPLAY.innerText = i;
             
-            // 3. CRITICAL V10.0 HACK: Overlay the file input directly over the clicked cell
+            // 3. CRITICAL V11.0 HACK: Overlay the file input directly over the clicked cell
             prepareInputOverlay(i);
         };
         
@@ -992,7 +992,6 @@ function generatePhotoGrid() {
 function prepareInputOverlay(zoneId) {
     const cell = document.getElementById(`zone-cell-${zoneId}`);
     const cellRect = cell.getBoundingClientRect();
-    const gridRect = document.getElementById('photoGrid').getBoundingClientRect();
 
     // Position the absolute input element relative to its parent (#photoGrid)
     FILE_INPUT_ELEMENT.style.display = 'block';
@@ -1001,17 +1000,10 @@ function prepareInputOverlay(zoneId) {
     FILE_INPUT_ELEMENT.style.width = `${cellRect.width}px`;
     FILE_INPUT_ELEMENT.style.height = `${cellRect.height}px`;
     
-    // Trigger the file dialog with a **short delay** to ensure the overlay position is applied
-    // NOTE: This *still* uses a simulated click, but the fact that the element is **visible and positioned under the cursor**
-    // makes it far more likely to work, as the browser/OS often needs a brief moment to register the new position.
-    STATUS_ELEMENT.innerText = `Zone ${zoneId} selected. Overlapping input. Please **click the cell again** to select the photo.`;
+    // V11.0 CRITICAL CHANGE: NO programmatic click is used here.
+    // The user's next click on the cell (which is now the input) will trigger the file dialog.
     
-    // We remove the programmatic click in V10.0 entirely, relying on the user's immediate second click.
-    // However, for the user flow to be seamless, we'll try the programmatic click one last time *after* positioning.
-    // If it fails, the user can immediately click the now-overlapping input manually.
-    setTimeout(() => {
-        FILE_INPUT_ELEMENT.click();
-    }, 50); 
+    STATUS_ELEMENT.innerText = `Zone ${zoneId} selected. 🚨 URGENT: **Click the highlighted Zone ${zoneId} one more time** to open the file selection dialog. This is a guaranteed direct click on the file input!`;
     
 }
 
