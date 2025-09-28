@@ -18,15 +18,15 @@ padding: 25px;
 border-radius: 10px;
 box-shadow: 0 4px 12px rgba(0,0,0,0.5);
 display: flex;
-flex-wrap: wrap;
+flex-wrap: wrap; /* Ensure panels wrap */
 }
-/* LAYOUT PANELS */
+/* LAYOUT PANELS - Adjusted to ensure Plant Analysis is always visible */
 .controls-panel { flex: 1; min-width: 350px; padding-right: 20px; }
 .map-panel { flex: 1; min-width: 450px; }
 .photo-panel { flex: 1; min-width: 450px; padding-left: 20px; border-left: 1px solid #3c3c3c; }
 .map-3d-panel { flex: 1; min-width: 450px; margin-top: 20px; }
 .plant-analysis-panel {
-flex-basis: 100%;
+flex-basis: 100%; /* Make this panel take the full width */
 margin-top: 30px;
 padding-top: 20px;
 border-top: 1px solid #3c3c3c;
@@ -57,7 +57,7 @@ margin: 20px auto 0;
 display: block;
 }
 /* 4x4 PHOTO GRID STYLES */
-#photoGrid, #stockImageGrid {
+#photoGrid {
 display: grid;
 grid-template-columns: repeat(4, 1fr);
 grid-template-rows: repeat(4, 1fr);
@@ -68,7 +68,11 @@ margin: 20px auto;
 aspect-ratio: 1 / 1;
 background-color: #252526;
 }
+/* Stock Image Grid (Now up to 50) */
 #stockImageGrid {
+display: grid;
+grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+gap: 10px;
 border: none;
 max-width: 100%;
 margin: 0;
@@ -145,7 +149,7 @@ box-sizing: border-box;
 display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.7);
 }
 .modal-content {
-background-color: #2d2d30; margin: 10% auto; padding: 20px; border: 1px solid #3c3c3c; width: 80%; max-width: 1000px; border-radius: 10px;
+background-color: #2d2d30; margin: 5% auto; padding: 20px; border: 1px solid #3c3c3c; width: 90%; max-width: 1200px; border-radius: 10px;
 }
 .close-btn {
 color: #aaa; float: right; font-size: 28px; font-weight: bold;
@@ -235,7 +239,7 @@ padding: 10px; margin-bottom: 5px; background-color: #252526; border-radius: 5px
 </div>
 </div>
 </div>
-<div id="historyModal" class="modal">
+<div id="historyModal" class="modal" onclick="if(event.target.id === 'historyModal') closeHistoryModal()">
 <div class="modal-content">
 <span class="close-btn" onclick="closeHistoryModal()">&times;</span>
 <h2>Saved Trial History</h2>
@@ -245,10 +249,10 @@ padding: 10px; margin-bottom: 5px; background-color: #252526; border-radius: 5px
 <button onclick="clearAllHistory()" style="background-color: #dc3545;">  🚨   Clear All Saved Trials</button>
 </div>
 </div>
-<div id="stockImageModal" class="modal">
+<div id="stockImageModal" class="modal" onclick="if(event.target.id === 'stockImageModal') closeStockImageModal()">
 <div class="modal-content">
 <span class="close-btn" onclick="closeStockImageModal()">&times;</span>
-<h2>Stock Image Gallery (16 Pre-Diagnosed Leaves)</h2>
+<h2>Stock Photo Gallery (50 Pre-Diagnosed Leaves)</h2>
 <p>Click on a stock photo to assign it to your currently selected plant zone.
 Note: Stock photos are mocked to show various disease states for demo purposes.</p>
 <div id="stockImageGrid">
@@ -305,9 +309,9 @@ y_m: 2.0
 const TOMATO_DIAGNOSTIC_LIBRARY = {
 // Disease Tiers (Prioritized by Severity)
 DISEASE_TIERS: [
-{ name: "Mottling/Mosaic Pattern (Viral)", severity: 95, probability: 0.10, class: 'rec-critical', recommendation: "***ISOLATION REQUIRED***: Strong indicator of Tobacco Mosaic Virus (TMV) or similar. Incurable. Remove plant immediately to prevent field-wide contamination."
+{ name: "Mottling/Mosaic Pattern (Viral)", severity: 95, probability: 0.10, class: 'rec-critical', recommendation: "ISOLATION REQUIRED: Strong indicator of Tobacco Mosaic Virus (TMV) or similar. Incurable. Remove plant immediately to prevent field-wide contamination."
 },
-{ name: "Dark Spots & Lesions (Fungal/Bact)", severity: 85, probability: 0.15, class: 'rec-critical', recommendation: "***FUNGICIDE/BACTERICIDE***: Likely Early Blight or Bacterial Spot. Apply broad-spectrum fungicide and improve air circulation/reduce leaf wetness."
+{ name: "Dark Spots & Lesions (Fungal/Bact)", severity: 85, probability: 0.15, class: 'rec-critical', recommendation: "FUNGICIDE/BACTERICIDE: Likely Early Blight or Bacterial Spot. Apply broad-spectrum fungicide and improve air circulation/reduce leaf wetness."
 },
 { name: "Leaf Curl & Wilting (Stress/Viral)", severity: 75, probability: 0.10, class: 'rec-critical', recommendation: "WILTING: Could be severe water stress, root rot, or Tomato Yellow Leaf Curl Virus (TYLCV). Check moisture urgently. If moisture is good, isolate for potential virus."
 },
@@ -423,10 +427,11 @@ updateRover3DPosition();
 // ------------------------------------
 // --- PHOTO GRID & MODAL FUNCTIONS ---
 // ------------------------------------
+const MAX_STOCK_PHOTOS = 50; // New constant for stock photo count
 function populateStockPhotos() {
-if (Object.keys(stockPhotoData).length === 16) return;
+if (Object.keys(stockPhotoData).length === MAX_STOCK_PHOTOS) return;
 const diseaseList = TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS;
-for (let i = 1; i <= 16; i++) {
+for (let i = 1; i <= MAX_STOCK_PHOTOS; i++) {
 // Use a deterministic assignment for stock photos to show specific diseases
 const diseaseIndex = i % diseaseList.length;
 const base64 = `data:image/svg+xml;base64,mocked_stock_photo_hash_${i}_diag:${diseaseList[diseaseIndex].name.replace(/\s/g, '_')}`;
@@ -494,7 +499,7 @@ function getCVAnalysis(base64Image) {
                 src.delete(); hsv.delete(); green_mask.delete(); yellow_mask.delete();
                 
                 let finalScore = 100;
-                let diagnosis = "Healthy, Deep Green (CV Analysis)";
+                let diagnosis = "Healthy, Deep Green";
                 let prediction = TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS.find(d => d.name.includes("Healthy"));
                 
                 if (totalAnalyzedPixels > 500) { // Require a minimum number of relevant pixels to analyze
@@ -502,10 +507,10 @@ function getCVAnalysis(base64Image) {
                     finalScore = Math.max(10, Math.min(100, Math.round(ratio * 100)));
 
                     if (ratio < 0.6) {
-                        diagnosis = `General Yellowing (Chlorosis) - CV: ${finalScore}%`;
+                        diagnosis = `General Yellowing (Chlorosis)`;
                         prediction = TOMATO_DIAGNOSTIC_LIBRARY.DISEASE_TIERS.find(d => d.name.includes("Yellowing"));
                     } else if (ratio < 0.8) {
-                        diagnosis = `Mild Chlorosis - CV: ${finalScore}%`;
+                        diagnosis = `Mild Chlorosis`;
                     }
                 } else {
                     // Not enough foliage to analyze, default to neutral
@@ -541,7 +546,7 @@ async function getPhotoPrediction(base64Image) {
         
         return {
             score: mockScore,
-            diagnosis: prediction.name + ` (Mock: ${mockScore}%)`,
+            diagnosis: prediction.name,
             prediction: prediction
         };
 
@@ -555,9 +560,9 @@ async function renderStockImageGrid() {
 const grid = document.getElementById('stockImageGrid');
 grid.innerHTML = '<div>Loading Stock Images...</div>'; // Loading message
 
-// Create an array of promises for stock photo analysis
+// Create an array of promises for stock photo analysis (using the MAX_STOCK_PHOTOS limit)
 const analysisPromises = [];
-for (let i = 1; i <= 16; i++) {
+for (let i = 1; i <= MAX_STOCK_PHOTOS; i++) {
     const base64Image = stockPhotoData[i];
     analysisPromises.push(getPhotoPrediction(base64Image));
 }
@@ -565,7 +570,7 @@ for (let i = 1; i <= 16; i++) {
 const results = await Promise.all(analysisPromises);
 grid.innerHTML = ''; // Clear loading message
 
-for (let i = 1; i <= 16; i++) {
+for (let i = 1; i <= MAX_STOCK_PHOTOS; i++) {
     const base64Image = stockPhotoData[i];
     const result = results[i-1];
 
@@ -734,7 +739,7 @@ id: plant.id,
 score: 20,
 visualDiagnosis: "Visual: N/A (Data Missing)",
 sensorDiagnosis: sensorDiagnosis,
-recommendation: "***CRITICAL ERROR: DATA GAP***. Conduct soil probe at Zone " + plant.id + " immediately to enable fused analysis.",
+recommendation: "CRITICAL ERROR: DATA GAP. Conduct soil probe at Zone " + plant.id + " immediately to enable fused analysis.",
 healthClass: 'rec-critical'
 };
 }
@@ -749,8 +754,8 @@ let healthClass = 'rec-optimal';
 if (visualResult) {
     prediction = visualResult.prediction;
     visualScore = visualResult.score;
-    // visualDiagnosis now includes the visual score for better pre-analysis clarity
-    visualDiagnosis = `Visual: ${visualResult.diagnosis}`;
+    // Updated visualDiagnosis to include the score for partial analysis clarity
+    visualDiagnosis = `Visual: ${visualResult.diagnosis} (Score: ${visualScore}%)`;
 
     // Apply the visual score (from CV/Mock) as a penalty to the soil score
     // Lower score means higher penalty. Penalty maxes out at 90.
@@ -784,20 +789,20 @@ soilScore = Math.min(25, soilScore); // Penalize severely
 // TIER 3: CRITICAL MOISTURE STRESS
 else if (isCritMoisture) {
 const critMoisture = soilProblems.find(p => p.problem.includes('CRITICAL'));
-finalRecommendation = `***CRITICAL WATER STRESS***: ${critMoisture.problem} (${critMoisture.value}%). ${critMoisture.rec}.`;
+finalRecommendation = `CRITICAL WATER STRESS: ${critMoisture.problem} (${critMoisture.value}%). Action: ${critMoisture.rec}.`;
 healthClass = 'rec-critical';
 soilScore = Math.min(35, soilScore);
 }
 // TIER 4: N-DEFICIENCY CONFIRMATION (Visual + Soil)
 else if (isYellow && isLowN) {
 const critN = soilProblems.find(p => p.key === 'N');
-finalRecommendation = `CONFIRMED N-DEFICIENCY: Yellowing is caused by ${critN.problem} (${critN.value} ppm). Apply ${critN.rec}.`;
+finalRecommendation = `CONFIRMED N-DEFICIENCY: Yellowing is caused by ${critN.problem} (${critN.value} ppm). Action: Apply ${critN.rec}.`;
 healthClass = 'rec-action'; // Usually action, not critical, unless growth is severely stunted.
 }
 // TIER 5: SECONDARY DEFICIENCY INFERENCE
 else if (isYellow && isLowK) {
 const critK = soilProblems.find(p => p.key === 'K');
-finalRecommendation = `INFERENCE: Yellowing present. Low Potassium (${critK.value} ppm) suggests K-deficiency. Supplement Potassium to boost resistance/fruit health.`;
+finalRecommendation = `INFERENCE: Yellowing present. Low Potassium (${critK.value} ppm) suggests K-deficiency. Action: Supplement Potassium to boost resistance/fruit health.`;
 healthClass = 'rec-action';
 }
 // TIER 6: SOIL PROBLEMS ONLY (No Major Visual)
@@ -1073,9 +1078,15 @@ loggedData: [...loggedData],
 photoData: { ...photoData },
 stockPhotoData: { ...stockPhotoData },
 aiData: {
+// Only save the current state of the analysis grid HTML for easy recall
 analysisGrid: document.getElementById('plantAnalysisGrid').innerHTML
 }
 };
+// Check if the history length exceeds 50 and trim the oldest if necessary
+if (trialHistory.length >= 50) {
+    trialHistory.shift(); 
+}
+
 trialHistory.push(trialData);
 localStorage.setItem('trialHistory', JSON.stringify(trialHistory));
 STATUS_ELEMENT.innerText = `Trial ${currentTrialNumber} saved successfully! Starting new trial...`;
@@ -1096,13 +1107,16 @@ list.innerHTML = '';
 if (trialHistory.length === 0) {
 list.innerHTML = '<p>No trials saved yet.</p>';
 } else {
-trialHistory.forEach(trial => {
-const item = document.createElement('div');
-item.className = 'trial-item';
-item.innerHTML = `<strong>Trial ${trial.id}:</strong> ${trial.date} (${trial.loggedData.length} readings)`;
-item.onclick = () => loadPastTrial(trial.id);
-list.appendChild(item);
-});
+    // Display last 50, but sort by descending ID
+    const sortedHistory = trialHistory.slice().sort((a, b) => b.id - a.id);
+    
+    sortedHistory.forEach(trial => {
+        const item = document.createElement('div');
+        item.className = 'trial-item';
+        item.innerHTML = `<strong>Trial ${trial.id}:</strong> ${trial.date} (${trial.loggedData.length} sensor readings, ${Object.keys(trial.photoData).length} photos)`;
+        item.onclick = () => loadPastTrial(trial.id);
+        list.appendChild(item);
+    });
 }
 modal.style.display = "block";
 }
@@ -1113,20 +1127,28 @@ function loadPastTrial(trialId) {
 const trial = trialHistory.find(t => t.id === trialId);
 if (!trial) return;
 
+// Load all trial data for full history context
 currentRoverData = trial.roverData;
+loggedData = trial.loggedData;
+photoData = trial.photoData;
+stockPhotoData = trial.stockPhotoData || {};
+
+// Update Control Panel Data
 document.getElementById('latitudeData').innerText = trial.roverData.latitude;
 document.getElementById('longitudeData').innerText = trial.roverData.longitude;
 document.getElementById('headingData').innerText = trial.roverData.heading + ' deg';
 document.getElementById('gpsFix').innerText = 'Historical';
-loggedData = trial.loggedData;
+
+// Update Visuals
 drawMap();
 draw3DMap();
-photoData = trial.photoData;
-stockPhotoData = trial.stockPhotoData || {};
 loadCurrentPhotoData();
+
+// Update Analysis Grid
 document.getElementById('plantAnalysisGrid').innerHTML = trial.aiData.analysisGrid;
+
 STATUS_ELEMENT.innerText = `Loaded data for Trial ${trialId}.`;
-document.getElementById('currentTrialNumber').innerText = `${currentTrialNumber} (Viewing Trial ${trialId})`;
+document.getElementById('currentTrialNumber').innerText = `${currentTrialNumber} (VIEWING PAST TRIAL ${trialId})`;
 closeHistoryModal();
 }
 function clearAllHistory() {
@@ -1144,7 +1166,7 @@ window.onload = function() {
 initThreeD();
 drawMap();
 generatePhotoGrid();
-populateStockPhotos();
+populateStockPhotos(); 
 fetchAIResults();
 };
 </script>
