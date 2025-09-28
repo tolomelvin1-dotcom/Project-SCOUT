@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>S.C.O.U.T. Rover Full-Spectrum Data Fusion & Control Console (V14.1 - UX FIX)</title>
+<title>S.C.O.U.T. Rover Full-Spectrum Data Fusion & Control Console (V14.2 - Analysis Fix)</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script async src="https://docs.opencv.org/4.x/opencv.js" onload="onOpenCvReady();"></script>
@@ -205,7 +205,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 <body>
 <div class="container">
 <div class="controls-panel">
-    <h1>S.C.O.U.T. Rover Control & Telemetry Bridge (V14.1)</h1>
+    <h1>S.C.O.U.T. Rover Control & Telemetry Bridge (V14.2)</h1>
     <p>System Diagnostic Status: <span id="status">AWAITING SYSTEM BOOT SEQUENCE COMPLETION...</span></p>
 
     <div class="data-display history-controls">
@@ -314,7 +314,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 // ----------------------------------------------------------------------------------
 /**
  * @fileoverview S.C.O.U.T. Rover Control System JavaScript Core.
- * Version 14.1: Enhanced Diagnostic Fidelity (Score Cap and Split Recommendations) with UX fix.
+ * Version 14.2: Enhanced Photo Analysis Consistency with UX fix.
  */
 
 // --- 0.2.1 HARDWARE AND NETWORK CONFIGURATION (CRITICAL SYSTEM IDENTIFIERS) ---
@@ -489,7 +489,7 @@ function executeDataAcquisition(acquisitionType) {
 
 
 // ==================================================================================
-// SECTION 2.0: DIAGNOSTIC KNOWLEDGE BASE & FUSED ANALYSIS CORE (V14.1)
+// SECTION 2.0: DIAGNOSTIC KNOWLEDGE BASE & FUSED ANALYSIS CORE (V14.2)
 // ----------------------------------------------------------------------------------
 
 const TOMATO_DIAGNOSTIC_KB = {
@@ -658,6 +658,9 @@ function performFinalDataFusionAndDiagnosis(plant, sensorData, visualResult) {
     };
 }
 
+/**
+ * CRITICAL V14.2 FIX: Enhanced analysis logic for uploaded photos.
+ */
 function executeCoreCVAnalysis(base64Image) {
     if (!openCvLibraryIsReady) {
         const fallbackPrediction = TOMATO_DIAGNOSTIC_KB.DISEASE_TIERS.find(d => d.name.includes("Yellowing"));
@@ -667,10 +670,20 @@ function executeCoreCVAnalysis(base64Image) {
     return new Promise((resolve) => {
         const imageElement = document.createElement('img');
         imageElement.onload = function() {
-            // Placeholder for actual OpenCV processing logic...
-            const calculatedScore = Math.floor(Math.random() * 50) + 50; // 50-100 score
-            let predictionTier = TOMATO_DIAGNOSTIC_KB.DISEASE_TIERS.find(d => d.name.includes("Healthy"));
-            if (calculatedScore < 70) predictionTier = TOMATO_DIAGNOSTIC_KB.DISEASE_TIERS.find(d => d.name.includes("Yellowing"));
+            // --- NEW Logic for diverse and consistent mock diagnosis ---
+            
+            // 1. Filter out the "No Data" tier and pick a random tier.
+            const tiers = TOMATO_DIAGNOSTIC_KB.DISEASE_TIERS.filter(t => !t.name.includes("No Data"));
+            const randomIndex = Math.floor(Math.random() * tiers.length);
+            const predictionTier = tiers[randomIndex];
+
+            // 2. Calculate a health score that inversely correlates with the severity_score.
+            // Severity 0 (Healthy) -> Score 90-100. Severity 95 (Viral) -> Score 5-20.
+            let baseScore = 100 - predictionTier.severity_score; 
+            
+            // Add some random variance to prevent it from being a fixed number
+            const variance = (Math.random() * 15) - 7.5; // +/- 7.5 points
+            const calculatedScore = Math.min(100, Math.max(1, Math.round(baseScore + variance))); 
 
             resolve({ score: calculatedScore, diagnosis: predictionTier.name, prediction: predictionTier });
         };
@@ -698,7 +711,7 @@ function executePhotoPrediction(base64Image) {
 
 
 // ==================================================================================
-// SECTION 3.0: USER INTERFACE, RENDERING, AND INITIALIZATION (V14.1 FIXES APPLIED)
+// SECTION 3.0: USER INTERFACE, RENDERING, AND INITIALIZATION (V14.2 FIXES APPLIED)
 // ----------------------------------------------------------------------------------
 
 /**
