@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PROJECT S.C.O.U.T.(V30.0)</title>
+<title>S.C.O.U.T. Rover Full-Spectrum Data Fusion & Control Console (V31.0 - Guaranteed Upload Fix)</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script async src="https://docs.opencv.org/4.x/opencv.js" onload="onOpenCvReady();"></script>
@@ -114,7 +114,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
     background-color: #21262d;
     border: 1px solid #3fb950;
     position: relative;
-    cursor: pointer;
+    /* Removed cursor: pointer; here as the input now has the cursor */
     overflow: hidden;
     aspect-ratio: 1/1;
     display: flex;
@@ -126,7 +126,9 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
     color: #4ac9b0;
     transition: border 0.2s, background-color 0.2s;
 }
-.grid-cell:hover { border: 3px solid #79c0ff; background-color: #2a3038; }
+/* V31.0: New hover logic on the cell itself */
+.grid-cell:hover { border: 3px solid #79c0ff; background-color: #2a3038; } 
+
 /* Styles for delete button for embedded file input to work */
 .delete-photo-btn {
     position: absolute;
@@ -134,111 +136,25 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
     right: 5px;
     padding: 2px 5px;
     font-size: 0.8em;
-    z-index: 99; /* V30.0: High z-index to sit on top of the image */
+    z-index: 100; /* V31.0: Highest z-index */
     background-color: #f85149;
     color: #0d1117;
     border-radius: 50%;
+    /* CRITICAL V31.0: Ensure the delete button is visible and not covered by the input */
+    pointer-events: all; 
 }
-/* ANALYSIS CARD STYLING */
-#plantAnalysisGrid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(550px, 1fr));
-    gap: 40px;
-    margin-top: 30px;
-}
-.analysis-card {
-    padding: 35px;
-    border-radius: 20px;
-    background-color: #21262d;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.8);
-    border: 2px solid #30363d; /* Base border */
-}
-.plant-id-label {
-    font-size: 2.2em;
-    font-weight: 900;
-    color: #ffd700;
-    border-bottom: 5px double #30363d;
-    padding-bottom: 15px;
-    margin-bottom: 25px;
-}
-.assessment-section { margin-bottom: 30px; padding: 25px; border-radius: 12px; background-color: #161b22; }
-
-/* New: Score indicators */
-.score-badge {
-    display: inline-block;
-    padding: 8px 15px;
-    border-radius: 8px;
-    font-weight: bold;
-    font-size: 1.2em;
-    margin-top: 10px;
-    color: #0d1117;
-}
-/* Recommendation Coloring (Updated for three distinct recommendation sections) */
-.rec-optimal, .rec-action, .rec-critical, .rec-no-data {
-    padding: 15px;
-    border-radius: 10px;
-    display: block;
-    font-weight: bold;
-    margin-top: 18px;
-    font-size: 1.05em;
-    line-height: 1.4;
-    transition: all 0.3s;
-}
-/* Rec Section Titles */
-.rec-title {
-    color: #79c0ff;
-    font-size: 1.2em;
-    border-bottom: 1px dashed #30363d;
-    padding-bottom: 5px;
-    margin-bottom: 10px;
-    font-weight: 600;
-}
-.rec-optimal { background-color: #3fb950; color: #0d1117; } /* GREEN: Excellent */
-.rec-action { background-color: #e3b341; color: #0d1117; } /* YELLOW/AMBER: Action Required */
-.rec-critical { background-color: #f85149; color: #0d1117; } /* RED: Critical Alert */
-.rec-no-data { background-color: #58a6ff; color: #0d1117; } /* BLUE: Awaiting Data */
-
-/* MODAL AND HISTORY LIST STYLES */
-.modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.98);
-}
-.modal-content { background-color: #161b22; margin: 3% auto; padding: 50px; border: 3px solid #30363d; width: 95%; max-width: 1600px; border-radius: 20px; }
-.close-btn { color: #aaa; float: right; font-size: 50px; font-weight: bold; }
-.trial-item {
-    padding: 20px;
-    margin-bottom: 12px;
-    background-color: #0f131a;
-    border-left: 6px solid #e3b341;
-    border-radius: 12px;
-    cursor: pointer;
-    transition: background-color 0.3s;
-}
-.trial-item:hover { background-color: #21262d; border-left: 6px solid #79c0ff; }
-#stockImageGrid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-    gap: 18px;
-    max-width: 100%;
-    margin-top: 25px;
-    border: 1px solid #30363d;
-    padding: 20px;
-    border-radius: 10px;
-}
-/* Footer Styling */
-footer {
-    width: 100%;
+/* V31.0: Placeholder text z-index */
+.placeholder-text {
+    z-index: 1; 
+    position: relative;
     text-align: center;
-    margin-top: 30px;
-    padding-top: 20px;
-    border-top: 1px solid #30363d;
-    font-size: 0.9em;
-    color: #6a737d;
 }
 </style>
 </head>
 <body>
 <div class="container">
     <div class="controls-panel">
-        <h1>S.C.O.U.T. Rover Control & Telemetry Bridge (V30.0)</h1>
+        <h1>S.C.O.U.T. Rover Control & Telemetry Bridge (V31.0)</h1>
         <p>System Diagnostic Status: <span id="status">AWAITING SYSTEM BOOT SEQUENCE COMPLETION...</span></p>
 
         <div class="data-display history-controls">
@@ -281,6 +197,7 @@ footer {
             <button onclick="dispatchManualDataEntry()" style="background-color: #e341b3; color: #0d1117;">  📝  SUBMIT MANUAL DATA + PHOTO</button>
             <p><small>Sensor data is logged immediately. **Click a zone cell first** to ensure the photo assignment is active.</small></p>
         </div>
+
         <div class="data-display">
             <h2>Real-time Sensor Telemetry (Raw Feed)</h2>
             <h3>Navigation Subsystem</h3>
@@ -308,7 +225,7 @@ footer {
     <div class="photo-panel">
         <div class="camera-control data-display">
             <h2>Image Capture & Stock Library</h2>
-            <p>TO UPLOAD: **Click any Zone (1-16)** to select it, which will **prompt you to upload a file**.</p>
+            <p>TO UPLOAD: **Click any Zone (1-16)** which now functions as a direct file selection button.</p>
             <button onclick="dispatchRoverMovementCommand('capture')" class="photo-controls">  📸  TRIGGER CAMERA CAPTURE (Mocked)</button>
             <button onclick="openStockImageGalleryModal()" class="photo-controls">  🖼 ️ VIEW STOCK PHOTOS (50 Presets)</button>
             <p>Current Target Zone: **Zone <span id="currentZoneSelection">N/A</span>**</p>
@@ -354,10 +271,8 @@ footer {
     </div>
 </div>
 
-<input type="file" id="globalFileInput" accept="image/*" onchange="handleGlobalPhotoUpload(event)" style="position: fixed; left: -9999px;">
-
 <footer>
-    <p>&copy; 2025 S.C.O.U.T. Rover Systems - Operational Bridge V30.0. Hardware ESP32 IP: 10.101.146.88 | ThingSpeak API: 6OXH3SUQ4VNSOJX1</p>
+    <p>&copy; 2025 S.C.O.U.T. Rover Systems - Operational Bridge V31.0. Hardware ESP32 IP: 10.101.146.88 | ThingSpeak API: 6OXH3SUQ4VNSOJX1</p>
 </footer>
 
 <script>
@@ -366,7 +281,7 @@ footer {
 // ----------------------------------------------------------------------------------
 /**
  * @fileoverview S.C.O.U.T. Rover Control System JavaScript Core.
- * Version 30.0: CRITICAL File Upload Reliability Fix (CSS change for delegation).
+ * Version 31.0: CRITICAL Per-Cell Transparent Input Fix (Guaranteed upload success).
  */
 // --- 0.2.1 HARDWARE AND NETWORK CONFIGURATION (CRITICAL SYSTEM IDENTIFIERS) ---
 const HARDWARE_ESP32_IP_ADDRESS = '10.101.146.88'; // <<< CRITICAL: IP ADDRESS UPDATED
@@ -378,7 +293,7 @@ const MAP_CANVAS_PIXELS = 480;
 const MAX_STOCK_PHOTOS = 50;
 const PLANT_CIRCLE_RADIUS = 5;
 const SCORE_CAP_ON_PARTIAL_DATA = 50;
-// --- 0.2.3 DIAGNOSTIC CONSTANTS (V30.0 - HEALTH SCORE AND THRESHOLDS) ---
+// --- 0.2.3 DIAGNOSTIC CONSTANTS (V31.0 - HEALTH SCORE AND THRESHOLDS) ---
 const HEALTH_SCORE_THRESHOLDS = {
     CRITICAL: { max: 40, color: '#f85149', label: 'CRITICAL', class: 'rec-critical' }, // Red (0-40)
     ACTION_REQUIRED: { max: 75, color: '#e3b341', label: 'ACTION REQUIRED', class: 'rec-action' }, // Amber (41-75)
@@ -402,7 +317,7 @@ const MAP_CONTEXT = document.getElementById('roverMap').getContext('2d');
 const HISTORY_MODAL = document.getElementById('historyModal');
 const STOCK_MODAL = document.getElementById('stockImageModal');
 const CURRENT_ZONE_SELECTION_DISPLAY = document.getElementById('currentZoneSelection');
-const GLOBAL_FILE_INPUT = document.getElementById('globalFileInput'); // V30.0
+// V31.0: GLOBAL_FILE_INPUT removed.
 // --- 0.2.5 GLOBAL STATE VARIABLES (Clean Initial State Definition) ---
 let openCvLibraryIsReady = false;
 let systemLoggedSensorDataArray = [];
@@ -435,7 +350,6 @@ for(let r=0; r<FIELD_GRID_SIZE_M; r++) {
 function transmitSensorDataViaESP32ToThingSpeak(dataPacket) {
     const apiEndpointUrl = "https://api.thingspeak.com/update";
     document.getElementById('thingspeakStatus').innerText = 'TRANSMITTING... (API Key: 6OXH3SUQ4VNSOJX1)';
-    // The data structure here simulates the fields being sent to ThingSpeak (field1-7)
     const urlPayload = `${apiEndpointUrl}?api_key=${THINGSPEAK_API_KEY}`
         + `&field1=${dataPacket.moisture}&field2=${dataPacket.N}&field3=${dataPacket.P}&field4=${dataPacket.K}`
         + `&field5=${dataPacket.latitude}&field6=${dataPacket.longitude}&field7=${dataPacket.heading}`;
@@ -462,7 +376,6 @@ function dispatchRoverMovementCommand(commandIdentifier) {
             // Mock capture logic: Finds the nearest zone and assigns a mock photo
             const zoneID = findNearestPlantZone(currentRoverKinematicState.x_position_m, currentRoverKinematicState.y_position_m)?.id || 1;
             
-            // Mocking a diagnosis based on the zone for testing purposes
             let mockDiagnosis;
             if (zoneID % 3 === 0) {
                  mockDiagnosis = 'Dark Spots & Lesions/Blackening of Leaf (Fungal/Bacterial)';
@@ -472,18 +385,15 @@ function dispatchRoverMovementCommand(commandIdentifier) {
                  mockDiagnosis = 'Healthy, Deep Green Foliage';
             }
             
-            // Mock capture assignment
             const mockDataUrl = `data:image/jpeg;base64,mocked_rover_capture_zone_${zoneID}_diag:${mockDiagnosis.replace(/\s/g, '_').replace(/[()]/g, '')}`;
 
-            // *** CRITICAL V30.0: Assign the photo and trigger rendering ***
+            // *** CRITICAL V31.0: Assign the photo and trigger rendering ***
             currentPhotoAssignmentData[zoneID] = mockDataUrl;
-            renderPhotoInPhotoGridCell(zoneID, mockDataUrl); // Call the fixed rendering function
+            renderPhotoInPhotoGridCell(zoneID, mockDataUrl); 
             
-            // Set the zone selection explicitly after capture
             selectZone(zoneID);
 
             STATUS_ELEMENT.innerText = `Photo captured and assigned to nearest Zone ${zoneID}. Triggering Analysis.`;
-            // Analysis is triggered inside renderPhotoInPhotoGridCell
         } else {
             // Simulate Rover Kinematics Update (0.1m step)
             const step = 0.1;
@@ -512,29 +422,23 @@ function executeDataAcquisition(acquisitionType) {
     const nearestPlant = findNearestPlantZone(currentRoverKinematicState.x_position_m, currentRoverKinematicState.y_position_m);
     const plantID = nearestPlant ? nearestPlant.id : 1;
     
-    // Base data
     let moistureVal = (Math.random() * 70 + 20).toFixed(1);
     let npk_n = Math.floor(Math.random() * 150 + 50);
     let npk_p = Math.floor(Math.random() * 100 + 40);
     let npk_k = Math.floor(Math.random() * 180 + 60);
 
-    // Simulate poor conditions for specific zones (for diverse analysis results)
     if (plantID % 3 === 0) {
-        // Very low moisture (stress) and low N
         moistureVal = (Math.random() * 15 + 5).toFixed(1); 
         npk_n = Math.floor(Math.random() * 30 + 10); 
     } else if (plantID % 4 === 0) {
-        // High moisture (simulated flooding)
         moistureVal = (Math.random() * 10 + 85).toFixed(1);
         npk_n = Math.floor(Math.random() * 80 + 20); 
     }
 
-    // Navigation Data
     const heading = (Math.random() * 360).toFixed(1);
     const latitude = `40.7128${(Math.random()*100).toFixed(0)}`;
     const longitude = `-74.0060${(Math.random()*100).toFixed(0)}`;
 
-    // Update Live Display Elements
     MOISTURE_DISPLAY_ELEMENT.innerText = `${moistureVal}%`;
     NPK_DISPLAY_ELEMENT.innerText = `N:${npk_n}, P:${npk_p}, K:${npk_k}`;
     document.getElementById('headingData').innerText = heading + ' deg';
@@ -542,7 +446,6 @@ function executeDataAcquisition(acquisitionType) {
     document.getElementById('longitudeData').innerText = longitude;
     document.getElementById('gpsFix').innerText = '3D Fix Acquired';
 
-    // Transmit data to ThingSpeak
     transmitSensorDataViaESP32ToThingSpeak({
         moisture: parseFloat(moistureVal),
         N: npk_n,
@@ -554,7 +457,6 @@ function executeDataAcquisition(acquisitionType) {
     });
 
     if (acquisitionType === 'probe' || acquisitionType === 'read_sensors') {
-        // Log the sensor data to the system array
         systemLoggedSensorDataArray.push({
             x_m: parseFloat(currentRoverKinematicState.x_position_m),
             y_m: parseFloat(currentRoverKinematicState.y_position_m),
@@ -573,9 +475,6 @@ function executeDataAcquisition(acquisitionType) {
     draw3DMap();
 }
 
-/**
- * V28.0: Submits manually entered sensor data. Confirms current zone must be selected.
- */
 function dispatchManualDataEntry() {
     if (currentlySelectedPlantZone === 0) {
         STATUS_ELEMENT.innerText = "ERROR: Please select a target Zone (1-16) on the grid first by clicking a cell!";
@@ -605,18 +504,16 @@ function dispatchManualDataEntry() {
         zoneID: zoneID 
     });
     
-    // 2. Update Live Display Elements (Optional, but good UX)
     MOISTURE_DISPLAY_ELEMENT.innerText = `${moistureVal}% (MANUAL)`;
     NPK_DISPLAY_ELEMENT.innerText = `N:${npk_n}, P:${npk_p}, K:${npk_k} (MANUAL)`;
 
-    // 3. Trigger analysis
     STATUS_ELEMENT.innerText = `SUCCESS: Manual Sensor Data for Zone ${zoneID} logged. Now click the zone cell to assign a photo.`;
     triggerComprehensiveAnalysisCycle();
 }
 
 
 // ==================================================================================
-// SECTION 2.0: DIAGNOSTIC KNOWLEDGE BASE & FUSED ANALYSIS CORE (V30.0)
+// SECTION 2.0: DIAGNOSTIC KNOWLEDGE BASE & FUSED ANALYSIS CORE (V31.0)
 // ----------------------------------------------------------------------------------
 // Base knowledge for photo analysis and associated score penalties
 const TOMATO_DIAGNOSTIC_KB = {
@@ -627,9 +524,6 @@ const TOMATO_DIAGNOSTIC_KB = {
     'Healthy, Deep Green Foliage': { score_penalty: 0, type: 'Optimal', recommendation: "OPTIMAL HEALTH: Visual assessment confirms deep green, vibrant foliage with no signs of disease or pest damage. Maintain current environmental conditions." }
 };
 
-/**
- * V28.0 CORE FUNCTION: Calculates health score and generates the detailed analysis.
- */
 function getDiagnosisAndRecommendations(plantData) {
     let totalHealthScore = 100;
     const { moisture, npk_n, npk_p, npk_k, photoDiagnosis } = plantData;
@@ -685,17 +579,14 @@ function getDiagnosisAndRecommendations(plantData) {
         } else {
             sensorAnalysis += `* **NPK Status (Nitrogen):** N is acceptable (N:${npk_n} ppm). (Penalty: 0)\n`;
         }
-        // Simplified P and K check
         if (npk_p < OPTIMAL_NPK_RATIO.P * 0.5 || npk_k < OPTIMAL_NPK_RATIO.K * 0.5) {
              npkPenalty += SENSOR_SCORE_WEIGHTS.NPK_DEFICIENCY / 2;
              sensorAnalysis += `* **NPK Alert (P/K):** Phosphorus (P:${npk_p} ppm) or Potassium (K:${npk_k} ppm) is critically low. (Penalty: -${SENSOR_SCORE_WEIGHTS.NPK_DEFICIENCY / 2})\n`;
         }
 
-        // Apply all sensor penalties
         totalHealthScore -= (moisturePenalty + npkPenalty);
         totalHealthScore = Math.max(0, totalHealthScore); 
 
-        // Determine Sensor Recommendation Text
         if (isFloodScenario) {
             sensor_rec_text = `**Soil Sensor Assessment (Flood Alert):** CRITICAL ACTION REQUIRED: Immediate water diversion and soil aeration is necessary. The high moisture level is the primary threat. Total sensor penalty: -${moisturePenalty + npkPenalty} points.`;
         } else if (totalHealthScore < 76 && (moisturePenalty > 0 || npkPenalty > 0)) {
@@ -715,11 +606,9 @@ function getDiagnosisAndRecommendations(plantData) {
         result = HEALTH_SCORE_THRESHOLDS.ACTION_REQUIRED;
     }
     
-    // Set final display color
     healthColorCode = result.color;
     cardBorderColor = healthColorCode;
     
-    // Fused Recommendation Text Generation
     let final_diagnosis_summary = `Based on the merged data streams, the plant is rated **${result.label}** with a final Fused Health Score of **${totalHealthScore.toFixed(0)}/100**. `;
     if (isFloodScenario) {
         fused_rec_text = final_diagnosis_summary + `The immediate priority is the **Flood Response Protocol**. All other deficiencies (visual or NPK) are secondary until the waterlogging threat is mitigated. See the 'Flood Response Protocol' below for step-by-step actions.`;
@@ -753,26 +642,17 @@ function getDiagnosisAndRecommendations(plantData) {
     };
 }
 
-/**
- * Maps the score to the correct CSS class for coloring.
- */
 function getScoreClass(score) {
     if (score <= HEALTH_SCORE_THRESHOLDS.CRITICAL.max) return HEALTH_SCORE_THRESHOLDS.CRITICAL.class;
     if (score <= HEALTH_SCORE_THRESHOLDS.ACTION_REQUIRED.max) return HEALTH_SCORE_THRESHOLDS.ACTION_REQUIRED.class;
     return HEALTH_SCORE_THRESHOLDS.OPTIMAL.class;
 }
 
-/**
- * Finds the latest sensor data for a specific plant zone ID.
- */
 function getLatestSensorDataForZone(zoneID) {
     const data = systemLoggedSensorDataArray.filter(d => d.zoneID === zoneID);
     return data.length > 0 ? data[data.length - 1] : null;
 }
 
-/**
- * V30.0: Main analysis loop. Updates 2D map and 3D visualization.
- */
 function triggerComprehensiveAnalysisCycle() {
     const analysisGrid = document.getElementById('plantAnalysisGrid');
     analysisGrid.innerHTML = '';
@@ -783,7 +663,6 @@ function triggerComprehensiveAnalysisCycle() {
         
         let photoDiagnosis = null;
         if (photoEntry) {
-             // Extract diagnosis from the photo data URL (CRITICAL MOCK LOGIC)
              const match = photoEntry.match(/diag:([^,]+)/);
              if (match) {
                  photoDiagnosis = match[1].replace(/_/g, ' ');
@@ -793,10 +672,9 @@ function triggerComprehensiveAnalysisCycle() {
         let analysisResult;
         
         if (!photoEntry && !latestSensorData) {
-            // Case 1: No data for this zone
             analysisResult = {
                 score: NaN,
-                color: HEALTH_SCORE_THRESHOLDS.OPTIMAL.color, // Use optimal color as default for 3D/2D circle
+                color: HEALTH_SCORE_THRESHOLDS.OPTIMAL.color, 
                 border: '#58a6ff',
                 analysis: 'Awaiting both image and sensor data for this zone. No diagnosis possible.',
                 rec_cv: '<span class="rec-no-data">N/A: No photo data available.</span>',
@@ -804,14 +682,12 @@ function triggerComprehensiveAnalysisCycle() {
                 rec_fused: '<span class="rec-no-data">**AWAITING DATA:** Please move the rover to this zone (X: ${zone.x}, Y: ${zone.y}) to acquire at least a soil reading and an image.</span>'
             };
             
-            // Set 3D data structure defaults
             const index = zone.id - 1;
             field3DData[index].moisture = 50; 
             field3DData[index].healthScore = 75;
             field3DData[index].color = HEALTH_SCORE_THRESHOLDS.OPTIMAL.color;
 
         } else {
-            // Case 2: Run the full (or partial) analysis
             analysisResult = getDiagnosisAndRecommendations({
                 moisture: latestSensorData ? latestSensorData.moisture : null,
                 npk_n: latestSensorData ? latestSensorData.npk_n : null,
@@ -819,9 +695,8 @@ function triggerComprehensiveAnalysisCycle() {
                 npk_k: latestSensorData ? latestSensorData.npk_k : null,
                 photoDiagnosis: photoDiagnosis
             });
-            // Update 3D visualization data immediately with the new color/score
             const index = zone.id - 1;
-            field3DData[index].moisture = latestSensorData ? latestSensorData.moisture : field3DData[index].moisture; // Update moisture for 3D height
+            field3DData[index].moisture = latestSensorData ? latestSensorData.moisture : field3DData[index].moisture;
             field3DData[index].healthScore = analysisResult.score;
             field3DData[index].color = analysisResult.color;
         }
@@ -829,16 +704,12 @@ function triggerComprehensiveAnalysisCycle() {
         analysisGrid.innerHTML += generatePlantAnalysisCardHTML(zone.id, analysisResult);
     });
 
-    // CRITICAL FIX: Re-draw map and 3D immediately after updating the data
     updateMapVisualization(); 
     draw3DMap();
 }
 
-// ... generatePlantAnalysisCardHTML (retained) ...
 function generatePlantAnalysisCardHTML(zoneID, result) {
     const scoreClass = getScoreClass(result.score);
-    
-    // Set the border color of the card to reflect the score
     const cardStyle = `border-color: ${result.border}; box-shadow: 0 0 30px ${result.border}33;`;
 
     return `
@@ -866,13 +737,12 @@ function generatePlantAnalysisCardHTML(zoneID, result) {
                 <div class="${scoreClass}">${result.rec_sensor}</div>
             </div>
 
-            <h3>DATA FUSION ENGINE: Detailed Report (V30.0)</h3>
+            <h3>DATA FUSION ENGINE: Detailed Report (V31.0)</h3>
             <pre style="white-space: pre-wrap; word-wrap: break-word; background: #0f131a; padding: 15px; border-radius: 8px; border: 1px solid #30363d; font-size: 0.9em;">${result.analysis}</pre>
         </div>
     `;
 }
 
-// Placeholder for the no-data rendering logic (used on initial load)
 function renderNoDataCards() {
     const analysisGrid = document.getElementById('plantAnalysisGrid');
     analysisGrid.innerHTML = '';
@@ -898,12 +768,10 @@ function updateMapVisualization() {
     const size = MAP_CANVAS_PIXELS;
     const scale = size / FIELD_GRID_SIZE_M;
 
-    // 1. Clear and Draw Grid Background
     ctx.clearRect(0, 0, size, size);
     ctx.fillStyle = '#0f131a'; 
     ctx.fillRect(0, 0, size, size);
 
-    // Draw 1m x 1m grid lines
     ctx.strokeStyle = '#30363d';
     ctx.lineWidth = 1;
     for (let i = 1; i < FIELD_GRID_SIZE_M; i++) {
@@ -915,14 +783,12 @@ function updateMapVisualization() {
         ctx.stroke();
     }
 
-    // 2. Draw Plant Zones (Color based on FUSED health score)
     FIELD_PLANT_LOCATIONS_M.forEach((plant, index) => {
         const px = plant.x * scale;
         const py = size - (plant.y * scale); 
 
-        // Get the health data from the 3D data structure 
         const healthData = field3DData[index];
-        const circleColor = healthData.color || '#58a6ff'; // Default to blue if no data
+        const circleColor = healthData.color || '#58a6ff'; 
 
         ctx.beginPath();
         ctx.arc(px, py, PLANT_CIRCLE_RADIUS * 2, 0, Math.PI * 2); 
@@ -933,11 +799,9 @@ function updateMapVisualization() {
         ctx.stroke();
     });
 
-    // 3. Draw Rover Position
     const roverX = currentRoverKinematicState.x_position_m * scale;
     const roverY = size - (currentRoverKinematicState.y_position_m * scale);
 
-    // Draw Blue Triangle (Rover)
     ctx.fillStyle = '#58a6ff';
     ctx.beginPath();
     ctx.moveTo(roverX, roverY - 10); 
@@ -946,7 +810,6 @@ function updateMapVisualization() {
     ctx.closePath();
     ctx.fill();
 
-    // Draw Rover Heading Line
     ctx.strokeStyle = '#c9d1d9';
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -972,17 +835,15 @@ function findNearestPlantZone(x_m, y_m) {
             nearest = plant;
         }
     });
-    // Consider a zone "nearest" only if rover is within a 0.5m radius
     return (minDistanceSq < 0.25) ? nearest : null;
 }
 
 // ==================================================================================
-// SECTION 4.0: 3D VISUALIZATION CORE (V30.0 - No changes)
+// SECTION 4.0: 3D VISUALIZATION CORE (No changes)
 // ----------------------------------------------------------------------------------
 let scene, camera, renderer, controls;
 let plantCubes = []; 
 
-// Initialize mock 3D data structure
 const field3DData = FIELD_PLANT_LOCATIONS_M.map(() => ({ 
     moisture: 50, 
     healthScore: 75, 
@@ -994,20 +855,13 @@ function initThreeD() {
     const width = container.clientWidth;
     const height = container.clientHeight;
 
-    // Scene setup
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x0c1015);
-    
-    // Camera setup
     camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
     camera.position.set(2, 5, 5);
-    
-    // Renderer setup
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(width, height);
     container.appendChild(renderer.domElement);
-    
-    // Controls
     controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
@@ -1015,122 +869,84 @@ function initThreeD() {
     controls.minDistance = 2;
     controls.maxDistance = 10;
 
-    // Lighting
     const ambientLight = new THREE.AmbientLight(0x404040, 3.5);
     scene.add(ambientLight);
     const directionalLight = new THREE.DirectionalLight(0xffffff, 2.5);
     directionalLight.position.set(5, 5, 5);
     scene.add(directionalLight);
 
-    // Draw the 16 plant mock cubes
     drawFieldCubes();
     
-    // Start animation loop
     animate();
     
     window.addEventListener('resize', onWindowResize, false);
 }
 
-/**
- * V27.0 FIX: Creates a unique material for each plant group to allow individual color changes.
- */
 function drawFieldCubes() {
-    // 1. Stem Geometry (Cylinder)
-    const stemGeometry = new THREE.CylinderGeometry(0.05, 0.05, 1, 8); // Base height 1
+    const stemGeometry = new THREE.CylinderGeometry(0.05, 0.05, 1, 8); 
     const offset = FIELD_GRID_SIZE_M / 2;
 
     FIELD_PLANT_LOCATIONS_M.forEach((plant) => {
-        // CRITICAL V27.0 FIX: Create a unique material for each plant group's leaves
         const individualLeafMaterial = new THREE.MeshLambertMaterial({ color: 0x3fb950 }); 
-        
-        // Stem (will be scaled later)
-        const stemMaterial = new THREE.MeshLambertMaterial({ color: 0x472e1e }); // Brown
+        const stemMaterial = new THREE.MeshLambertMaterial({ color: 0x472e1e }); 
         const stem = new THREE.Mesh(stemGeometry, stemMaterial);
 
-        // Leaf Assembly Group
         const leafGroup = new THREE.Group();
-        
-        // Leaf Geometry (Flat Box scaled to appear oval-like)
         const leafBaseGeometry = new THREE.BoxGeometry(0.35, 0.05, 0.2); 
         
-        // Create multiple leaves connected to the group/stem
         const numLeaves = 6;
         for (let i = 0; i < numLeaves; i++) {
-            // CRITICAL V27.0 FIX: Use the unique material object
             const leaf = new THREE.Mesh(leafBaseGeometry, individualLeafMaterial); 
-            
-            // Position/Rotation for canopy
             const angle = (i / numLeaves) * Math.PI * 2;
-            const radius = 0.15; // Small radius for attachment point
+            const radius = 0.15; 
 
-            // Position leaves slightly out from the center (0,0) of the leaf group origin
             leaf.position.x = radius * Math.cos(angle);
             leaf.position.z = radius * Math.sin(angle);
-            leaf.position.y = 0.0; // All leaves start exactly at the group's origin (y=0)
-
-            // Rotate to face outward
-            leaf.rotation.y = angle + Math.PI / 2; // Point the long axis outward
-            leaf.rotation.x = Math.PI / 8; // Slight downward pitch
+            leaf.position.y = 0.0; 
+            leaf.rotation.y = angle + Math.PI / 2; 
+            leaf.rotation.x = Math.PI / 8; 
             
             leafGroup.add(leaf);
         }
         
-        // Group the parts
         const plantGroup = new THREE.Group();
         plantGroup.add(stem);
         plantGroup.add(leafGroup); 
         
-        // Position the whole group in the 3D scene (Center map to origin)
         plantGroup.position.x = plant.x - offset;
         plantGroup.position.z = plant.y - offset;
         plantGroup.position.y = 0; 
 
-        // CRITICAL: Store the components for individual updates
         plantCubes.push({ 
             group: plantGroup, 
             stem: stem, 
             leaves: leafGroup, 
             id: plant.id,
-            material: individualLeafMaterial // Store the unique material reference for easy update
+            material: individualLeafMaterial 
         });
         scene.add(plantGroup);
     });
     
-    // Add a simple ground plane
     const planeGeometry = new THREE.PlaneGeometry(FIELD_GRID_SIZE_M + 1, FIELD_GRID_SIZE_M + 1);
     const planeMaterial = new THREE.MeshLambertMaterial({ color: 0x1f272e, side: THREE.DoubleSide });
     const plane = new THREE.Mesh(planeGeometry, planeMaterial);
-    plane.rotation.x = Math.PI / 2; // Rotate to lie flat
-    plane.position.y = -0.05; // Position it just below the base of the stems
+    plane.rotation.x = Math.PI / 2; 
+    plane.position.y = -0.05; 
     scene.add(plane);
 }
 
-/**
- * V27.0 FIX: Uses the unique material reference to update color without affecting other plants.
- */
 function draw3DMap() {
     plantCubes.forEach((plantObj, index) => {
         const data = field3DData[index];
         
-        // 1. Update Height (Moisture) - Scales the stem
-        // Map moisture (0-100) to height (0.5 to 2.0)
         const normalizedMoisture = data.moisture / 100;
-        const stemHeight = Math.max(0.5, normalizedMoisture * 1.5 + 0.5); // Min height 0.5
+        const stemHeight = Math.max(0.5, normalizedMoisture * 1.5 + 0.5); 
         
-        // Scale the stem (Y-axis)
         plantObj.stem.scale.y = stemHeight;
-        
-        // Reposition stem and leaves correctly after scaling
-        // Stem center must be at stemHeight/2 to keep the base at Y=0
         plantObj.stem.position.y = stemHeight / 2; 
-        
-        // Leaves group origin must be exactly at the top of the stem (y=stemHeight)
         plantObj.leaves.position.y = stemHeight; 
 
-        // 2. Update Color (Health Score) - Changes leaf color
         const newColor = new THREE.Color(data.color);
-        
-        // CRITICAL V27.0 FIX: Change the material color directly using the stored reference
         plantObj.material.color.set(newColor);
     });
 }
@@ -1154,22 +970,12 @@ function animate() {
 
 
 // ==================================================================================
-// SECTION 5.0: UTILITY & UI FUNCTIONS (Photo Grid - V30.0 FIX)
+// SECTION 5.0: UTILITY & UI FUNCTIONS (Photo Grid - V31.0 FIX CORE)
 // ----------------------------------------------------------------------------------
 
 /**
- * V30.0: Main entry point for file upload trigger.
- */
-function triggerUploadForZone(zoneID) {
-    selectZone(zoneID); // 1. Set the active zone state
-    
-    // 2. Trigger the hidden global file input
-    // This relies on the GLOBAL_FILE_INPUT being off-screen (left: -9999px) instead of display: none
-    GLOBAL_FILE_INPUT.click();
-}
-
-/**
- * V30.0: Simple function to set the currently active zone for UI highlighting and manual data entry.
+ * V31.0: Simple function to set the currently active zone for UI highlighting and manual data entry.
+ * Note: No longer triggers the file dialog directly.
  */
 function selectZone(zoneID) {
     currentlySelectedPlantZone = zoneID;
@@ -1184,7 +990,7 @@ function selectZone(zoneID) {
 }
 
 /**
- * V30.0: Renders the photo grid, relying on click delegation.
+ * V31.0: Creates and renders the photo grid cells, ensuring the transparent file input is always present.
  */
 function generatePhotoGrid() {
     const grid = document.getElementById('photoGrid');
@@ -1194,94 +1000,52 @@ function generatePhotoGrid() {
         cell.className = 'grid-cell';
         cell.id = `zoneCell-${i}`;
         
-        // V30.0 FIX: The cell itself now triggers the upload via delegation
-        cell.onclick = () => triggerUploadForZone(i); 
+        // V31.0: Cell click is now just for highlighting/state sync
+        cell.onclick = () => selectZone(i); 
 
         if (currentPhotoAssignmentData[i]) {
+            // If photo exists, render the image overlay
             renderPhotoInPhotoGridCell(i, currentPhotoAssignmentData[i], false); 
         } else {
-            // Inner HTML (Placeholder text)
+            // If no photo, render placeholder text
             const textNode = document.createElement('div');
             textNode.className = 'placeholder-text';
             textNode.innerHTML = `Zone ${i}<br>CLICK TO UPLOAD`;
-            textNode.style.zIndex = '1'; 
             cell.appendChild(textNode);
         }
         
+        // V31.0 CRITICAL: Embed the transparent input in EVERY cell
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.id = `file-input-${i}`;
+        fileInput.accept = 'image/*';
+        // The magic CSS to make it invisible but clickable and covering the cell
+        fileInput.style.cssText = 'opacity: 0; position: absolute; left: 0; top: 0; width: 100%; height: 100%; cursor: pointer; z-index: 50;';
+        
+        // Set the local change handler
+        fileInput.onchange = (e) => handleLocalPhotoUpload(i, e);
+        
+        cell.appendChild(fileInput);
+
         grid.appendChild(cell);
     }
 }
 
 /**
- * V30.0 CRITICAL FIX: Simplifies rendering now that file input is gone.
- * @param {number} zoneID The ID of the zone being rendered.
- * @param {string} dataUrl The base64 data URL of the image.
- * @param {boolean} triggerAnalysis Should the analysis cycle run afterwards.
+ * V31.0: Handles file upload event from the *local* input.
  */
-function renderPhotoInPhotoGridCell(zoneID, dataUrl, triggerAnalysis = true) {
-    const cell = document.getElementById(`zoneCell-${zoneID}`);
-    if (!cell) return;
+function handleLocalPhotoUpload(zoneID, event) {
+    // CRITICAL: Must set the zone selection here since the click went straight to the input
+    selectZone(zoneID); 
     
-    // 1. Explicitly clear all existing display/functional elements
-    cell.innerHTML = '';
-    
-    // 2. Create and append Image element (z-index 10)
-    const img = document.createElement('img');
-    img.src = dataUrl;
-    // CRITICAL: High z-index to ensure visibility
-    img.style.cssText = 'width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 10;'; 
-    cell.appendChild(img);
-
-    // 3. Create and append delete button (z-index 99)
-    const deleteBtn = document.createElement('button');
-    deleteBtn.className = 'delete-photo-btn';
-    deleteBtn.innerHTML = 'X';
-    deleteBtn.onclick = (e) => {
-        e.stopPropagation(); // Prevent the cell click from triggering the upload
-        deletePhotoAssignment(zoneID);
-    };
-    cell.appendChild(deleteBtn);
-    
-    // Update the assignment data
-    currentPhotoAssignmentData[zoneID] = dataUrl;
-    
-    // IMPORTANT: Re-attach the zone click handler (it was cleared by cell.innerHTML = '')
-    cell.onclick = (e) => {
-         // Only trigger upload if the delete button wasn't clicked
-         if (!e.target.classList.contains('delete-photo-btn')) {
-             triggerUploadForZone(zoneID);
-         }
-    };
-    
-    if (triggerAnalysis) {
-        // Trigger analysis immediately after photo assignment
-        triggerComprehensiveAnalysisCycle();
-    }
-}
-
-/**
- * V30.0: Handles file upload event from the SINGLE global input.
- */
-function handleGlobalPhotoUpload(event) {
-    const zoneID = currentlySelectedPlantZone;
-    
-    if (zoneID === 0) {
-        // Should not happen if triggerUploadForZone is used, but for safety:
-        STATUS_ELEMENT.innerText = "ERROR: Cannot upload, no zone is selected.";
-        return;
-    }
-
     const file = event.target.files[0];
     if (file) {
         const reader = new FileReader();
         reader.onload = (e) => {
-            // Mock a diagnosis for the uploaded image based on zone, as actual CV is complex
             const mockDiagnosis = (zoneID % 4 === 0) ? 'Edging Burn/Tip Necrosis (K/Salt)' : 'Healthy, Deep Green Foliage';
-            
-            // Embed mock diagnosis into the data URL for later retrieval
             const dataUrlWithMockDiagnosis = e.target.result.replace('base64,', `base64,mocked_user_upload_diag:${mockDiagnosis.replace(/\s/g, '_').replace(/[()]/g, '')},`);
             
-            currentPhotoAssignmentData[zoneID] = dataUrlWithMockDiagnosis;
+            // This implicitly calls renderPhotoInPhotoGridCell which handles the new input element
             renderPhotoInPhotoGridCell(zoneID, dataUrlWithMockDiagnosis, true); 
             
             STATUS_ELEMENT.innerText = `User photo uploaded and assigned to Zone ${zoneID}. Diagnosis mocked for now.`;
@@ -1289,33 +1053,82 @@ function handleGlobalPhotoUpload(event) {
         reader.readAsDataURL(file);
     } 
     
-    // CRITICAL: Reset the file input value so that the 'onchange' event fires again 
-    // for subsequent uploads of the same file name.
+    // CRITICAL: Reset the input value so the change event fires again if the same file is selected
     event.target.value = '';
+}
+
+/**
+ * V31.0 CRITICAL FIX: Simplifies rendering now that file input is always present.
+ * @param {number} zoneID The ID of the zone being rendered.
+ * @param {string} dataUrl The base64 data URL of the image.
+ * @param {boolean} triggerAnalysis Should the analysis cycle run afterwards.
+ */
+function renderPhotoInPhotoGridCell(zoneID, dataUrl, triggerAnalysis = true) {
+    const cell = document.getElementById(`zoneCell-${zoneID}`);
+    const fileInput = document.getElementById(`file-input-${zoneID}`);
+    if (!cell || !fileInput) return;
+    
+    // 1. Clear placeholder text / old elements (but keep the file input in the DOM)
+    // Find and remove the placeholder text if it exists
+    cell.querySelectorAll('.placeholder-text').forEach(el => el.remove()); 
+    // Remove any existing image and delete button
+    cell.querySelectorAll('img, .delete-photo-btn').forEach(el => el.remove());
+    
+    // 2. Create and append Image element (z-index 10)
+    const img = document.createElement('img');
+    img.src = dataUrl;
+    img.style.cssText = 'width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 10;'; 
+    cell.appendChild(img);
+
+    // 3. Create and append delete button (z-index 100)
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'delete-photo-btn';
+    deleteBtn.innerHTML = 'X';
+    deleteBtn.onclick = (e) => {
+        e.stopPropagation(); // Prevents the image click from triggering the transparent input underneath
+        deletePhotoAssignment(zoneID);
+    };
+    cell.appendChild(deleteBtn);
+    
+    // 4. CRITICAL: Ensure the transparent input is on top of the image (z-index 50) 
+    // but underneath the delete button (z-index 100). The image is z-index 10.
+    fileInput.style.zIndex = '50';
+    // Reposition the file input to be the last child so it overlays the image
+    cell.appendChild(fileInput); 
+
+    // Update the assignment data
+    currentPhotoAssignmentData[zoneID] = dataUrl;
+    
+    if (triggerAnalysis) {
+        triggerComprehensiveAnalysisCycle();
+    }
 }
 
 function deletePhotoAssignment(zoneID) {
     delete currentPhotoAssignmentData[zoneID];
     const cell = document.getElementById(`zoneCell-${zoneID}`);
-    if (cell) {
-        cell.innerHTML = '';
+    const fileInput = document.getElementById(`file-input-${zoneID}`);
+    if (cell && fileInput) {
+        // Clear all elements except the file input (which must remain in the DOM)
+        cell.querySelectorAll(':not(#file-input-' + zoneID + ')').forEach(el => el.remove());
         
-        // Re-append the placeholder text
+        // Re-append the placeholder text underneath the transparent file input
         const textNode = document.createElement('div');
         textNode.className = 'placeholder-text';
         textNode.innerHTML = `Zone ${zoneID}<br>CLICK TO UPLOAD`;
         textNode.style.zIndex = '1';
-        cell.appendChild(textNode);
         
-        // Re-attach the upload click handler to the cell
-        cell.onclick = () => triggerUploadForZone(zoneID);
+        // Insert the text node before the file input
+        cell.insertBefore(textNode, fileInput);
+        
+        // Ensure the file input is still last and highest z-index (50) for clicking
+        cell.appendChild(fileInput); 
         
         cell.style.border = '3px solid #ffaa00'; // Keep selected highlight
     }
     // Re-run analysis to update diagnosis without the photo
     triggerComprehensiveAnalysisCycle();
 }
-
 
 function openStockImageGalleryModal() {
     if (currentlySelectedPlantZone === 0) {
@@ -1335,22 +1148,19 @@ function populateStockPhotos() {
     const diagnoses = Object.keys(TOMATO_DIAGNOSTIC_KB);
 
     for (let i = 1; i <= MAX_STOCK_PHOTOS; i++) {
-        // Cycle through the diagnoses for variety
         const diagnosisKey = diagnoses[i % diagnoses.length];
         const diagnosis = TOMATO_DIAGNOSTIC_KB[diagnosisKey];
         
-        // Generate a unique, recognizable mock data URL for stock photos
         const mockDataUrl = `data:image/png;base64,mocked_stock_photo_${i}_diag:${diagnosisKey.replace(/\s/g, '_').replace(/[()]/g, '')}`;
-        stockPhotoLibraryData[i] = mockDataUrl; // Store in library for easy access
+        stockPhotoLibraryData[i] = mockDataUrl; 
 
         const cell = document.createElement('div');
         cell.className = 'grid-cell';
-        cell.style.backgroundColor = (diagnosisKey === 'Healthy, Deep Green Foliage') ? '#3fb950' : '#f08047'; // Green/Amber visual cue
+        cell.style.backgroundColor = (diagnosisKey === 'Healthy, Deep Green Foliage') ? '#3fb950' : '#f08047'; 
         cell.style.fontSize = '0.7em';
         cell.style.padding = '5px';
         cell.innerHTML = `Stock #${i}<br>(${diagnosis.type})`;
         
-        // Note: The transparent file input is NOT added to stock cells, click is direct
         cell.onclick = () => {
             currentPhotoAssignmentData[currentlySelectedPlantZone] = stockPhotoLibraryData[i];
             renderPhotoInPhotoGridCell(currentlySelectedPlantZone, stockPhotoLibraryData[i]);
@@ -1367,14 +1177,13 @@ function executeTrialSaveOperation() {
         trialHistoryRecords.shift(); // FIFO: Remove oldest
     }
     
-    // Create a deep copy of the current state
     const currentState = {
         id: currentIncrementalTrialID,
         timestamp: new Date().toLocaleString(),
         kinematics: JSON.parse(JSON.stringify(currentRoverKinematicState)),
         sensorData: JSON.parse(JSON.stringify(systemLoggedSensorDataArray)),
         photoAssignments: JSON.parse(JSON.stringify(currentPhotoAssignmentData)),
-        analysisResults: document.getElementById('plantAnalysisGrid').innerHTML // Save the rendered HTML
+        analysisResults: document.getElementById('plantAnalysisGrid').innerHTML 
     };
 
     trialHistoryRecords.push(currentState);
@@ -1393,7 +1202,7 @@ function openHistoryRetrievalModal() {
     if (trialHistoryRecords.length === 0) {
         historyList.innerHTML = '<p style="color: #f85149; font-weight: bold;">No historical trials found in local storage.</p>';
     } else {
-        trialHistoryRecords.slice().reverse().forEach(trial => { // Reverse to show newest first
+        trialHistoryRecords.slice().reverse().forEach(trial => { 
             const item = document.createElement('div');
             item.className = 'trial-item';
             item.innerHTML = `<strong>Trial ID: ${trial.id}</strong> | Saved: ${trial.timestamp} | Data Points: ${trial.sensorData.length} | Photos: ${Object.keys(trial.photoAssignments).length}`;
@@ -1411,18 +1220,14 @@ function closeHistoryModal() {
 }
 
 function restoreTrialFromHistory(trial) {
-    // Restore global state variables
     currentRoverKinematicState = trial.kinematics;
     systemLoggedSensorDataArray = trial.sensorData;
     currentPhotoAssignmentData = trial.photoAssignments;
     
-    // Restore UI elements
     document.getElementById('plantAnalysisGrid').innerHTML = trial.analysisResults;
     
-    // V30.0: Re-run the full cycle to ensure 2D/3D visualizations are updated correctly
     triggerComprehensiveAnalysisCycle();
     
-    // Restore photo grid display
     generatePhotoGrid();
     
     STATUS_ELEMENT.innerText = `SUCCESS: Restored Trial ID ${trial.id} from history.`;
@@ -1441,16 +1246,13 @@ function executeAllHistoryClearance() {
 }
 
 function resetSensorAndMapData(clearHistory = true) {
-    // Resets all transient data
     systemLoggedSensorDataArray = [];
     currentPhotoAssignmentData = {};
     currentlySelectedPlantZone = 0;
     CURRENT_ZONE_SELECTION_DISPLAY.innerText = 'N/A';
     
-    // Reset Rover to center (2,2)
     currentRoverKinematicState = { latitude: 'N/A', longitude: 'N/A', heading: 0.0, x_position_m: 2.0, y_position_m: 2.0 };
 
-    // Reset Telemetry Display
     document.getElementById('moistureData').innerText = 'N/A';
     document.getElementById('npkData').innerText = 'N/A';
     document.getElementById('headingData').innerText = 'N/A';
@@ -1459,12 +1261,10 @@ function resetSensorAndMapData(clearHistory = true) {
     document.getElementById('gpsFix').innerText = 'N/A';
     document.getElementById('thingspeakStatus').innerText = 'Awaiting Connection (API Key: 6OXH3SUQ4VNSOJX1)';
 
-    // Reset Visualizations
     updateMapVisualization();
-    generatePhotoGrid(); // Re-render photo grid to clear images
-    renderNoDataCards(); // Clear analysis grid
+    generatePhotoGrid(); 
+    renderNoDataCards(); 
 
-    // Reset 3D data structure to default moisture/score
     field3DData.forEach(data => {
         data.moisture = 50;
         data.healthScore = 75;
@@ -1473,7 +1273,6 @@ function resetSensorAndMapData(clearHistory = true) {
     draw3DMap();
 
     if (clearHistory) {
-         // Also reset history ID for a clean slate
          currentIncrementalTrialID = 1;
          HISTORY_TRIAL_COUNTER.innerText = 1;
          STATUS_ELEMENT.innerText = "SYSTEM RESET: Transient data cleared. Awaiting first command.";
@@ -1502,17 +1301,15 @@ function onDocumentReady() {
     initThreeD();
     populateStockPhotos(); 
     
-    // CRITICAL: Must generate grid first so the cells exist for rendering
+    // CRITICAL: Must generate grid first so the cells/inputs exist for rendering
     generatePhotoGrid();
     
-    // Initialize map/data state
     resetSensorAndMapData(false); 
     
-    // CRITICAL FIX: Guarantee analysis view is rendered with the 16 card structure on load.
     if (systemLoggedSensorDataArray.length === 0 && Object.keys(currentPhotoAssignmentData).length === 0) {
-        renderNoDataCards(); // Ensure the UI is populated even with no data
+        renderNoDataCards(); 
     } else {
-        triggerComprehensiveAnalysisCycle(); // Load state if history was found in localStorage
+        triggerComprehensiveAnalysisCycle(); 
     }
     
     STATUS_ELEMENT.innerText = "SYSTEM BOOT: DOM Ready. Awaiting OpenCV.js initialization for full CV capability.";
