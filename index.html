@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>S.C.O.U.T. Rover Full-Spectrum Data Fusion & Control Console (V14.3 - Manual Upload Fix)</title>
+<title>S.C.O.U.T. Rover Full-Spectrum Data Fusion & Control Console (V14.4 - Upload/Stock Fix)</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script async src="https://docs.opencv.org/4.x/opencv.js" onload="onOpenCvReady();"></script>
@@ -57,7 +57,6 @@ h3 { color: #4ac9b0; margin-top: 20px; font-size: 1.4em; }
 }
 .data-display:hover { box-shadow: 0 0 18px rgba(88, 166, 255, 0.3); }
 /* Data Rows (Alignment Control) */
-.data-row { margin: 12px 0; }
 .data-row strong {
     display: inline-block;
     width: 220px; /* Increased for clean alignment */
@@ -118,6 +117,20 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
     transition: border 0.2s, background-color 0.2s;
 }
 .grid-cell:hover { background-color: #2a3038; } 
+
+/* CRITICAL FIX V14.4: Image overlay must allow clicks to pass through to the cell */
+.grid-cell-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 5;
+    /* THIS IS THE FIX: Prevents the image element itself from capturing the mouse click */
+    pointer-events: none; 
+}
+
 /* Styles for delete button for embedded file input to work */
 .delete-photo-btn {
     position: absolute;
@@ -125,7 +138,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
     right: 5px;
     padding: 2px 5px;
     font-size: 0.8em;
-    z-index: 10; /* Ensure button is on top of the transparent input */
+    z-index: 10; /* Ensure button is on top of the image */
     background-color: #f85149;
     color: #0d1117;
     border-radius: 50%;
@@ -196,7 +209,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 <body>
 <div class="container">
     <div class="controls-panel">
-        <h1>S.C.O.U.T. Rover Control & Telemetry Bridge (V14.3)</h1>
+        <h1>S.C.O.U.T. Rover Control & Telemetry Bridge (V14.4)</h1>
         <p>System Diagnostic Status: <span id="status">AWAITING SYSTEM BOOT SEQUENCE COMPLETION...</span></p>
         
         <div class="data-display history-controls">
@@ -255,7 +268,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
     <div class="photo-panel">
         <div class="camera-control data-display">
             <h2>Image Capture & Stock Library</h2>
-            <p>TO UPLOAD: **Click any Zone (1-16)** to trigger the file dialog or use the stock library.</p>
+            <p>TO UPLOAD/REPLACE: **Click any Zone (1-16)** to trigger the file dialog or use the stock library.</p>
             <button onclick="dispatchRoverMovementCommand('capture')" class="photo-controls">  📸  TRIGGER CAMERA CAPTURE</button>
             <button onclick="openStockImageGalleryModal()" class="photo-controls">  🖼 ️ VIEW STOCK PHOTOS (50 Presets)</button>
             <p>Current Target Zone: **Zone <span id="currentZoneSelection">N/A</span>**</p>
@@ -308,7 +321,8 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 // ----------------------------------------------------------------------------------
 /**
  * @fileoverview S.C.O.U.T. Rover Control System JavaScript Core.
- * Version 14.3: CRITICAL FIX: Manual Photo Upload/Replacement fix via pointer-events: none.
+ * Version 14.4: CRITICAL FIX: Manual Photo Upload/Replacement fix via pointer-events: none CSS, 
+ * and cleaning up Stock Photo data structure.
  */
 // --- 0.2.1 HARDWARE AND NETWORK CONFIGURATION (CRITICAL SYSTEM IDENTIFIERS) ---
 // ** CRITICAL USER-REQUESTED CONFIGURATION UPDATES APPLIED BELOW **
@@ -320,7 +334,7 @@ const FIELD_GRID_SIZE_M = 4;
 const MAP_CANVAS_PIXELS = 480;
 const MAX_STOCK_PHOTOS = 50;
 const PLANT_CIRCLE_RADIUS = 5;
-const SCORE_CAP_ON_PARTIAL_DATA = 50; // New constraint applied here
+const SCORE_CAP_ON_PARTIAL_DATA = 50; 
 
 // --- 0.2.3 DOM ELEMENT REFERENCES (MAPPING CORE UI COMPONENTS) ---
 const STATUS_ELEMENT = document.getElementById('status');
@@ -344,8 +358,8 @@ const PLANT_ANALYSIS_GRID = document.getElementById('plantAnalysisGrid');
 let openCvLibraryIsReady = false;
 let systemLoggedSensorDataArray = [];
 let currentPhotoAssignmentData = {};
-let stockPhotoLibraryData = {};
-let currentlySelectedPlantZone = 0; // CRITICAL: Used by photo handlers
+let stockPhotoLibraryData = {}; // Stores clean photo URLs and separate diagnosis strings
+let currentlySelectedPlantZone = 0; 
 let historyIsBeingViewed = false;
 let currentRoverKinematicState = {
     latitude: 'N/A',
@@ -354,7 +368,7 @@ let currentRoverKinematicState = {
     x_position_m: 2.0, // Starting center (2, 2)
     y_position_m: 2.0
 };
-// Persistent Storage Management (Ensure 50 preset capacity logic is used)
+// Persistent Storage Management 
 let trialHistoryRecords = JSON.parse(localStorage.getItem('trialHistory') || '[]');
 let currentIncrementalTrialID = trialHistoryRecords.length + 1;
 HISTORY_TRIAL_COUNTER.innerText = currentIncrementalTrialID;
@@ -384,7 +398,6 @@ function transmitSensorDataViaESP32ToThingSpeak(dataPacket) {
         `&field1=${dataPacket.moisture}&field2=${dataPacket.N}&field3=${dataPacket.P}&field4=${dataPacket.K}` +
         `&field5=${dataPacket.latitude}&field6=${dataPacket.longitude}&field7=${dataPacket.heading}`;
 
-    // Using fetch with mode: 'no-cors' for ThingSpeak API simplicity, as direct response reading is often blocked
     fetch(urlPayload, { method: 'GET', mode: 'no-cors' })
         .then(() => {
             document.getElementById('thingspeakStatus').innerText = `SUCCESS: Data pushed.`;
@@ -405,7 +418,6 @@ function dispatchRoverMovementCommand(commandIdentifier) {
         if (commandIdentifier.startsWith('read_') || commandIdentifier === 'probe') {
             executeDataAcquisition(commandIdentifier);
         } else if (commandIdentifier === 'capture') {
-            // Mock capture logic: image is assigned to the nearest plant zone.
             const nearestPlant = findNearestPlantZone(currentRoverKinematicState.x_position_m, currentRoverKinematicState.y_position_m);
             const zoneID = nearestPlant ? nearestPlant.id : 1; 
 
@@ -415,12 +427,14 @@ function dispatchRoverMovementCommand(commandIdentifier) {
                 : 'Healthy, Deep Green Foliage';
             
             // NOTE: In a real system, this would be a full base64 image from the rover camera.
-            // Here, it's a diagnostic string disguised as a base64 string for CV simulation.
-            currentPhotoAssignmentData[zoneID] = `data:image/jpeg;base64,mocked_rover_capture_zone_${zoneID}_diag:${mockDiagnosis.replace(/\s/g, '_').replace(/[()]/g, '')}`;
+            // We append the diagnosis to the *end* of the image data for the analysis engine to read.
+            const mockedImageBase64 = `data:image/jpeg;base64,mocked_rover_capture_zone_${zoneID}`;
+            const photoDataForAnalysis = mockedImageBase64 + `_diag:${mockDiagnosis.replace(/\s/g, '_').replace(/[()]/g, '')}`;
             
-            renderPhotoInPhotoGridCell(zoneID, currentPhotoAssignmentData[zoneID]);
+            currentPhotoAssignmentData[zoneID] = photoDataForAnalysis;
+            
+            renderPhotoInPhotoGridCell(zoneID, photoDataForAnalysis);
 
-            // Set the zone selection explicitly after capture
             currentlySelectedPlantZone = zoneID;
             CURRENT_ZONE_SELECTION_DISPLAY.innerText = zoneID;
             MODAL_ZONE_SELECTION_DISPLAY.innerText = zoneID;
@@ -454,23 +468,21 @@ function executeDataAcquisition(acquisitionType) {
     STATUS_ELEMENT.innerText = "SENSOR READ: Acquiring raw data...";
 
     // --- Data Simulation ---
-    // 1. Determine nearest plant for targeted simulation
     const nearestPlant = findNearestPlantZone(currentRoverKinematicState.x_position_m, currentRoverKinematicState.y_position_m);
     const plantID = nearestPlant ? nearestPlant.id : 1;
     
-    // 2. Simulate sensor data
     let moistureVal = (Math.random() * 70 + 20).toFixed(1);
     let npk_n = Math.floor(Math.random() * 150 + 50);
     let npk_p = Math.floor(Math.random() * 100 + 40);
     let npk_k = Math.floor(Math.random() * 180 + 60);
 
-    // Simulate bad sensor data for zones that have a mocked disease (Zones 3, 6, 9, 12, 15)
+    // Simulate bad sensor data for zones that have a mocked disease 
     if (plantID % 3 === 0) {
-        moistureVal = (Math.random() * 15 + 5).toFixed(1); // Very low moisture
-        npk_n = Math.floor(Math.random() * 30 + 10); // Very low N
+        moistureVal = (Math.random() * 15 + 5).toFixed(1); 
+        npk_n = Math.floor(Math.random() * 30 + 10); 
     }
 
-    // 3. Navigation Data
+    // Navigation Data
     const heading = (Math.random() * 360).toFixed(1);
     const latitude = `40.7128${(Math.random()*100).toFixed(0)}`;
     const longitude = `-74.0060${(Math.random()*100).toFixed(0)}`;
@@ -496,7 +508,7 @@ function executeDataAcquisition(acquisitionType) {
         K: npk_k,
         latitude: latitude,
         longitude: longitude,
-        heading: heading // Sending full data packet
+        heading: heading 
     });
 
     // --- Log Data for Analysis (Probe/Read Sensors only) ---
@@ -520,7 +532,7 @@ function executeDataAcquisition(acquisitionType) {
 }
 
 // ==================================================================================
-// SECTION 2.0: DIAGNOSTIC KNOWLEDGE BASE & FUSED ANALYSIS CORE (V14.3)
+// SECTION 2.0: DIAGNOSTIC KNOWLEDGE BASE & FUSED ANALYSIS CORE (V14.4)
 // ----------------------------------------------------------------------------------
 
 const TOMATO_DIAGNOSTIC_KB = {
@@ -559,8 +571,8 @@ const TOMATO_DIAGNOSTIC_KB = {
     NPK_GUIDELINES: {
         moisture: { ideal_min: 40, ideal_max: 60, low_crit: 25, high_crit: 75, penalty_minor: 10, penalty_major: 30, low_rec: "deep supplemental irrigation", high_rec: "review soil drainage/stop all irrigation" },
         N: { ideal_min: 60, ideal_max: 100, low_crit: 30, high_crit: 150, penalty_minor: 15, penalty_major: 40, low_rec: "high-Nitrogen (N) liquid feed", high_rec: "stop all N-fertilizer, flush soil" },
-        P: { ideal_min: 50, ideal_max: 80, low_crit: 20, high_crit: 120, penalty_minor: 10, penalty_major: 25, low_rec: "Phosphorus (P) booster for root development", high_rec: "check fertilizer blend for P excess" },
-        K: { ideal_min: 70, ideal_max: 120, low_crit: 40, high_crit: 180, penalty_minor: 10, penalty_major: 25, low_rec: "Potassium (K) to boost resistance/fruit set", high_rec: "check for K salt toxicity" },
+        P: { ideal_min: 50, ideal_max: 80, low_crit: 20, high_crit: 120, penalty_minor: 10, penalty_major: 25, low_rec: "Phosphorus (P) booster for root development", high_crit: "check fertilizer blend for P excess" },
+        K: { ideal_min: 70, ideal_max: 120, low_crit: 40, high_crit: 180, penalty_minor: 10, penalty_major: 25, low_rec: "Potassium (K) to boost resistance/fruit set", high_crit: "check for K salt toxicity" },
     }
 };
 
@@ -589,7 +601,7 @@ function getVisualPreAssessment(visualScore, diagnosedDiseaseName) {
 function findNearestSensorDataPoint(plantX, plantY) {
     let nearestDataPoint = null;
     let minimumDistanceSquared = Infinity;
-    const MAX_SEARCH_RADIUS_SQ = 0.5 * 0.5; // Max 0.5m away from the center of the 1m zone
+    const MAX_SEARCH_RADIUS_SQ = 0.5 * 0.5; 
 
     systemLoggedSensorDataArray.forEach(dataPoint => {
         let dx = dataPoint.x_m - plantX;
@@ -606,14 +618,13 @@ function findNearestSensorDataPoint(plantX, plantY) {
 
 /**
  * @function parsePhotoDataForCVResult
- * Simulates the Computer Vision engine processing the base64 string.
- * This is where a real CV API call would happen.
- * @param {string} photoBase64 - The encoded photo data.
+ * Simulates the Computer Vision engine processing the base64 string, extracting the appended diagnosis marker.
+ * @param {string} photoBase64 - The encoded photo data, containing the diagnostic marker.
  * @returns {object} The simulated CV analysis result.
  */
 function parsePhotoDataForCVResult(photoBase64) {
-    // Extract the mock diagnosis from the mocked base64 string
-    const diagMatch = photoBase64.match(/diag:([a-zA-Z0-9_\/]+)/);
+    // CRITICAL V14.4: Extract the mock diagnosis from the end of the base64 string
+    const diagMatch = photoBase64.match(/_diag:([a-zA-Z0-9_\/]+)$/);
     if (!diagMatch) {
         // Fallback for missing/invalid mock data
         return { diagnosis: "Healthy, Deep Green Foliage", score: 100, prediction: TOMATO_DIAGNOSTIC_KB.DISEASE_TIERS.find(d => d.name.includes("Healthy")) };
@@ -625,12 +636,6 @@ function parsePhotoDataForCVResult(photoBase64) {
     let predictionTier = TOMATO_DIAGNOSTIC_KB.DISEASE_TIERS.find(tier => diagnosisRaw.includes(tier.name.split('(')[0].trim()));
     
     if (!predictionTier) {
-        // Find by partial string match (e.g., 'Blackening' matches 'Dark Spots...')
-        predictionTier = TOMATO_DIAGNOSTIC_KB.DISEASE_TIERS.find(tier => tier.name.includes(diagnosisRaw));
-    }
-    
-    if (!predictionTier) {
-        // Default to healthy if no match is found (should not happen with mocked data)
         predictionTier = TOMATO_DIAGNOSTIC_KB.DISEASE_TIERS.find(d => d.name.includes("Healthy"));
     }
 
@@ -701,7 +706,6 @@ function performFinalDataFusionAndDiagnosis(plant, sensorData, visualResult) {
         partialRecommendationVisual = visualPredictionTier.recommendation;
 
         // Apply visual penalty (20% weight) to the score
-        // A lower visual health score translates to a higher deficit.
         const visualDeficit = 100 - visualScore; 
         fusedHealthScore = Math.max(0, fusedHealthScore - (visualDeficit * 0.20));
     }
@@ -798,6 +802,7 @@ function triggerComprehensiveAnalysisCycle() {
         const photoBase64 = currentPhotoAssignmentData[plant.id] || null;
         let visualResult = null;
         if (photoBase64) {
+            // Note: parsePhotoDataForCVResult now extracts the appended diagnosis from the full string
             visualResult = parsePhotoDataForCVResult(photoBase64);
         }
         
@@ -946,7 +951,7 @@ function restoreTrialFromHistory(trialId) {
     currentRoverKinematicState = {...trial.kinematicState};
     
     // Re-render UI components
-    updateRoverLiveDisplays(trial.sensorData[trial.sensorData.length - 1]); // Update raw data displays with last log
+    updateRoverLiveDisplays(systemLoggedSensorDataArray[systemLoggedSensorDataArray.length - 1]); // Update raw data displays with last log
     updateMapVisualization();
     generatePhotoGrid();
     triggerComprehensiveAnalysisCycle();
@@ -1015,7 +1020,7 @@ function resetSensorAndMapData(clearPhotos = true) {
         y_position_m: 2.0
     };
 
-    // Clear Photo assignments if requested (used for hard reset vs soft init)
+    // Clear Photo assignments if requested 
     if(clearPhotos) {
         currentPhotoAssignmentData = {};
         currentlySelectedPlantZone = 0;
@@ -1104,8 +1109,6 @@ function updateMapVisualization() {
         ctx.strokeStyle = '#30363d';
         ctx.lineWidth = 1;
         ctx.stroke();
-
-        // Label removed for clarity as per UI spec.
     });
 
     // 4. Draw Rover Position (Blue Triangle)
@@ -1159,7 +1162,7 @@ function updateMapVisualization() {
 function findNearestPlantZone(x_m, y_m) {
     let nearestPlant = null;
     let minDistance = Infinity;
-    const MAX_DISTANCE = 1.0; // Max 1m distance to count as "nearest" for capture/probe
+    const MAX_DISTANCE = 1.0; 
 
     FIELD_PLANT_LOCATIONS_M.forEach(plant => {
         const dist = Math.sqrt(Math.pow(plant.x - x_m, 2) + Math.pow(plant.y - y_m, 2));
@@ -1222,7 +1225,7 @@ function generatePhotoGrid() {
  * @function renderPhotoInPhotoGridCell
  * Places a photo (or mock data image) into a specific grid cell, while preserving the hidden input.
  * @param {number} zoneID - The ID of the zone (1-16).
- * @param {string} photoBase64 - The base64 image data.
+ * @param {string} photoBase64 - The base64 image data (including the diagnosis marker).
  */
 function renderPhotoInPhotoGridCell(zoneID, photoBase64) {
     const cell = document.getElementById(`zone-cell-${zoneID}`);
@@ -1234,24 +1237,26 @@ function renderPhotoInPhotoGridCell(zoneID, photoBase64) {
         cell.removeChild(cell.lastChild);
     }
     
-    // 2. Add new image/overlay content
+    // 2. Isolate the *clean* base64 string for display by stripping the diagnosis marker
+    const cleanPhotoUrl = photoBase64.replace(/_diag:([a-zA-Z0-9_\/]+)$/, '');
+
+    // 3. Add new image/overlay content
     const img = document.createElement('img');
-    img.src = photoBase64;
+    img.src = cleanPhotoUrl; // Use the clean URL for the image source
     img.alt = `Zone ${zoneID} Photo`;
-    // CRITICAL FIX V14.3: Ensure the image does not block click events on the cell
-    img.style.cssText = 'width:100%; height:100%; object-fit:cover; position:absolute; top:0; left:0; z-index:5; pointer-events: none;';
+    // CRITICAL FIX V14.4: Applying the required class for click-through
+    img.className = 'grid-cell-img'; 
     
     const deleteButton = document.createElement('button');
     deleteButton.className = 'delete-photo-btn';
     deleteButton.innerHTML = 'X';
-    // Use event.stopPropagation() to prevent the click from falling through to the cell's main click handler
     deleteButton.setAttribute('onclick', `event.stopPropagation(); deletePhotoFromZone(${zoneID})`);
     
     const zoneLabel = document.createElement('p');
     zoneLabel.innerText = `Zone ${zoneID}`;
-    zoneLabel.style.cssText = 'position: absolute; bottom: 5px; left: 5px; background: rgba(0,0,0,0.6); padding: 2px 5px; border-radius: 5px; z-index:15;';
+    zoneLabel.style.cssText = 'position: absolute; bottom: 5px; left: 5px; background: rgba(0,0,0,0.6); padding: 2px 5px; border-radius: 5px; z-index:15; color:#c9d1d9;';
 
-    // Append new content (order is important for layering)
+    // Append new content
     cell.appendChild(img); 
     cell.appendChild(deleteButton); 
     cell.appendChild(zoneLabel); 
@@ -1271,7 +1276,6 @@ function selectPlantZoneForPhoto(zoneID) {
     
     // Visually highlight the selected zone
     document.querySelectorAll('.grid-cell').forEach(cell => {
-        cell.style.boxShadow = 'none';
         const currentCellID = parseInt(cell.id.split('-')[2]);
         if (currentCellID === zoneID) {
             cell.style.border = '3px solid #ffd700'; // Highlight selected zone with yellow border
@@ -1282,10 +1286,10 @@ function selectPlantZoneForPhoto(zoneID) {
         }
     });
 
-    // Programmatically click the hidden file input to trigger upload dialog for manual replacement/upload
+    // Programmatically click the hidden file input to trigger upload dialog.
+    // The pointer-events:none on the image guarantees this click is registered by the cell and then passed to its handler.
     const fileInput = document.getElementById(`file-input-${zoneID}`);
     if (fileInput) {
-        // This function is the trigger, and the element is guaranteed to be present and clickable.
         fileInput.click(); 
         STATUS_ELEMENT.innerText = `Zone ${zoneID} selected. File upload dialog opened for manual photo assignment/replacement.`;
     }
@@ -1303,13 +1307,14 @@ function handleManualPhotoUpload(event, zoneID) {
         const reader = new FileReader();
         reader.onload = function(e) {
             const base64Image = e.target.result;
-            // NOTE: For consistency with stock/rover captures, we add a mock diagnosis marker
+            
+            // Mock a diagnosis for the CV analysis step
             const mockDiagnosis = (Math.random() > 0.5) 
                 ? 'General Severe Yellowing (Chlorosis-N)'
                 : 'Healthy, Deep Green Foliage';
             
-            // Re-encode to contain the diagnostic marker for analysis core consumption
-            const photoDataWithDiagnosis = base64Image + `mocked_manual_upload_diag:${mockDiagnosis.replace(/\s/g, '_').replace(/[()]/g, '')}`;
+            // Append the diagnostic marker to the user's base64 data for the analysis engine to process
+            const photoDataWithDiagnosis = base64Image + `_diag:${mockDiagnosis.replace(/\s/g, '_').replace(/[()]/g, '')}`;
 
             currentPhotoAssignmentData[zoneID] = photoDataWithDiagnosis;
             renderPhotoInPhotoGridCell(zoneID, photoDataWithDiagnosis);
@@ -1329,15 +1334,8 @@ function deletePhotoFromZone(zoneID) {
     if (currentPhotoAssignmentData[zoneID]) {
         delete currentPhotoAssignmentData[zoneID];
         
-        // Re-generate the grid to clear photo content, reset border, and ensure the file input remains.
+        // Re-generate the grid cell content (which calls generatePhotoGrid internally)
         generatePhotoGrid(); 
-        
-        // Ensure visual state is clean
-        const cell = document.getElementById(`zone-cell-${zoneID}`);
-        if(cell) {
-            cell.style.boxShadow = 'none';
-            cell.style.border = '1px solid #3fb950';
-        }
 
         triggerComprehensiveAnalysisCycle();
         STATUS_ELEMENT.innerText = `Photo cleared from Zone ${zoneID}.`;
@@ -1346,7 +1344,7 @@ function deletePhotoFromZone(zoneID) {
 
 /**
  * @function populateStockPhotos
- * Generates the mock stock photo library (simulates 50 pre-diagnosed images).
+ * Generates the mock stock photo library (stores *clean* base64 and *separate* diagnosis).
  */
 function populateStockPhotos() {
     stockPhotoLibraryData = {};
@@ -1355,14 +1353,13 @@ function populateStockPhotos() {
         const tierIndex = i % TOMATO_DIAGNOSTIC_KB.DISEASE_TIERS.length;
         const tier = TOMATO_DIAGNOSTIC_KB.DISEASE_TIERS[tierIndex];
         
-        // Mock a diagnostic string into the base64 URL
-        const mockDiagnosis = tier.name;
-        const mockImageURL = `data:image/jpeg;base64,stock_photo_${i}_diag:${mockDiagnosis.replace(/\s/g, '_').replace(/[()]/g, '')}`;
+        // CRITICAL V14.4: Only store the clean, generic image URL in the stock library
+        const mockImageURL = `data:image/jpeg;base64,STOCK_PRESET_#${i}_(Mock_Image_Data_Only)`;
 
         stockPhotoLibraryData[i] = {
             id: i,
-            url: mockImageURL,
-            diagnosis: tier.name
+            url: mockImageURL, // Clean URL for storage
+            diagnosis: tier.name // Diagnosis stored separately
         };
     }
 }
@@ -1423,8 +1420,11 @@ function assignStockPhotoToZone(stockPhotoID) {
     
     const photo = stockPhotoLibraryData[stockPhotoID];
     if (photo) {
-        currentPhotoAssignmentData[currentlySelectedPlantZone] = photo.url;
-        renderPhotoInPhotoGridCell(currentlySelectedPlantZone, photo.url);
+        // CRITICAL V14.4: Fuse the clean URL and the diagnosis string for the analysis engine
+        const photoDataForAnalysis = photo.url + `_diag:${photo.diagnosis.replace(/\s/g, '_').replace(/[()]/g, '')}`;
+
+        currentPhotoAssignmentData[currentlySelectedPlantZone] = photoDataForAnalysis;
+        renderPhotoInPhotoGridCell(currentlySelectedPlantZone, photoDataForAnalysis);
         closeStockImageGalleryModal();
         triggerComprehensiveAnalysisCycle();
         STATUS_ELEMENT.innerText = `Stock photo ${stockPhotoID} assigned to Zone ${currentlySelectedPlantZone}. Triggering Analysis.`;
@@ -1447,11 +1447,10 @@ function initThreeD() {
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x0c1015);
     
-    // 2. Camera setup (Orthographic for map-like view)
+    // 2. Camera setup 
     const aspect = container.clientWidth / container.clientHeight;
-    const frustumSize = 5; // To match the 4m x 4m field (with some padding)
     camera = new THREE.PerspectiveCamera(75, aspect, 0.1, 1000);
-    camera.position.set(2, 5, 2); // Start looking down at the center of the field
+    camera.position.set(2, 5, 2); 
     
     // 3. Renderer setup
     renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -1460,12 +1459,12 @@ function initThreeD() {
     
     // 4. Controls
     controls = new THREE.OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true; // smooth zoom/pan
+    controls.enableDamping = true; 
     controls.dampingFactor = 0.05;
     controls.screenSpacePanning = false;
     controls.minDistance = 2;
     controls.maxDistance = 10;
-    controls.maxPolarAngle = Math.PI / 2.1; // Prevent going under the plane
+    controls.maxPolarAngle = Math.PI / 2.1; 
     
     // 5. Lighting
     scene.add(new THREE.AmbientLight(0xffffff, 0.6));
@@ -1477,8 +1476,8 @@ function initThreeD() {
     const planeGeometry = new THREE.PlaneGeometry(FIELD_GRID_SIZE_M, FIELD_GRID_SIZE_M);
     const planeMaterial = new THREE.MeshPhongMaterial({ color: 0x161b22, side: THREE.DoubleSide });
     const plane = new THREE.Mesh(planeGeometry, planeMaterial);
-    plane.rotation.x = Math.PI / 2; // Lay flat
-    plane.position.set(FIELD_GRID_SIZE_M / 2, 0, FIELD_GRID_SIZE_M / 2); // Center it in 4x4
+    plane.rotation.x = Math.PI / 2; 
+    plane.position.set(FIELD_GRID_SIZE_M / 2, 0, FIELD_GRID_SIZE_M / 2); 
     scene.add(plane);
     
     // Add grid helper to define the 4x4 area
@@ -1538,8 +1537,8 @@ function draw3DMap() {
 
     // 2. Draw 16 zone blocks (Height=Moisture, Color=Health)
     FIELD_PLANT_LOCATIONS_M.forEach(plant => {
-        const x_coord = plant.x; // 0.5, 1.5, 2.5, 3.5
-        const z_coord = plant.y; // 0.5, 1.5, 2.5, 3.5 (Z-axis in Three.js corresponds to Y on the 2D map)
+        const x_coord = plant.x; 
+        const z_coord = plant.y; 
         
         // Get the diagnosis data
         const sensorData = findNearestSensorDataPoint(plant.x, plant.y);
@@ -1561,7 +1560,7 @@ function draw3DMap() {
         const color = getHealthColor(healthScore);
         
         // Create the block (Cylinder is better for "plant" or "core sample" representation)
-        const geometry = new THREE.CylinderGeometry(0.4, 0.4, height, 8); // Radius 0.4m, Height scaled
+        const geometry = new THREE.CylinderGeometry(0.4, 0.4, height, 8); 
         const material = new THREE.MeshStandardMaterial({ color: color });
         const block = new THREE.Mesh(geometry, material);
         
@@ -1602,7 +1601,6 @@ function updateRover3DPosition() {
     rover.position.set(x_coord, 0.2, z_coord);
     
     // Rotation: Cone points along its Y-axis by default, rotate to align with field plane
-    // Then rotate around Y to match heading (0 deg is along +Z axis on map)
     rover.rotation.x = Math.PI / 2; // Lay flat
     rover.rotation.z = -heading; // Rotate to match heading angle
     
@@ -1624,7 +1622,6 @@ function updateRoverLiveDisplays(latestLog) {
      if (!latestLog) return;
      MOISTURE_DISPLAY_ELEMENT.innerText = `${latestLog.moisture}%`;
      NPK_DISPLAY_ELEMENT.innerText = `N:${latestLog.npk_n}, P:${latestLog.npk_p}, K:${latestLog.npk_k}`;
-     // Note: GPS/IMU data is updated directly in executeDataAcquisition as it's separate from a soil probe.
 }
 
 // CRITICAL: Polyfill for :contains is not standard, this is required for the code's logic.
