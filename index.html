@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>S.C.O.U.T. Rover Post-Flood Data Fusion & Control Console (V45.0 - Photo Dominance/3D Sync Fix)</title>
+<title>S.C.O.U.T. Rover Post-Flood Data Fusion & Control Console (V46.0 - Photo Verdict Differentiation Fix)</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script async src="https://docs.opencv.org/4.x/opencv.js" onload="onOpenCvReady();"></script>
@@ -229,7 +229,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 <body>
 <div class="container">
     <div class="controls-panel">
-        <h1>S.C.O.U.T. Post-Flood Assessment Bridge (V45.0)</h1>
+        <h1>S.C.O.U.T. Post-Flood Assessment Bridge (V46.0)</h1>
         <p>System Diagnostic Status: <span id="status">AWAITING SYSTEM BOOT SEQUENCE COMPLETION...</span></p>
 
         <div class="data-display history-controls">
@@ -275,7 +275,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
                 <label style="color:#79c0ff;">K (ppm): <input type="number" id="manualK" min="1" value="150" style="width: 50px;"></label>
             </div>
             <button onclick="dispatchManualDataEntry()" style="background-color: #e341b3; color: #0d1117;">  📝  SUBMIT MANUAL DATA + PHOTO</button>
-            <p><small>**V45.0 Fix:** Analysis is now **Photo-Dominant** and **3D Colors are synchronized** with the Fused Score.</small></p>
+            <p><small>**V46.0 Fix:** Photo analysis now uses **6 highly distinct penalties** and diagnoses for maximal verdict differentiation.</small></p>
         </div>
 
         <div class="data-display">
@@ -323,7 +323,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 
     <div class="plant-analysis-panel">
         <h2>DATA FUSION ENGINE: Post-Flood Plant Diagnosis (16 Zones)  🔬  </h2>
-        <p>This panel displays the **FUSED** assessment: **Leaf Visual Pre-Assessment (CV)** + **Local Soil Sensor Data**. **(V45.0: Results prioritize photo/visual data)**.</p>
+        <p>This panel displays the **FUSED** assessment: **Leaf Visual Pre-Assessment (CV)** + **Local Soil Sensor Data**. **(V46.0: Visual verdicts are now maximally differentiated)**.</p>
         <div id="plantAnalysisGrid">
         </div>
     </div>
@@ -352,7 +352,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 </div>
 
 <footer>
-    <p>&copy; 2025 S.C.O.U.T. Rover Systems - Operational Bridge V45.0. Hardware ESP32 IP: 10.101.146.88 | ThingSpeak API: 6OXH3SUQ4VNSOJX1</p>
+    <p>&copy; 2025 S.C.O.U.T. Rover Systems - Operational Bridge V46.0. Hardware ESP32 IP: 10.101.146.88 | ThingSpeak API: 6OXH3SUQ4VNSOJX1</p>
 </footer>
 
 <script>
@@ -361,7 +361,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 // ----------------------------------------------------------------------------------
 /**
  * @fileoverview S.C.O.U.T. Rover Control System JavaScript Core.
- * Version 45.0: Photo Analysis Dominance and 3D Color Synchronization Fix.
+ * Version 46.0: Photo Verdict Differentiation Fix (New Pest Diagnosis & distinct penalties).
  */
 // --- 0.2.1 HARDWARE AND NETWORK CONFIGURATION (CRITICAL SYSTEM IDENTIFIERS) ---
 const HARDWARE_ESP32_IP_ADDRESS = '10.101.146.88'; 
@@ -375,7 +375,7 @@ const PLANT_CIRCLE_RADIUS = 5;
 const SCORE_CAP_ON_PARTIAL_DATA = 50;
 // V43.0 CRITICAL FIX: A valid, tiny PNG image (1x1 green pixel) to ensure Base64 image integrity
 const VALID_MOCK_BASE64_DATA = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP4z8BQDwAEhQGAhKmMIwAAAABJRU5ErkJggg=='; 
-// --- 0.2.3 DIAGNOSTIC CONSTANTS (V45.0 - HEALTH SCORE AND THRESHOLDS) ---
+// --- 0.2.3 DIAGNOSTIC CONSTANTS (V46.0 - HEALTH SCORE AND THRESHOLDS) ---
 const HEALTH_SCORE_THRESHOLDS = {
     CRITICAL: { max: 40, color: '#f85149', label: 'CRITICAL', class: 'rec-critical' }, // Red (0-40)
     ACTION_REQUIRED: { max: 75, color: '#e3b341', label: 'ACTION REQUIRED', class: 'rec-action' }, // Amber (41-75)
@@ -401,7 +401,7 @@ const STOCK_MODAL = document.getElementById('stockImageModal');
 const CURRENT_ZONE_SELECTION_DISPLAY = document.getElementById('currentZoneSelection');
 const MANUAL_TARGET_ZONE_SELECT = document.getElementById('manualTargetZone');
 
-// --- V43.0 CORE: DETERMINISTIC FIELD CONDITIONS (Retained from V41.0) ---
+// --- V43.0 CORE: DETERMINISTIC FIELD CONDITIONS (Retained from V41.0, updated diagnosis for Zone 16) ---
 const FIELD_ZONE_CONDITIONS = {
     // Optimal / Baseline Condition (Should result in high score, unless moisture is over 70)
     1: { type: 'Optimal', moisture: 55.0, N: 160, P: 85, K: 155, diag: 'Healthy, Deep Green Foliage' },
@@ -421,11 +421,11 @@ const FIELD_ZONE_CONDITIONS = {
     11: { type: 'N-Deficient', moisture: 32.0, N: 25, P: 80, K: 95, diag: 'General Severe Yellowing (Chlorosis-N)' },
     15: { type: 'N-Deficient', moisture: 40.0, N: 40, P: 65, K: 105, diag: 'General Severe Yellowing (Chlorosis-N)' },
     
-    // Disease Hotspot / Fungal Condition (Normal Moisture/NPK, but visual issue)
-    4: { type: 'Disease', moisture: 65.0, N: 150, P: 80, K: 150, diag: 'Dark Spots & Lesions/Blackening of Leaf (Fungal/Bacterial)' },
-    8: { type: 'Disease', moisture: 55.0, N: 160, P: 85, K: 155, diag: 'Dark Spots & Lesions/Blackening of Leaf (Fungal/Bacterial)' },
-    12: { type: 'Disease', moisture: 50.0, N: 145, P: 75, K: 140, diag: 'Mottling/Mosaic Pattern (Viral-TMV)' }, // Changed to Viral for testing
-    16: { type: 'Disease', moisture: 45.0, N: 155, P: 78, K: 145, diag: 'Edging Burn/Tip Necrosis (K/Salt)' }, 
+    // Disease/Pest Hotspot Conditions (Normal Moisture/NPK, but visual issue)
+    4: { type: 'Fungal', moisture: 65.0, N: 150, P: 80, K: 150, diag: 'Dark Spots & Lesions/Blackening of Leaf (Fungal/Bacterial)' },
+    8: { type: 'Fungal', moisture: 55.0, N: 160, P: 85, K: 155, diag: 'Dark Spots & Lesions/Blackening of Leaf (Fungal/Bacterial)' },
+    12: { type: 'Viral', moisture: 50.0, N: 145, P: 75, K: 140, diag: 'Mottling/Mosaic Pattern (Viral-TMV)' }, 
+    16: { type: 'Pest', moisture: 45.0, N: 155, P: 78, K: 145, diag: 'Heavy Mite/Pest Damage (Stippling)' }, // V46.0 New Pest Diagnosis
 };
 
 
@@ -637,15 +637,19 @@ function dispatchManualDataEntry() {
 
 
 // ==================================================================================
-// SECTION 2.0: DIAGNOSTIC KNOWLEDGE BASE & FUSED ANALYSIS CORE (V45.0 - Photo Dominance Logic)
+// SECTION 2.0: DIAGNOSTIC KNOWLEDGE BASE & FUSED ANALYSIS CORE (V46.0 - MAX DIFFERENTIATION)
 // ----------------------------------------------------------------------------------
 const TOMATO_DIAGNOSTIC_KB = {
-    // V45.0 FIX: Increased penalty to 70 to guarantee a CRITICAL score (<40) even with optimal soil data (100 - 70 = 30)
+    // V46.0 FIX: Viral diagnosis is the most critical, designed to always be CRITICAL score.
     'Mottling/Mosaic Pattern (Viral-TMV)': { score_penalty: 70, type: 'Viral', recommendation: "CRITICAL ISOLATION REQUIRED: Strong indicator of Tobacco Mosaic Virus (TMV). **IMMEDIATELY REMOVE AND DESTROY** the plant to prevent field-wide contamination. No chemical cure exists." },
-    // V45.0 FIX: Increased penalty to 55 to guarantee an ACTION REQUIRED score (<75) even with optimal soil data (100 - 55 = 45)
+    // V46.0 FIX: Fungal diagnosis is next most critical, designed to always be ACTION REQUIRED/CRITICAL.
     'Dark Spots & Lesions/Blackening of Leaf (Fungal/Bacterial)': { score_penalty: 55, type: 'Fungal/Bacterial', recommendation: "FUNGICIDE/BACTERICIDE APPLICATION: Likely Early Blight or Bacterial Spot. Apply broad-spectrum copper-based fungicide and focus on improving air circulation and reducing leaf wetness." },
-    'General Severe Yellowing (Chlorosis-N)': { score_penalty: 15, type: 'Deficiency', recommendation: "NPK DEFICIENCY LIKELY: Severe general yellowing often indicates primary Nitrogen (N) deficiency. Review sensor data and apply a high-Nitrogen fertilizer source (e.g., urea)." },
-    'Edging Burn/Tip Necrosis (K/Salt)': { score_penalty: 20, type: 'Deficiency', recommendation: "POTASSIUM/SALINITY ISSUE: Burnt edges suggest Potassium (K) deficiency or high soil salinity/over-fertilization. Test soil salinity and apply potash or flush the soil if necessary." },
+    // V46.0 NEW DIAGNOSIS: Pest damage, providing a distinct intermediate penalty.
+    'Heavy Mite/Pest Damage (Stippling)': { score_penalty: 35, type: 'Pest', recommendation: "PESTICIDE REQUIRED: Severe stippling and webbing suggest heavy mite infestation. Apply miticide immediately and scout surrounding plants." },
+    // V46.0 Adjusted Penalty: Salt/K deficiency
+    'Edging Burn/Tip Necrosis (K/Salt)': { score_penalty: 30, type: 'Deficiency', recommendation: "POTASSIUM/SALINITY ISSUE: Burnt edges suggest Potassium (K) deficiency or high soil salinity/over-fertilization. Test soil salinity and apply potash or flush the soil if necessary." },
+    // V46.0 Adjusted Penalty: N deficiency
+    'General Severe Yellowing (Chlorosis-N)': { score_penalty: 25, type: 'Deficiency', recommendation: "NPK DEFICIENCY LIKELY: Severe general yellowing often indicates primary Nitrogen (N) deficiency. Review sensor data and apply a high-Nitrogen fertilizer source (e.g., urea)." },
     'Healthy, Deep Green Foliage': { score_penalty: 0, type: 'Optimal', recommendation: "OPTIMAL HEALTH: Visual assessment confirms deep green, vibrant foliage with no signs of disease or pest damage. Maintain current environmental conditions." }
 };
 
@@ -662,15 +666,16 @@ function getDiagnosisAndRecommendations(plantData) {
     let isFloodScenario = false;
     let visualPenaltyApplied = 0;
     
-    // 1. --- VISUAL (PARTIAL) ASSESSMENT / PHOTO PENALTY (V45.0: DOMINANT FACTOR) ---
+    // 1. --- VISUAL (PARTIAL) ASSESSMENT / PHOTO PENALTY (V46.0: DOMINANT FACTOR) ---
     if (photoDiagnosis) {
         const kbEntry = TOMATO_DIAGNOSTIC_KB[photoDiagnosis];
         if (kbEntry) {
             visualPenaltyApplied = kbEntry.score_penalty;
             totalHealthScore -= visualPenaltyApplied;
             cv_rec_text = `**Leaf Visual Assessment (${kbEntry.type}):** ${kbEntry.recommendation}`;
-            analysisDetail += `**VISUAL ASSESSMENT (CV Analysis - V45.0 DOMINANT):** The captured photo identified: **${photoDiagnosis}**. This visual indication has triggered a **-${visualPenaltyApplied} point** penalty, designed to override optimal sensor readings when a severe disease is present.\n\n`;
+            analysisDetail += `**VISUAL ASSESSMENT (CV Analysis - V46.0 DOMINANT):** The captured photo identified: **${photoDiagnosis}**. This visual indication has triggered a **-${visualPenaltyApplied} point** penalty, designed to override optimal sensor readings when a severe disease is present.\n\n`;
         } else {
+            // Default if photo is there but diagnosis text is unknown (should not happen with mocks)
             cv_rec_text = `**Leaf Visual Assessment (Optimal):** ${TOMATO_DIAGNOSTIC_KB['Healthy, Deep Green Foliage'].recommendation}`;
         }
     }
@@ -735,11 +740,15 @@ function getDiagnosisAndRecommendations(plantData) {
     
     let final_diagnosis_summary = `Based on the merged Post-Flood data streams, the plant is rated **${result.label}** with a final Fused Health Score of **${totalHealthScore.toFixed(0)}/100**. `;
     
-    if (visualPenaltyApplied > 40) {
-        // V45.0: If photo penalty is high, focus on the disease/visual issue as the primary threat
-        fused_rec_text = final_diagnosis_summary + `**VISUAL DISEASE DOMINANCE:** The primary, CRITICAL threat is the visually identified condition (**${photoDiagnosis}**). Immediate isolation and treatment/destruction protocol must be followed as detailed in the Visual Assessment. The high photo penalty has driven the final score down.`;
+    if (visualPenaltyApplied >= TOMATO_DIAGNOSTIC_KB['Dark Spots & Lesions/Blackening of Leaf (Fungal/Bacterial)'].score_penalty) {
+        // V46.0: If photo penalty is high (Fungal or Viral), focus on the disease/visual issue as the primary threat
+        const photoRec = TOMATO_DIAGNOSTIC_KB[photoDiagnosis] ? TOMATO_DIAGNOSTIC_KB[photoDiagnosis].recommendation : "Immediate removal is suggested.";
+        fused_rec_text = final_diagnosis_summary + `**CRITICAL DISEASE DOMINANCE:** The primary threat is the visually identified severe condition. **PROTOCOL ISOLATION/DESTRUCTION/FUNGICIDE REQUIRED.** Follow the explicit instruction in the Visual Assessment.`;
     } else if (isFloodScenario) {
         fused_rec_text = final_diagnosis_summary + `**CRITICAL POST-FLOOD DRAINAGE FAILURE:** The immediate priority is the **Post-Flood Mitigation Protocol (Drainage)**. Waterlogging (high moisture) will prevent all recovery. Address drainage before attempting nutrient correction.`;
+    } else if (visualPenaltyApplied > 20 && totalHealthScore < 76) {
+         // V46.0: Lower level photo issue driving score but not critical
+        fused_rec_text = final_diagnosis_summary + `**VISUAL/NUTRIENT STRESS:** The visual issue (**${photoDiagnosis}**) combined with soil stress suggests an **ACTION REQUIRED** response. Apply the required pesticide/nutrient supplement protocol immediately.`;
     } else if (totalHealthScore < 76 && (moisture !== null || npk_n !== null)) {
         fused_rec_text = final_diagnosis_summary + `**POST-FLOOD RECOVERY STAGE:** The soil has drained, but the low health score is due to severe **nutrient leaching/drought stress**. Implement the nutrient/water correction actions detailed in the Full Assessment immediately.`;
     } else {
@@ -831,7 +840,7 @@ function triggerComprehensiveAnalysisCycle() {
     });
 
     updateMapVisualization(); 
-    draw3DMap(); // V45.0 FIX: Ensure this is called to update colors
+    draw3DMap(); 
 }
 
 function generatePlantAnalysisCardHTML(zoneID, result) {
@@ -866,7 +875,7 @@ function generatePlantAnalysisCardHTML(zoneID, result) {
                 <div class="${scoreClass}">${result.rec_sensor}</div>
             </div>
 
-            <h3>DATA FUSION ENGINE: Detailed Report (V45.0)</h3>
+            <h3>DATA FUSION ENGINE: Detailed Report (V46.0)</h3>
             <pre style="white-space: pre-wrap; word-wrap: break-word; background: #0f131a; padding: 15px; border-radius: 8px; border: 1px solid #30363d; font-size: 0.9em;">${result.analysis}</pre>
         </div>
     `;
@@ -1053,7 +1062,7 @@ function drawFieldCubes() {
             stem: stem, 
             leaves: leafGroup, 
             id: plant.id,
-            leafMaterial: individualLeafMaterial // V45.0 FIX: Use descriptive name
+            leafMaterial: individualLeafMaterial 
         });
         scene.add(plantGroup);
     });
@@ -1299,19 +1308,28 @@ function closeStockImageGalleryModal() {
 function populateStockPhotos() {
     const grid = document.getElementById('stockImageGrid');
     grid.innerHTML = '';
-    const diagnoses = Object.keys(TOMATO_DIAGNOSTIC_KB);
+    
+    // V46.0: Use the keys of the Knowledge Base for maximal differentiation (6 distinct diagnoses)
+    const diagnosesKeys = Object.keys(TOMATO_DIAGNOSTIC_KB);
 
     for (let i = 1; i <= MAX_STOCK_PHOTOS; i++) {
-        const diagnosisKey = diagnoses[i % diagnoses.length];
+        // Cycle through the 6 distinct diagnoses for variety
+        const diagnosisKey = diagnosesKeys[i % diagnosesKeys.length];
         const diagnosis = TOMATO_DIAGNOSTIC_KB[diagnosisKey];
         
         // V43.0 FIX: Use the valid base64 data + append the diagnosis string after the base64 data
-        const dataUrlWithMockDiagnosis = `data:image/png;base64,${VALID_MOCK_BASE64_DATA},diag:${diagnosisKey.replace(/\s/g, '_').replace(/[()]/g, '')}`;
+        const dataUrlWithMockDiagnosis = `data:image:png;base64,${VALID_MOCK_BASE64_DATA},diag:${diagnosisKey.replace(/\s/g, '_').replace(/[()]/g, '')}`;
         stockPhotoLibraryData[i] = dataUrlWithMockDiagnosis; 
 
         const cell = document.createElement('div');
         cell.className = 'grid-cell';
-        cell.style.backgroundColor = (diagnosisKey === 'Healthy, Deep Green Foliage') ? '#3fb950' : '#f08047'; 
+        
+        let bgColor = '#3fb950'; // Green for Optimal
+        if(diagnosis.score_penalty === 70) bgColor = '#f85149'; // Red for Viral
+        else if(diagnosis.score_penalty === 55) bgColor = '#ff8000'; // Orange for Fungal
+        else if(diagnosis.score_penalty > 0) bgColor = '#e3b341'; // Amber for Deficiency/Pest
+
+        cell.style.backgroundColor = bgColor; 
         cell.style.fontSize = '0.7em';
         cell.style.padding = '5px';
         cell.innerHTML = `Stock #${i}<br>(${diagnosis.type})`;
