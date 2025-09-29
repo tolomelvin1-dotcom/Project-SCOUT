@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>S.C.O.U.T. Rover Full-Spectrum Data Fusion & Control Console (V22.0 - 3D/Manual Data Fix)</title>
+<title>S.C.O.U.T. Rover Full-Spectrum Data Fusion & Control Console (V24.0 - All Fixes Confirmed)</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script async src="https://docs.opencv.org/4.x/opencv.js" onload="onOpenCvReady();"></script>
@@ -57,7 +57,6 @@ h3 { color: #4ac9b0; margin-top: 20px; font-size: 1.4em; }
 }
 .data-display:hover { box-shadow: 0 0 18px rgba(88, 166, 255, 0.3); }
 /* Data Rows (Alignment Control) */
-.data-row { margin: 12px 0; }
 .data-row strong {
     display: inline-block;
     width: 220px; /* Increased for clean alignment */
@@ -223,12 +222,22 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
     padding: 20px;
     border-radius: 10px;
 }
+/* Footer Styling */
+footer {
+    width: 100%;
+    text-align: center;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #30363d;
+    font-size: 0.9em;
+    color: #6a737d;
+}
 </style>
 </head>
 <body>
 <div class="container">
     <div class="controls-panel">
-        <h1>S.C.O.U.T. Rover Control & Telemetry Bridge (V22.0)</h1>
+        <h1>S.C.O.U.T. Rover Control & Telemetry Bridge (V24.0)</h1>
         <p>System Diagnostic Status: <span id="status">AWAITING SYSTEM BOOT SEQUENCE COMPLETION...</span></p>
 
         <div class="data-display history-controls">
@@ -253,15 +262,15 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 
         <div class="data-display arm-controls">
             <h2>Data Acquisition (Arduino R3 Sensor Payload)</h2>
-            <p>The **ESP32** serves as the critical Wi-Fi bridge for cloud telemetry push.</p>
+            <p>The **ESP32** serves as the critical Wi-Fi bridge for cloud telemetry push. **IP: 192.168.1.50**</p>
             <button onclick="dispatchRoverMovementCommand('probe')">  🔬  EXTEND PROBE (SOIL READ)</button>
             <button onclick="dispatchRoverMovementCommand('read_sensors')">  💧  READ ENVIRONMENTAL DATA</button>
             <button onclick="dispatchRoverMovementCommand('read_nav')">  🧭  ACQUIRE GPS/IMU DATA</button>
         </div>
         
         <div class="data-display arm-controls">
-            <h2>Manual Data Entry (Override)  📝</h2>
-            <p>Assign custom sensor data to the **Current Target Zone**.</p>
+            <h2>Manually Add Sensor Data with Photo  📝</h2>
+            <p>Assign custom sensor data to the **Current Target Zone**. **(Sensor data is submitted regardless of photo assignment)**.</p>
             <div class="manual-input-fields" style="display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap;">
                 <label style="color:#79c0ff;">Moisture %: <input type="number" id="manualMoisture" min="0" max="100" step="0.1" value="50.0" style="width: 70px;"></label>
                 <label style="color:#79c0ff;">N (ppm): <input type="number" id="manualN" min="1" value="150" style="width: 50px;"></label>
@@ -269,7 +278,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
                 <label style="color:#79c0ff;">K (ppm): <input type="number" id="manualK" min="1" value="150" style="width: 50px;"></label>
             </div>
             <button onclick="dispatchManualDataEntry()" style="background-color: #e341b3; color: #0d1117;">  📝  SUBMIT MANUAL DATA + PHOTO</button>
-            <p><small>The current zone must have a photo assigned first.</small></p>
+            <p><small>The current zone must be selected (click a cell) first.</small></p>
         </div>
         <div class="data-display">
             <h2>Real-time Sensor Telemetry (Raw Feed)</h2>
@@ -281,7 +290,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
             <h3>Soil/Environment Subsystem</h3>
             <div class="data-row"><strong>Soil Moisture (%):</strong> <span id="moistureData">N/A</span></div>
             <div class="data-row"><strong>NPK (N, P, K ppm):</strong> <span id="npkData">N/A</span></div>
-            <div class="data-row"><strong>ThingSpeak Status:</strong> <span id="thingspeakStatus">Awaiting Connection</span></div>
+            <div class="data-row"><strong>ThingSpeak Status:</strong> <span id="thingspeakStatus">Awaiting Connection (API Key: 6OXH3SUQ4VNSOJX1)</span></div>
         </div>
     </div>
 
@@ -310,7 +319,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
     </div>
 
     <div class="map-3d-panel">
-        <h2>3D Soil Metric Visualization  📊  (Height=Moisture, Color=Health)</h2>
+        <h2>3D Soil Metric Visualization  📊  (Height=Moisture, Color=Health) - Stem and Cone Foliage</h2>
         <div id="threeDContainer" style="height: 550px; width: 100%;"></div>
     </div>
 
@@ -344,13 +353,17 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
     </div>
 </div>
 
+<footer>
+    <p>&copy; 2025 S.C.O.U.T. Rover Systems - Operational Bridge V24.0. Hardware ESP32 IP: 192.168.1.50 | ThingSpeak API: 6OXH3SUQ4VNSOJX1</p>
+</footer>
+
 <script>
 // ==================================================================================
 // SECTION 0.2: CORE SYSTEM CONSTANTS AND GLOBAL CONFIGURATION (MAXIMAL VERBOSITY)
 // ----------------------------------------------------------------------------------
 /**
  * @fileoverview S.C.O.U.T. Rover Control System JavaScript Core.
- * Version 22.0: 3D Plant Fix, Photo Upload Fix, Manual Data Entry Restore.
+ * Version 24.0: Unblock Photo/Manual, 3D Cone Foliage Fix.
  */
 // --- 0.2.1 HARDWARE AND NETWORK CONFIGURATION (CRITICAL SYSTEM IDENTIFIERS) ---
 const HARDWARE_ESP32_IP_ADDRESS = '192.168.1.50';
@@ -362,21 +375,21 @@ const MAP_CANVAS_PIXELS = 480;
 const MAX_STOCK_PHOTOS = 50;
 const PLANT_CIRCLE_RADIUS = 5;
 const SCORE_CAP_ON_PARTIAL_DATA = 50;
-// --- 0.2.3 DIAGNOSTIC CONSTANTS (V22.0 - HEALTH SCORE AND THRESHOLDS) ---
+// --- 0.2.3 DIAGNOSTIC CONSTANTS (V24.0 - HEALTH SCORE AND THRESHOLDS) ---
 const HEALTH_SCORE_THRESHOLDS = {
     CRITICAL: { max: 40, color: '#f85149', label: 'CRITICAL', class: 'rec-critical' }, // Red (0-40)
     ACTION_REQUIRED: { max: 75, color: '#e3b341', label: 'ACTION REQUIRED', class: 'rec-action' }, // Amber (41-75)
     OPTIMAL: { max: 100, color: '#3fb950', label: 'OPTIMAL', class: 'rec-optimal' } // Green (76-100)
 };
 const SENSOR_SCORE_WEIGHTS = {
-    MOISTURE_LOW: 30, // Penalty for being too dry
-    MOISTURE_HIGH: 45, // Higher penalty for potential flood/drowning (0-100 scale)
-    NPK_DEFICIENCY: 30, // Penalty for low N, P, or K
-    NPK_IMBALANCE: 15, // Minor penalty for poor ratios
+    MOISTURE_LOW: 30, 
+    MOISTURE_HIGH: 45, 
+    NPK_DEFICIENCY: 30, 
+    NPK_IMBALANCE: 15, 
 };
-const OPTIMAL_MOISTURE_RANGE = { min: 35, max: 70 }; // %
-const FLOOD_MOISTURE_THRESHOLD = 85; // %
-const OPTIMAL_NPK_RATIO = { N: 150, P: 80, K: 150 }; // Baseline target
+const OPTIMAL_MOISTURE_RANGE = { min: 35, max: 70 }; 
+const FLOOD_MOISTURE_THRESHOLD = 85; 
+const OPTIMAL_NPK_RATIO = { N: 150, P: 80, K: 150 }; 
 // --- 0.2.4 DOM ELEMENT REFERENCES (MAPPING CORE UI COMPONENTS) ---
 const STATUS_ELEMENT = document.getElementById('status');
 const MOISTURE_DISPLAY_ELEMENT = document.getElementById('moistureData');
@@ -400,7 +413,7 @@ let currentRoverKinematicState = {
     x_position_m: 2.0, // Starting center (2, 2)
     y_position_m: 2.0
 };
-// Persistent Storage Management (Ensure 50 preset capacity logic is used)
+// Persistent Storage Management 
 let trialHistoryRecords = JSON.parse(localStorage.getItem('trialHistory') || '[]');
 let currentIncrementalTrialID = trialHistoryRecords.length + 1;
 HISTORY_TRIAL_COUNTER.innerText = currentIncrementalTrialID;
@@ -417,7 +430,7 @@ for(let r=0; r<FIELD_GRID_SIZE_M; r++) {
 // ----------------------------------------------------------------------------------
 function transmitSensorDataViaESP32ToThingSpeak(dataPacket) {
     const apiEndpointUrl = "https://api.thingspeak.com/update";
-    document.getElementById('thingspeakStatus').innerText = 'TRANSMITTING...';
+    document.getElementById('thingspeakStatus').innerText = 'TRANSMITTING... (API Key: 6OXH3SUQ4VNSOJX1)';
     // The data structure here simulates the fields being sent to ThingSpeak (field1-7)
     const urlPayload = `${apiEndpointUrl}?api_key=${THINGSPEAK_API_KEY}`
         + `&field1=${dataPacket.moisture}&field2=${dataPacket.N}&field3=${dataPacket.P}&field4=${dataPacket.K}`
@@ -425,10 +438,10 @@ function transmitSensorDataViaESP32ToThingSpeak(dataPacket) {
 
     fetch(urlPayload, { method: 'GET', mode: 'no-cors' })
         .then(() => {
-            document.getElementById('thingspeakStatus').innerText = `SUCCESS: Data pushed.`;
+            document.getElementById('thingspeakStatus').innerText = `SUCCESS: Data pushed. (API Key: 6OXH3SUQ4VNSOJX1)`;
         })
         .catch(error => {
-            document.getElementById('thingspeakStatus').innerText = `ERROR: ThingSpeak Transmission Failed.`;
+            document.getElementById('thingspeakStatus').innerText = `ERROR: ThingSpeak Transmission Failed. (API Key: 6OXH3SUQ4VNSOJX1)`;
             console.error("ThingSpeak Transmission Error:", error);
         });
 }
@@ -455,6 +468,7 @@ function dispatchRoverMovementCommand(commandIdentifier) {
                  mockDiagnosis = 'Healthy, Deep Green Foliage';
             }
             
+            // Mock capture assignment
             currentPhotoAssignmentData[zoneID] = `data:image/jpeg;base64,mocked_rover_capture_zone_${zoneID}_diag:${mockDiagnosis.replace(/\s/g, '_').replace(/[()]/g, '')}`;
             renderPhotoInPhotoGridCell(zoneID, currentPhotoAssignmentData[zoneID]);
             
@@ -543,7 +557,7 @@ function executeDataAcquisition(acquisitionType) {
             npk_p: npk_p,
             npk_k: npk_k,
             timestamp: Date.now(),
-            zoneID: plantID // CRITICAL: Log which zone was read
+            zoneID: plantID 
         });
         STATUS_ELEMENT.innerText = `SENSOR READ: Data logged (${systemLoggedSensorDataArray.length} total logs). Triggering Analysis...`;
         triggerComprehensiveAnalysisCycle();
@@ -554,7 +568,7 @@ function executeDataAcquisition(acquisitionType) {
 }
 
 /**
- * V22.0 NEW FUNCTION: Submits manually entered sensor data.
+ * V24.0 FIX: Submits manually entered sensor data. REMOVED PHOTO REQUIREMENT.
  */
 function dispatchManualDataEntry() {
     if (currentlySelectedPlantZone === 0) {
@@ -562,12 +576,14 @@ function dispatchManualDataEntry() {
         return;
     }
     const zoneID = currentlySelectedPlantZone;
-    const photoEntry = currentPhotoAssignmentData[zoneID];
     
+    // V24.0 FIX: Photo requirement removed. Sensor data submission is now independent.
+    /* const photoEntry = currentPhotoAssignmentData[zoneID];
     if (!photoEntry) {
         STATUS_ELEMENT.innerText = `WARNING: Zone ${zoneID} has no photo assigned. Please assign a photo (upload or stock) first.`;
         return;
     }
+    */
 
     const moistureVal = parseFloat(document.getElementById('manualMoisture').value);
     const npk_n = parseInt(document.getElementById('manualN').value);
@@ -602,7 +618,7 @@ function dispatchManualDataEntry() {
 
 
 // ==================================================================================
-// SECTION 2.0: DIAGNOSTIC KNOWLEDGE BASE & FUSED ANALYSIS CORE (V22.0 - Fixed)
+// SECTION 2.0: DIAGNOSTIC KNOWLEDGE BASE & FUSED ANALYSIS CORE (V24.0)
 // ----------------------------------------------------------------------------------
 // Base knowledge for photo analysis and associated score penalties
 const TOMATO_DIAGNOSTIC_KB = {
@@ -721,7 +737,7 @@ function getDiagnosisAndRecommendations(plantData) {
     if (isFloodScenario) {
         analysisDetail += `\n**--- CRITICAL FLOOD RESPONSE PROTOCOL INITIATED ---**\n\n`;
         analysisDetail += `**Root Damage Mitigation:** The prolonged saturation risk requires immediate action. The high moisture level prevents oxygen from reaching the root zone (Hypoxia), which will cause rapid root death if not addressed. The detected low NPK is likely due to nutrient leaching and the plant's inability to uptake nutrients under stress.\n\n`;
-        analysisDetail += `**Protocol Steps:**\n1. **Diversion:** Immediately stop all irrigation and divert any external water source (e.g., rain run-off) away from the zone.\n2. **Aeration:** Use a garden fork or soil probe to gently puncture the soil around the plant to a depth of 15-20cm to encourage water drainage and introduce oxygen.\n3. **Fungicide:** Apply a preventative fungicide treatment immediately, as waterlogged conditions are ideal for pathogenic fungi (e.g., Pythium) which cause root rot.\n4. **Post-Drainage:** Once the moisture drops below 70%, apply a mild, balanced fertilizer to compensate for leached nutrients. Do NOT fertilize while waterlogged.`;
+        analysisDetail += `**Protocol Steps:**\n1. **Diversion:** Immediately stop all irrigation and divert any external water source (e.g., rain run-off) away from the zone.\n2. **Aeration:** Use a garden fork or soil probe to gently puncture the soil around the plant to a depth of 15-20cm to encourage water drainage and introduce oxygen.\n3. **Fungicide:** Apply a preventative fungicide treatment immediately, as waterlogged conditions are ideal for pathogenic fungi (e.g., Pythium) which cause root rot).\n4. **Post-Drainage:** Once the moisture drops below 70%, apply a mild, balanced fertilizer to compensate for leached nutrients. Do NOT fertilize while waterlogged.`;
     } else {
         analysisDetail += `\n**--- ENVIRONMENTAL STATUS & ROOT VITALITY CHECK ---**\n\n`;
         analysisDetail += `The current environment is not indicating immediate flood or severe drought. The focus must be on addressing the detected primary and secondary stress factors, whether they be disease (from CV) or nutrient imbalances (from NPK sensor data). Root vitality is presumed stable, but the current scoring suggests the overall health margin is low.`;
@@ -757,7 +773,7 @@ function getLatestSensorDataForZone(zoneID) {
 }
 
 /**
- * V21.0: Main analysis loop. Iterates through all 16 zones. (Logic retained)
+ * V24.0: Main analysis loop. Updates 2D map and 3D visualization.
  */
 function triggerComprehensiveAnalysisCycle() {
     const analysisGrid = document.getElementById('plantAnalysisGrid');
@@ -800,7 +816,7 @@ function triggerComprehensiveAnalysisCycle() {
             });
             // Update 3D visualization data immediately with the new color/score
             const index = zone.id - 1;
-            field3DData[index].moisture = latestSensorData ? latestSensorData.moisture : field3DData[index].moisture; // Update moisture for 3D height
+            field3DData[index].moisture = latestSensorData ? analysisResult.moisture_actual : field3DData[index].moisture; // Update moisture for 3D height
             field3DData[index].healthScore = analysisResult.score;
             field3DData[index].color = analysisResult.color;
         }
@@ -845,7 +861,7 @@ function generatePlantAnalysisCardHTML(zoneID, result) {
                 <div class="${scoreClass}">${result.rec_sensor}</div>
             </div>
 
-            <h3>DATA FUSION ENGINE: Detailed Report (V22.0)</h3>
+            <h3>DATA FUSION ENGINE: Detailed Report (V24.0)</h3>
             <pre style="white-space: pre-wrap; word-wrap: break-word; background: #0f131a; padding: 15px; border-radius: 8px; border: 1px solid #30363d; font-size: 0.9em;">${result.analysis}</pre>
         </div>
     `;
@@ -870,7 +886,7 @@ function renderNoDataCards() {
 }
 
 // ==================================================================================
-// SECTION 3.0: 2D MAP VISUALIZATION (V21.0 - HEALTH COLOR FIX) - Logic retained
+// SECTION 3.0: 2D MAP VISUALIZATION (V24.0)
 // ----------------------------------------------------------------------------------
 function updateMapVisualization() {
     const ctx = MAP_CONTEXT;
@@ -956,10 +972,9 @@ function findNearestPlantZone(x_m, y_m) {
 }
 
 // ==================================================================================
-// SECTION 4.0: 3D VISUALIZATION CORE (V22.0 - PLANT STRUCTURE FIX)
+// SECTION 4.0: 3D VISUALIZATION CORE (V24.0 - STEM AND CONE FOLIAGE FIX)
 // ----------------------------------------------------------------------------------
 let scene, camera, renderer, controls;
-// CRITICAL FIX: Update plantCubes to hold an object with the group and its components
 let plantCubes = []; 
 
 // Initialize mock 3D data structure
@@ -1012,14 +1027,14 @@ function initThreeD() {
 }
 
 /**
- * V22.0: Creates the stem and leaves plant structure.
+ * V24.0 FIX: Creates the stem (cylinder) and cone (foliage) plant structure.
  */
 function drawFieldCubes() {
     // 1. Stem Geometry (Cylinder)
     const stemGeometry = new THREE.CylinderGeometry(0.05, 0.05, 1, 8); // Thin cylinder
     
-    // 2. Leaf Geometry (Simple sphere to represent foliage)
-    const leafGeometry = new THREE.SphereGeometry(0.2, 10, 10); 
+    // 2. Foliage Geometry (Cone for stylized leaves/canopy - NOT SPHERE)
+    const leafGeometry = new THREE.ConeGeometry(0.3, 0.4, 6); // Cone with 6 segments (low poly, stylized leaf mass)
     const offset = FIELD_GRID_SIZE_M / 2;
 
     FIELD_PLANT_LOCATIONS_M.forEach((plant) => {
@@ -1058,7 +1073,7 @@ function drawFieldCubes() {
 }
 
 /**
- * V22.0: Updates the plant structure's height and color based on analysis data.
+ * V24.0: Updates the plant structure's height and color based on analysis data.
  */
 function draw3DMap() {
     plantCubes.forEach((plantObj, index) => {
@@ -1074,7 +1089,7 @@ function draw3DMap() {
         
         // Reposition stem and leaves correctly after scaling
         plantObj.stem.position.y = stemHeight / 2; // Keep center of scaled stem at half height
-        plantObj.leaves.position.y = stemHeight; // Place leaves at the top of the stem
+        plantObj.leaves.position.y = stemHeight + 0.2; // Place leaves at the top of the stem + half the cone height
 
         // 2. Update Color (Health Score) - Changes leaf color
         const newColor = new THREE.Color(data.color);
@@ -1105,6 +1120,9 @@ function animate() {
 // SECTION 5.0: UTILITY & UI FUNCTIONS (History, Modals, Initialization)
 // ----------------------------------------------------------------------------------
 
+/**
+ * V24.0 FIX: Instantly creates and triggers the hidden file input when a cell is clicked.
+ */
 function selectZoneForPhotoAssignment(zoneID) {
     currentlySelectedPlantZone = zoneID;
     CURRENT_ZONE_SELECTION_DISPLAY.innerText = zoneID;
@@ -1116,7 +1134,7 @@ function selectZoneForPhotoAssignment(zoneID) {
     });
     document.getElementById(`zoneCell-${zoneID}`).style.border = '3px solid #ffaa00'; // Highlight selected
 
-    // V22.0 FIX: Create and trigger hidden file input when a cell is selected to enable local file upload
+    // CRITICAL V24.0 FIX: Create and trigger hidden file input instantly
     const fileInput = document.createElement('input');
     fileInput.type = 'file';
     fileInput.accept = 'image/*';
@@ -1125,7 +1143,11 @@ function selectZoneForPhotoAssignment(zoneID) {
     // Event listener must be attached before click()
     fileInput.onchange = (event) => {
         handlePhotoUpload(event);
-        document.body.removeChild(fileInput); // Clean up after selection
+        // Clean up: Reset the border highlight if user cancelled
+        if (event.target.files.length === 0) {
+            document.getElementById(`zoneCell-${zoneID}`).style.border = '1px solid #3fb950';
+        }
+        document.body.removeChild(fileInput); // Clean up after selection/cancellation
     };
     
     document.body.appendChild(fileInput);
@@ -1172,7 +1194,7 @@ function renderPhotoInPhotoGridCell(zoneID, dataUrl) {
     deleteBtn.className = 'delete-photo-btn';
     deleteBtn.innerHTML = 'X';
     deleteBtn.onclick = (e) => {
-        e.stopPropagation(); // Prevent cell click
+        e.stopPropagation(); // Prevent cell click/upload trigger
         deletePhotoAssignment(zoneID);
     };
 
@@ -1198,11 +1220,10 @@ function deletePhotoAssignment(zoneID) {
 }
 
 /**
- * V22.0: Handles file upload event from the hidden input.
+ * V24.0: Handles file upload event from the hidden input.
  */
 function handlePhotoUpload(event) {
     if (currentlySelectedPlantZone === 0) {
-        // This shouldn't happen if selectZoneForPhotoAssignment is called first
         return; 
     }
 
@@ -1224,12 +1245,8 @@ function handlePhotoUpload(event) {
             STATUS_ELEMENT.innerText = `User photo uploaded and assigned to Zone ${currentlySelectedPlantZone}. Diagnosis mocked for now.`;
         };
         reader.readAsDataURL(file);
-    } else {
-        // If the user cancels the file dialog, reset the border highlight
-        document.querySelectorAll('.grid-cell').forEach(cell => {
-            cell.style.border = '1px solid #3fb950'; // Reset all
-        });
-    }
+    } 
+    // If user cancels, the cleanup is handled in selectZoneForPhotoAssignment, not here
 }
 
 
@@ -1370,7 +1387,7 @@ function resetSensorAndMapData(clearHistory = true) {
     document.getElementById('latitudeData').innerText = 'N/A';
     document.getElementById('longitudeData').innerText = 'N/A';
     document.getElementById('gpsFix').innerText = 'N/A';
-    document.getElementById('thingspeakStatus').innerText = 'Awaiting Connection';
+    document.getElementById('thingspeakStatus').innerText = 'Awaiting Connection (API Key: 6OXH3SUQ4VNSOJX1)';
 
     // Reset Visualizations
     updateMapVisualization();
