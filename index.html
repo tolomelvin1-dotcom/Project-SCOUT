@@ -1,45 +1,189 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>PROJECT SCOUT – Post-Flood Crop Assessment Dashboard</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <!-- =========================
-       STYLES (Self-contained)
+       GLOBAL STYLES (SELF-CONTAINED)
        ========================= -->
   <style>
-    * { box-sizing: border-box; margin:0; padding:0; font-family: Arial, Helvetica, sans-serif; }
-    body { background: #0a111a; color: #e4e4e4; display:flex; flex-direction:column; min-height:100vh; }
-    h1,h2,h3,h4 { font-weight:600; margin-bottom:10px; }
-    p { margin-bottom:10px; line-height:1.5; }
-    button { cursor:pointer; }
+    /* Reset & base */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: Arial, Helvetica, sans-serif;
+    }
 
-    /* Layout */
-    .layout { display:grid; grid-template-columns:260px 1fr; flex:1; min-height:calc(100vh - 60px); }
+    body {
+      background: #0a111a;
+      color: #e4e4e4;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
 
-    header { background:#112131; color:#fff; padding:15px 25px; display:flex; align-items:center; justify-content:space-between; height:60px; box-shadow:0 2px 4px rgba(0,0,0,0.5); position:sticky; top:0; z-index:100; }
-    header h1 { font-size:1.2rem; letter-spacing:1px; }
-    header .status { font-size:0.9rem; color:#9fdf9f; font-weight:bold; }
+    h1,h2,h3,h4 {
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
 
-    .sidebar { background:#131c29; padding:20px; border-right:2px solid #1d2c3c; display:flex; flex-direction:column; gap:20px; }
-    .sidebar h2 { font-size:1rem; text-transform:uppercase; color:#7fb4ff; }
-    .sidebar button { background:#1c2f47; border:none; padding:10px; margin:4px 0; color:#fff; font-size:0.9rem; border-radius:6px; text-align:left; transition:background 0.2s; }
-    .sidebar button:hover { background:#2c4f77; }
+    p {
+      margin-bottom: 10px;
+      line-height: 1.5;
+    }
 
-    .main { padding:20px; overflow-y:auto; display:grid; grid-template-columns:1fr 1fr; grid-gap:20px; }
-    .panel { background:#162233; padding:15px; border-radius:10px; box-shadow:0 2px 6px rgba(0,0,0,0.6); }
-    .panel h3 { color:#7fb4ff; margin-bottom:12px; }
+    button {
+      cursor: pointer;
+    }
 
-    footer { background:#112131; padding:12px 20px; font-size:0.85rem; text-align:center; border-top:2px solid #1d2c3c; }
+    /* =========================
+       HEADER
+       ========================= */
+    header {
+      background: #112131;
+      color: #fff;
+      padding: 15px 25px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 60px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
 
-    /* Photo Grid */
-    #photoGridContainer div { cursor:pointer; transition:0.2s; }
-    #photoGridContainer div:hover { border-color:#7fb4ff; }
+    header h1 {
+      font-size: 1.2rem;
+      letter-spacing: 1px;
+    }
+
+    header .status {
+      font-size: 0.9rem;
+      color: #9fdf9f;
+      font-weight: bold;
+    }
+
+    /* =========================
+       LAYOUT: SIDEBAR + MAIN + FLOATING 3D
+       ========================= */
+    .layout {
+      display: grid;
+      grid-template-columns: 260px 1fr 400px; /* Sidebar + Main + 3D Panel */
+      gap: 10px;
+      flex: 1;
+      min-height: calc(100vh - 60px);
+    }
+
+    /* =========================
+       SIDEBAR
+       ========================= */
+    .sidebar {
+      background: #131c29;
+      padding: 20px;
+      border-right: 2px solid #1d2c3c;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .sidebar h2 {
+      font-size: 1rem;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+      color: #7fb4ff;
+    }
+
+    .sidebar button {
+      background: #1c2f47;
+      border: none;
+      padding: 10px;
+      margin: 4px 0;
+      color: #fff;
+      font-size: 0.9rem;
+      border-radius: 6px;
+      text-align: left;
+      transition: background 0.2s ease;
+    }
+
+    .sidebar button:hover {
+      background: #2c4f77;
+    }
+
+    /* =========================
+       MAIN DASHBOARD
+       ========================= */
+    .main {
+      padding: 20px;
+      overflow-y: auto;
+      display: grid;
+      grid-template-columns: 1fr;
+      grid-gap: 20px;
+    }
+
+    /* Panels */
+    .panel {
+      background: #162233;
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.6);
+    }
+
+    .panel h3 {
+      color: #7fb4ff;
+      margin-bottom: 12px;
+    }
+
+    /* =========================
+       FLOATING 3D PANEL
+       ========================= */
+    .floating3d {
+      position: sticky;
+      top: 80px;
+      right: 10px;
+      width: 380px;
+      height: calc(100vh - 100px);
+      background: #162233;
+      border-radius: 10px;
+      padding: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.7);
+      display: flex;
+      flex-direction: column;
+      z-index: 90;
+    }
+
+    .floating3d h3 {
+      font-size: 1rem;
+      color: #7fb4ff;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+
+    #threeDContainer {
+      flex: 1;
+      border: 1px solid #333;
+      border-radius: 10px;
+      background: #0f1722;
+    }
+
+    /* =========================
+       FOOTER
+       ========================= */
+    footer {
+      background: #112131;
+      padding: 12px 20px;
+      font-size: 0.85rem;
+      text-align: center;
+      border-top: 2px solid #1d2c3c;
+    }
   </style>
 </head>
-<body>
 
+<body>
   <!-- =========================
        HEADER
        ========================= -->
@@ -60,141 +204,142 @@
       <button onclick="scrollToSection('stockGallery')">Stock Gallery</button>
       <button onclick="scrollToSection('manualEntry')">Manual Entry</button>
       <button onclick="scrollToSection('mapSection')">2D Map</button>
-      <button onclick="scrollToSection('threeDSection')">3D Plants</button>
       <button onclick="scrollToSection('analysisSection')">Analysis</button>
       <button onclick="scrollToSection('logs')">Logs</button>
     </aside>
 
-    <!-- MAIN -->
+    <!-- MAIN DASHBOARD -->
     <main class="main">
-      <!-- =========================
-           ROVER CONTROLS
-           ========================= -->
-      <section class="panel" id="roverControls">
-        <h3>Rover Controls</h3>
-        <p>Use these buttons to move the rover and operate the probe arm.</p>
-        <div style="display:flex;flex-wrap:wrap;gap:10px">
-          <button onclick="sendCommandToESP32('forward')">⬆ Forward</button>
-          <button onclick="sendCommandToESP32('backward')">⬇ Backward</button>
-          <button onclick="sendCommandToESP32('left')">⬅ Left</button>
-          <button onclick="sendCommandToESP32('right')">➡ Right</button>
-          <button onclick="sendCommandToESP32('stop')">⏹ Stop</button>
-          <button onclick="sendCommandToESP32('probe_up')">🔼 Probe Up</button>
-          <button onclick="sendCommandToESP32('probe_down')">🔽 Probe Down</button>
-          <button onclick="fetchSensorData()">📡 Read Sensors</button>
-        </div>
-      </section>
-
-      <!-- =========================
-           PHOTO GRID
-           ========================= -->
-      <section class="panel" id="photoGrid">
-        <h3>Zone Photo Grid (16 zones)</h3>
-        <p>Upload field images per zone for analysis. Each square represents a zone.</p>
-        <div id="photoGridContainer" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;"></div>
-      </section>
-
-      <!-- =========================
-           STOCK GALLERY
-           ========================= -->
-      <section class="panel" id="stockGallery">
-        <h3>Stock Gallery</h3>
-        <p>Upload and manage stock images separately.</p>
-        <input type="file" accept="image/*" multiple onchange="handleStockUpload(event)" />
-        <div id="stockGrid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:10px"></div>
-      </section>
-
-      <!-- =========================
-           MANUAL ENTRY
-           ========================= -->
-      <section class="panel" id="manualEntry">
-        <h3>Manual Data Entry</h3>
-        <form onsubmit="submitManualEntry();return false;" style="display:flex;flex-direction:column;gap:8px;max-width:300px">
-          <label>Zone: <input id="manual_zone" type="number" min="1" max="16" value="1" required></label>
-          <label>Soil Moisture (%): <input id="manual_moisture" type="number" min="0" max="100"></label>
-          <label>Nitrogen (N): <input id="manual_n" type="number" min="0" max="200"></label>
-          <label>Phosphorus (P): <input id="manual_p" type="number" min="0" max="200"></label>
-          <label>Potassium (K): <input id="manual_k" type="number" min="0" max="200"></label>
-          <label>Upload Photo: <input id="manual_photo" type="file" accept="image/*"></label>
-          <button type="submit" style="background:#2c4f77;color:#fff;padding:10px;border:none;border-radius:6px">
-            ➕ Submit Manual Entry
-          </button>
-        </form>
-      </section>
-
-      <!-- =========================
-           2D MAP
-           ========================= -->
-      <section class="panel" id="mapSection">
-        <h3>2D Field Map</h3>
-        <canvas id="mapCanvas" width="600" height="600" style="border:1px solid #333;border-radius:10px;background:#0f1722"></canvas>
-        <p style="font-size:0.8rem;color:#aaa;margin-top:6px">Hover over a circle to view zone details.</p>
-      </section>
-
-      <!-- =========================
-           3D PLANTS
-           ========================= -->
-      <section class="panel" id="threeDSection">
-        <h3>3D Tomato Plant Visualization</h3>
-        <div id="threeDContainer" style="width:100%;height:500px;border:1px solid #333;border-radius:10px"></div>
-      </section>
-
-      <!-- =========================
-           ANALYSIS
-           ========================= -->
-      <section class="panel" id="analysisSection">
-        <h3>AI-Based Analysis Results</h3>
-        <div id="analysisGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:15px"></div>
-        <div id="aiAnalysis" style="background:#0f1722;padding:12px;border-radius:8px;font-size:0.9rem;line-height:1.4;white-space:pre-wrap;min-height:150px">
-          No zone selected. Click on a zone card above to see detailed analysis.
-        </div>
-      </section>
-
-      <!-- =========================
-           LOGS
-           ========================= -->
-      <section class="panel" id="logs">
-        <h3>System Logs</h3>
-        <div id="log" style="background:#0f1722;padding:10px;border-radius:8px;max-height:200px;overflow-y:auto;font-size:0.85rem;line-height:1.3"></div>
-      </section>
+      <!-- Panels placeholders -->
+      <section class="panel" id="roverControls"><h3>Rover Controls</h3></section>
+      <section class="panel" id="photoGrid"><h3>Photo Grid</h3></section>
+      <section class="panel" id="stockGallery"><h3>Stock Gallery</h3></section>
+      <section class="panel" id="manualEntry"><h3>Manual Entry</h3></section>
+      <section class="panel" id="mapSection"><h3>2D Map</h3></section>
+      <section class="panel" id="analysisSection"><h3>Analysis</h3></section>
+      <section class="panel" id="logs"><h3>System Logs</h3></section>
     </main>
+
+    <!-- FLOATING 3D PANEL -->
+    <aside class="floating3d">
+      <h3>3D Tomato Plant Visualization</h3>
+      <div id="threeDContainer"></div>
+    </aside>
   </div>
 
+  <!-- FOOTER -->
   <footer>
     PROJECT SCOUT • ESP32: 10.101.146.88 • ThingSpeak Key: 6OXH3SUQ4VNSOJX1
   </footer>
 
   <!-- =========================
-       SCRIPTS
+       JAVASCRIPT (EMPTY INITIALIZERS)
        ========================= -->
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.12.0/dist/tf.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.155.0/build/three.min.js"></script>
-
   <script>
-  /* ============================================================
-     GLOBAL VARIABLES
-     ============================================================ */
-  const ESP32_IP = "10.101.146.88";
-  const THINGSPEAK_KEY = "6OXH3SUQ4VNSOJX1";
-  const ZONES = 16;
-  let photos = {};
-  let stockGallery = {};
-  let sensorLogs = [];
-  let latestAnalysis = {};
+    function scrollToSection(id) {
+      document.getElementById(id).scrollIntoView({ behavior: "smooth" });
+    }
+    <!-- =========================
+     ROVER CONTROLS PANEL
+     ========================= -->
+<section class="panel" id="roverControls">
+  <h3>Rover Controls</h3>
+  <p>Use these buttons to move the rover and operate the probe arm.</p>
+  <div style="display:flex;flex-wrap:wrap;gap:10px">
+    <button onclick="sendCommandToESP32('forward')">⬆ Forward</button>
+    <button onclick="sendCommandToESP32('backward')">⬇ Backward</button>
+    <button onclick="sendCommandToESP32('left')">⬅ Left</button>
+    <button onclick="sendCommandToESP32('right')">➡ Right</button>
+    <button onclick="sendCommandToESP32('stop')">⏹ Stop</button>
+    <button onclick="sendCommandToESP32('probe_up')">🔼 Probe Up</button>
+    <button onclick="sendCommandToESP32('probe_down')">🔽 Probe Down</button>
+    <button onclick="fetchSensorData()">📡 Read Sensors</button>
+  </div>
+</section>
 
-  /* ============================================================
-     LOGGING
-     ============================================================ */
+<!-- =========================
+     PHOTO GRID PANEL
+     ========================= -->
+<section class="panel" id="photoGrid">
+  <h3>Zone Photo Grid (16 zones)</h3>
+  <p>Upload field images per zone for analysis. Each square represents a zone.</p>
+  <div id="photoGridContainer" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;"></div>
+</section>
+
+<!-- =========================
+     STOCK GALLERY PANEL
+     ========================= -->
+<section class="panel" id="stockGallery">
+  <h3>Stock Gallery</h3>
+  <p>Upload and manage stock images here. This gallery is separate from the zone grid.</p>
+  <input type="file" accept="image/*" multiple onchange="handleStockUpload(event)" />
+  <div id="stockGrid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:10px"></div>
+</section>
+
+<!-- =========================
+     MANUAL ENTRY PANEL
+     ========================= -->
+<section class="panel" id="manualEntry">
+  <h3>Manual Data Entry</h3>
+  <p>If rover or sensors fail, you can manually input values and photos for each zone.</p>
+  <form onsubmit="submitManualEntry();return false;" style="display:flex;flex-direction:column;gap:8px;max-width:300px">
+    
+    <!-- Zone selection -->
+    <label>
+      Zone:
+      <input id="manual_zone" type="number" min="1" max="16" value="1" required>
+    </label>
+
+    <!-- Moisture -->
+    <label>
+      Soil Moisture (%):
+      <input id="manual_moisture" type="number" min="0" max="100" step="1">
+    </label>
+
+    <!-- NPK Values -->
+    <label>
+      Nitrogen (N):
+      <input id="manual_n" type="number" min="0" max="200">
+    </label>
+    <label>
+      Phosphorus (P):
+      <input id="manual_p" type="number" min="0" max="200">
+    </label>
+    <label>
+      Potassium (K):
+      <input id="manual_k" type="number" min="0" max="200">
+    </label>
+
+    <!-- Photo Upload -->
+    <label>
+      Upload Photo:
+      <input id="manual_photo" type="file" accept="image/*">
+    </label>
+
+    <!-- Submit -->
+    <button type="submit" style="background:#2c4f77;color:#fff;padding:10px;border:none;border-radius:6px">
+      ➕ Submit Manual Entry
+    </button>
+  </form>
+</section>
+
+<!-- =========================
+     JAVASCRIPT FOR PHOTO & MANUAL ENTRY
+     ========================= -->
+<script>
+  const ZONES = 16;
+  const photos = {};
+  const stockGallery = {};
+  const sensorLogs = [];
+
   function log(msg) {
     const d = document.createElement("div");
     d.innerText = `[${new Date().toLocaleTimeString()}] ${msg}`;
-    document.getElementById("log").prepend(d);
+    document.getElementById("log")?.prepend(d);
     console.log(msg);
   }
 
-  /* ============================================================
-     FILE READING
-     ============================================================ */
+  // File reader helper
   function readFileAsDataURL(file) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -204,13 +349,425 @@
     });
   }
 
-  /* ============================================================
-     PHOTO GRID
-     ============================================================ */
+  // Generate photo grid
   function generatePhotoGrid() {
     const grid = document.getElementById("photoGridContainer");
+    if (!grid) return;
     grid.innerHTML = "";
-    for(let zone=1; zone<=ZONES; zone++){
+
+    for (let zone = 1; zone <= ZONES; zone++) {
+      const cell = document.createElement("div");
+      cell.style.position = "relative";
+      cell.style.border = "1px solid #2c3e50";
+      cell.style.borderRadius = "6px";
+      cell.style.overflow = "hidden";
+      cell.style.height = "100px";
+      cell.style.background = "#0f1722";
+      cell.style.display = "flex";
+      cell.style.alignItems = "center";
+      cell.style.justifyContent = "center";
+      cell.dataset.zone = zone;
+
+      // Label overlay
+      const label = document.createElement("div");
+      label.innerText = "Zone " + zone;
+      label.style.position = "absolute";
+      label.style.top = "2px";
+      label.style.left = "4px";
+      label.style.fontSize = "0.8rem";
+      label.style.background = "rgba(0,0,0,0.5)";
+      label.style.padding = "1px 3px";
+      label.style.borderRadius = "4px";
+      cell.appendChild(label);
+
+      // File input
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = "image/*";
+      input.style.position = "absolute";
+      input.style.opacity = "0";
+      input.style.width = "100%";
+      input.style.height = "100%";
+      input.onchange = async (e) => {
+        const f = e.target.files[0];
+        if (!f) return;
+        const b64 = await readFileAsDataURL(f);
+        photos[zone] = b64;
+        log("Photo uploaded for Zone " + zone);
+        generatePhotoGrid();
+      };
+      cell.appendChild(input);
+
+      // Show photo if exists
+      if (photos[zone]) {
+        const img = document.createElement("img");
+        img.src = photos[zone];
+        img.style.width = "100%";
+        img.style.height = "100%";
+        img.style.objectFit = "cover";
+        cell.appendChild(img);
+
+        // Delete button
+        const del = document.createElement("button");
+        del.innerText = "×";
+        del.style.position = "absolute";
+        del.style.top = "2px";
+        del.style.right = "2px";
+        del.style.background = "rgba(255,0,0,0.7)";
+        del.style.border = "none";
+        del.style.borderRadius = "4px";
+        del.style.color = "#fff";
+        del.style.padding = "2px 6px";
+        del.onclick = (ev) => {
+          ev.stopPropagation();
+          delete photos[zone];
+          log("Deleted photo for Zone " + zone);
+          generatePhotoGrid();
+        };
+        cell.appendChild(del);
+      }
+
+      grid.appendChild(cell);
+    }
+  }
+
+  // Handle stock gallery
+  function handleStockUpload(event) {
+    for (const f of event.target.files) {
+      readFileAsDataURL(f).then((b64) => {
+        const id = Object.keys(stockGallery).length + 1;
+        stockGallery[id] = { id, url: b64, name: f.name };
+        log("Added stock image: " + f.name);
+        renderStockGrid();
+      });
+    }
+  }
+
+  function renderStockGrid() {
+    const g = document.getElementById("stockGrid");
+    if (!g) return;
+    g.innerHTML = "";
+    for (const id in stockGallery) {
+      const it = stockGallery[id];
+      const img = document.createElement("img");
+      img.src = it.url;
+      img.title = it.name;
+      img.style.width = "100%";
+      img.style.borderRadius = "6px";
+      g.appendChild(img);
+    }
+  }
+
+  // Manual entry
+  function submitManualEntry() {
+    const zone = parseInt(document.getElementById("manual_zone").value);
+    const moisture = parseFloat(document.getElementById("manual_moisture").value);
+    const n = parseFloat(document.getElementById("manual_n").value);
+    const p = parseFloat(document.getElementById("manual_p").value);
+    const k = parseFloat(document.getElementById("manual_k").value);
+    const photoInput = document.getElementById("manual_photo");
+    const photoFile = photoInput.files[0];
+
+    let photoPromise = Promise.resolve(null);
+    if (photoFile) photoPromise = readFileAsDataURL(photoFile);
+
+    photoPromise.then((b64) => {
+      sensorLogs.push({ zone, moisture, n, p, k, photo: b64, timestamp: new Date() });
+      if (b64) photos[zone] = b64;
+      log(`Manual entry submitted for Zone ${zone}`);
+      generatePhotoGrid();
+      photoInput.value = "";
+    });
+  }
+
+  // Rover Commands
+  const ESP32_IP = "10.101.146.88";
+  async function sendCommandToESP32(cmd) {
+    try {
+      const res = await fetch(`http://${ESP32_IP}/${cmd}`);
+      if (res.ok) {
+        log(`Command sent: ${cmd}`);
+        document.getElementById("status").innerText = `Last command: ${cmd}`;
+      } else {
+        log(`Failed command: ${cmd}`);
+      }
+    } catch (err) {
+      log(`Error sending command: ${cmd} (${err})`);
+    }
+  }
+
+  // Fetch sensor data
+  async function fetchSensorData() {
+    try {
+      const res = await fetch(`http://${ESP32_IP}/sensors`);
+      const data = await res.json();
+      log(`Sensor data: ${JSON.stringify(data)}`);
+    } catch (err) {
+      log("Error fetching sensor data: " + err);
+    }
+  }
+
+  // Initialize
+  generatePhotoGrid();
+<!-- =========================
+     2D MAP PANEL
+     ========================= -->
+<section class="panel" id="mapSection">
+  <h3>2D Field Map</h3>
+  <p>
+    The field is divided into 16 zones. Each circle represents the zone’s health 
+    (green = healthy, yellow = moderate stress, red = severe stress).
+  </p>
+  <canvas id="mapCanvas" width="600" height="600"
+          style="border:1px solid #333;border-radius:10px;background:#0f1722"></canvas>
+  <p style="font-size:0.8rem;color:#aaa;margin-top:6px">
+    Hover over a circle to view zone details.
+  </p>
+</section>
+
+<!-- =========================
+     3D TOMATO PLANTS PANEL
+     ========================= -->
+<section class="panel" id="threeDSection" style="position:sticky;top:10px;flex-shrink:0">
+  <h3>3D Tomato Plant Visualization</h3>
+  <p>
+    Each 3D model represents a tomato plant in its respective zone. 
+    Plants are colored based on health (green → yellow → red).
+  </p>
+  <div id="threeDContainer" style="width:100%;height:500px;border:1px solid #333;border-radius:10px"></div>
+</section>
+
+<!-- =========================
+     ANALYSIS PANEL
+     ========================= -->
+<section class="panel" id="analysisSection">
+  <h3>AI-Based Analysis Results</h3>
+  <p>Select a zone to view detailed post-flood crop health analysis.</p>
+  
+  <!-- Summary cards -->
+  <div id="analysisGrid" 
+       style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:15px">
+    <!-- Each zone’s analysis card will appear here -->
+  </div>
+
+  <!-- Detailed AI narrative -->
+  <div id="aiAnalysis" 
+       style="background:#0f1722;padding:12px;border-radius:8px;font-size:0.9rem;line-height:1.4;white-space:pre-wrap;min-height:150px">
+    No zone selected. Click on a zone card above to see detailed analysis.
+  </div>
+</section>
+
+<!-- =========================
+     LOGS PANEL
+     ========================= -->
+<section class="panel" id="logs">
+  <h3>System Logs</h3>
+  <p>All rover actions, uploads, and analysis updates are logged here.</p>
+  <div id="log" 
+       style="background:#0f1722;padding:10px;border-radius:8px;max-height:200px;overflow-y:auto;font-size:0.85rem;line-height:1.3"></div>
+</section>
+
+<!-- =========================
+     JAVASCRIPT FOR 2D MAP + 3D PLANTS + ANALYSIS
+     ========================= -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r152/three.min.js"></script>
+<script>
+  // =========================
+  // 2D MAP
+  // =========================
+  function renderMap() {
+    const canvas = document.getElementById("mapCanvas");
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const radius = 25;
+    const padding = 40;
+    const cols = 4;
+    const rows = 4;
+
+    canvas._zones = [];
+
+    for (let i = 0; i < 16; i++) {
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      const x = padding + col * (radius * 3);
+      const y = padding + row * (radius * 3);
+
+      let color = "#4caf50"; // healthy
+      const logEntry = sensorLogs[i];
+      if (logEntry?.moisture < 40) color = "#ffc107"; // moderate
+      if (logEntry?.moisture < 20) color = "#f44336"; // severe
+
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI*2);
+      ctx.fillStyle = color;
+      ctx.fill();
+      ctx.strokeStyle = "#222";
+      ctx.stroke();
+
+      canvas._zones[i] = { x, y, radius, zone: i+1, moisture: logEntry?.moisture || 'N/A' };
+    }
+  }
+
+  // Hover tooltip
+  const tooltip = document.createElement("div");
+  tooltip.style.position = "absolute";
+  tooltip.style.padding = "4px 8px";
+  tooltip.style.background = "rgba(0,0,0,0.8)";
+  tooltip.style.color = "#fff";
+  tooltip.style.borderRadius = "4px";
+  tooltip.style.pointerEvents = "none";
+  tooltip.style.fontSize = "0.8rem";
+  tooltip.style.display = "none";
+  document.body.appendChild(tooltip);
+
+  document.getElementById("mapCanvas")?.addEventListener("mousemove", (e)=>{
+    const canvas = e.target;
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+    let hovered = false;
+
+    canvas._zones.forEach(z=>{
+      const dist = Math.hypot(mx - z.x, my - z.y);
+      if(dist < z.radius){
+        tooltip.style.left = e.clientX + 10 + "px";
+        tooltip.style.top = e.clientY + 10 + "px";
+        tooltip.innerText = `Zone ${z.zone}\nMoisture: ${z.moisture}%`;
+        tooltip.style.display = "block";
+        hovered = true;
+      }
+    });
+    if(!hovered) tooltip.style.display = "none";
+  });
+
+  // =========================
+  // 3D TOMATO PLANTS
+  // =========================
+  const threeDContainer = document.getElementById("threeDContainer");
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(50, threeDContainer.clientWidth / threeDContainer.clientHeight, 0.1, 1000);
+  camera.position.set(0,5,15);
+  const renderer = new THREE.WebGLRenderer({antialias:true});
+  renderer.setSize(threeDContainer.clientWidth, threeDContainer.clientHeight);
+  threeDContainer.appendChild(renderer.domElement);
+
+  const light = new THREE.DirectionalLight(0xffffff, 1);
+  light.position.set(5,10,5);
+  scene.add(light);
+  scene.add(new THREE.AmbientLight(0x404040));
+
+  // Generate 16 tomato plants
+  const plants = [];
+  for(let i=0;i<16;i++){
+    const stemMat = new THREE.MeshStandardMaterial({color:0x228B22});
+    const leafMat = new THREE.MeshStandardMaterial({color:0x32CD32});
+    const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.1,1), stemMat);
+    const leaf = new THREE.Mesh(new THREE.SphereGeometry(0.3,8,6), leafMat);
+    leaf.position.y = 0.6;
+    const plant = new THREE.Group();
+    plant.add(stem);
+    plant.add(leaf);
+    plant.position.x = (i%4)*2 -3;
+    plant.position.z = Math.floor(i/4)*2 -3;
+    scene.add(plant);
+    plants.push(plant);
+  }
+
+  function updatePlantColors(){
+    for(let i=0;i<plants.length;i++){
+      const moisture = sensorLogs[i]?.moisture ?? Math.floor(Math.random()*100);
+      let color;
+      if(moisture>40) color=0x32CD32;
+      else if(moisture>20) color=0xFFFF00;
+      else color=0xFF4500;
+      plants[i].children[1].material.color.setHex(color);
+    }
+  }
+
+  function animate(){
+    requestAnimationFrame(animate);
+    renderer.render(scene,camera);
+  }
+  animate();
+
+  // =========================
+  // ANALYSIS GRID
+  // =========================
+  function triggerAnalysis(){
+    const grid = document.getElementById("analysisGrid");
+    if(!grid) return;
+    grid.innerHTML = "";
+
+    for(let zone=1;zone<=16;zone++){
+      const card = document.createElement("div");
+      card.style.background="#1b2a3c";
+      card.style.padding="8px";
+      card.style.borderRadius="6px";
+      card.style.cursor="pointer";
+      card.style.textAlign="center";
+      card.innerText=`Zone ${zone}`;
+      card.onclick=()=>{
+        const moisture = sensorLogs[zone-1]?.moisture ?? Math.floor(Math.random()*100);
+        const health = moisture>40?"Healthy":moisture>20?"Moderate":"Severe";
+        document.getElementById("aiAnalysis").innerText=
+          `Zone ${zone} Analysis:\n`+
+          `- Moisture: ${moisture}%\n`+
+          `- Health Status: ${health}\n`+
+          `- Recommendation: ${health==="Healthy"?"No action needed":"Inspect and irrigate"}`;
+      };
+      grid.appendChild(card);
+    }
+    renderMap();
+    updatePlantColors();
+  }
+
+  triggerAnalysis();
+<!-- =========================
+     CORE JAVASCRIPT: HELPERS + PHOTO HANDLING + STOCK GALLERY
+     ========================= -->
+<script>
+  /* ============================================================
+     GLOBAL CONSTANTS & VARIABLES
+     ============================================================ */
+  const ZONES = 16;
+  let photos = {};         // { zoneNumber: base64Image }
+  let stockGallery = {};   // { id: {url, name} }
+  let sensorLogs = [];     // Array of manual sensor entries
+
+  /* ============================================================
+     LOGGER UTILITY
+     ============================================================ */
+  function log(msg) {
+    const d = document.createElement("div");
+    d.innerText = `[${new Date().toLocaleTimeString()}] ${msg}`;
+    const logDiv = document.getElementById("log");
+    if(logDiv) logDiv.prepend(d);
+    console.log(msg);
+  }
+
+  /* ============================================================
+     FILE READER
+     ============================================================ */
+  function readFileAsDataURL(file){
+    return new Promise((resolve,reject)=>{
+      const reader = new FileReader();
+      reader.onload=()=>resolve(reader.result);
+      reader.onerror=reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  /* ============================================================
+     PHOTO GRID HANDLING
+     ============================================================ */
+  function generatePhotoGrid(){
+    const grid = document.getElementById("photoGridContainer");
+    if(!grid) return;
+    grid.innerHTML = "";
+
+    for(let zone=1;zone<=ZONES;zone++){
       const cell = document.createElement("div");
       cell.style.position="relative";
       cell.style.border="1px solid #2c3e50";
@@ -218,58 +775,100 @@
       cell.style.overflow="hidden";
       cell.style.height="100px";
       cell.style.background="#0f1722";
-      cell.style.display="flex"; cell.style.alignItems="center"; cell.style.justifyContent="center";
-      cell.dataset.zone=zone;
+      cell.style.display="flex";
+      cell.style.alignItems="center";
+      cell.style.justifyContent="center";
+      cell.dataset.zone = zone;
 
+      // Label
       const label = document.createElement("div");
-      label.innerText = "Zone "+zone;
-      label.style.position="absolute"; label.style.top="2px"; label.style.left="4px";
-      label.style.fontSize="0.8rem"; label.style.background="rgba(0,0,0,0.5)"; label.style.padding="1px 3px"; label.style.borderRadius="4px";
+      label.innerText="Zone "+zone;
+      label.style.position="absolute";
+      label.style.top="2px";
+      label.style.left="4px";
+      label.style.fontSize="0.8rem";
+      label.style.background="rgba(0,0,0,0.5)";
+      label.style.padding="1px 3px";
+      label.style.borderRadius="4px";
       cell.appendChild(label);
 
+      // File input
       const input = document.createElement("input");
-      input.type="file"; input.accept="image/*";
-      input.style.position="absolute"; input.style.opacity="0"; input.style.width="100%"; input.style.height="100%";
+      input.type="file";
+      input.accept="image/*";
+      input.style.position="absolute";
+      input.style.opacity="0";
+      input.style.width="100%";
+      input.style.height="100%";
       input.onchange = async (e)=>{
-        const f = e.target.files[0]; if(!f) return;
-        const b64 = await readFileAsDataURL(f); photos[zone]=b64; log("Photo uploaded for Zone "+zone); generatePhotoGrid(); triggerAnalysis();
+        const f = e.target.files[0];
+        if(!f) return;
+        const b64 = await readFileAsDataURL(f);
+        photos[zone] = b64;
+        log("Photo uploaded for Zone "+zone);
+        generatePhotoGrid();
+        triggerAnalysis();
       };
       cell.appendChild(input);
 
+      // Display photo
       if(photos[zone]){
-        const img=document.createElement("img");
-        img.src=photos[zone]; img.style.width="100%"; img.style.height="100%"; img.style.objectFit="cover";
+        const img = document.createElement("img");
+        img.src = photos[zone];
+        img.style.width="100%";
+        img.style.height="100%";
+        img.style.objectFit="cover";
         cell.appendChild(img);
 
-        const del=document.createElement("button");
-        del.innerText="×"; del.style.position="absolute"; del.style.top="2px"; del.style.right="2px";
-        del.style.background="rgba(255,0,0,0.7)"; del.style.border="none"; del.style.borderRadius="4px"; del.style.color="#fff"; del.style.padding="2px 6px";
-        del.onclick=(ev)=>{ ev.stopPropagation(); delete photos[zone]; log("Deleted photo for Zone "+zone); generatePhotoGrid(); };
+        // Delete button
+        const del = document.createElement("button");
+        del.innerText="×";
+        del.style.position="absolute";
+        del.style.top="2px";
+        del.style.right="2px";
+        del.style.background="rgba(255,0,0,0.7)";
+        del.style.border="none";
+        del.style.borderRadius="4px";
+        del.style.color="#fff";
+        del.style.padding="2px 6px";
+        del.onclick=(ev)=>{
+          ev.stopPropagation();
+          delete photos[zone];
+          log("Deleted photo for Zone "+zone);
+          generatePhotoGrid();
+        };
         cell.appendChild(del);
       }
+
       grid.appendChild(cell);
     }
   }
 
   /* ============================================================
-     STOCK GALLERY
+     STOCK GALLERY HANDLING
      ============================================================ */
   function handleStockUpload(event){
     for(const f of event.target.files){
-      readFileAsDataURL(f).then((b64)=>{
-        const id=Object.keys(stockGallery).length+1;
+      readFileAsDataURL(f).then(b64=>{
+        const id = Object.keys(stockGallery).length+1;
         stockGallery[id]={id,url:b64,name:f.name};
         log("Added stock image: "+f.name);
         renderStockGrid();
       });
     }
   }
+
   function renderStockGrid(){
-    const g=document.getElementById("stockGrid"); g.innerHTML="";
+    const g = document.getElementById("stockGrid");
+    if(!g) return;
+    g.innerHTML = "";
     for(const id in stockGallery){
-      const it=stockGallery[id];
-      const img=document.createElement("img");
-      img.src=it.url; img.title=it.name; img.style.width="100%"; img.style.borderRadius="6px";
+      const it = stockGallery[id];
+      const img = document.createElement("img");
+      img.src=it.url;
+      img.title=it.name;
+      img.style.width="100%";
+      img.style.borderRadius="6px";
       g.appendChild(img);
     }
   }
@@ -278,164 +877,546 @@
      MANUAL ENTRY
      ============================================================ */
   function submitManualEntry(){
-    const zone=parseInt(document.getElementById("manual_zone").value);
-    const moisture=parseFloat(document.getElementById("manual_moisture").value);
-    const n=parseFloat(document.getElementById("manual_n").value);
-    const p=parseFloat(document.getElementById("manual_p").value);
-    const k=parseFloat(document.getElementById("manual_k").value);
-    const photoInput=document.getElementById("manual_photo");
-    const photoFile=photoInput.files[0];
+    const zone = parseInt(document.getElementById("manual_zone").value);
+    const moisture = parseFloat(document.getElementById("manual_moisture").value);
+    const n = parseFloat(document.getElementById("manual_n").value);
+    const p = parseFloat(document.getElementById("manual_p").value);
+    const k = parseFloat(document.getElementById("manual_k").value);
+    const photoInput = document.getElementById("manual_photo");
+    const photoFile = photoInput.files[0];
 
-    let photoPromise=Promise.resolve(null);
-    if(photoFile) photoPromise=readFileAsDataURL(photoFile);
+    let photoPromise = Promise.resolve(null);
+    if(photoFile) photoPromise = readFileAsDataURL(photoFile);
 
-    photoPromise.then((b64)=>{
-      sensorLogs.push({zone,moisture,n,p,k,photo:b64,timestamp:new Date()});
-      if(b64) photos[zone]=b64;
+    photoPromise.then(b64=>{
+      sensorLogs[zone-1]={zone,moisture,n,p,k,photo:b64,timestamp:new Date()};
+      if(b64) photos[zone]=b64; // add to photo grid
       log(`Manual entry submitted for Zone ${zone}`);
-      generatePhotoGrid(); photoInput.value=""; triggerAnalysis();
+      generatePhotoGrid();
+      photoInput.value="";
+      triggerAnalysis();
     });
   }
 
   /* ============================================================
-     ROVER COMMANDS
+     INIT
      ============================================================ */
-  async function sendCommandToESP32(cmd){
-    try{
-      const res=await fetch(`http://${ESP32_IP}/${cmd}`);
-      if(res.ok){ log(`Command sent: ${cmd}`); document.getElementById("status").innerText=`Last command: ${cmd}`; }
-      else log(`Failed command: ${cmd}`);
-    }catch(err){ log(`Error sending command: ${cmd} (${err})`); }
-  }
-  async function fetchSensorData(){
-    try{
-      const res=await fetch(`http://${ESP32_IP}/sensors`);
-      const data=await res.json(); log(`Sensor data: ${JSON.stringify(data)}`);
-    }catch(err){ log("Error fetching sensor data: "+err); }
-  }
+  // Connect stock upload input
+  const stockInput = document.querySelector('#stockGallery input[type="file"]');
+  if(stockInput) stockInput.addEventListener("change", handleStockUpload);
 
+  // Connect manual form
+  const manualForm = document.querySelector('#manualEntry form');
+  if(manualForm) manualForm.addEventListener("submit", e=>{e.preventDefault(); submitManualEntry();});
+
+  // Initialize photo grid
+  generatePhotoGrid();
+<!-- =========================
+     PART 5: MAP DRAWING + 3D TOMATO PLANTS
+     ========================= -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.159.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.159.0/examples/js/controls/OrbitControls.js"></script>
+<script>
   /* ============================================================
-     2D MAP
+     2D MAP RENDERING
      ============================================================ */
+  const mapCanvas = document.getElementById("mapCanvas");
+  const mapCtx = mapCanvas.getContext("2d");
   function renderMap(){
-    const canvas=document.getElementById("mapCanvas"); const ctx=canvas.getContext("2d");
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    const radius=25, padding=40, cols=4;
+    if(!mapCtx) return;
+    mapCtx.clearRect(0,0,mapCanvas.width,mapCanvas.height);
+    const radius = 25;
+    const padding = 50;
+    const cols = 4;
+
+    mapCanvas._zones = [];
+
     for(let i=0;i<ZONES;i++){
-      const col=i%cols, row=Math.floor(i/cols);
-      const x=padding+col*(radius*3), y=padding+row*(radius*3);
-      let color="#4caf50";
-      if(sensorLogs[i]&&sensorLogs[i].moisture<40) color="#ffc107";
-      if(sensorLogs[i]&&sensorLogs[i].moisture<20) color="#f44336";
-      ctx.beginPath(); ctx.arc(x,y,radius,0,Math.PI*2); ctx.fillStyle=color; ctx.fill(); ctx.strokeStyle="#222"; ctx.stroke();
-      canvas._zones=canvas._zones||[]; canvas._zones[i]={x,y,radius,zone:i+1};
+      const col = i%cols;
+      const row = Math.floor(i/cols);
+      const x = padding + col* (radius*3);
+      const y = padding + row* (radius*3);
+
+      const data = sensorLogs[i] || {};
+      let color = "#4caf50"; // healthy
+      if(data.moisture<40) color="#ffc107";
+      if(data.moisture<20) color="#f44336";
+
+      mapCtx.beginPath();
+      mapCtx.arc(x,y,radius,0,Math.PI*2);
+      mapCtx.fillStyle=color;
+      mapCtx.fill();
+      mapCtx.strokeStyle="#222";
+      mapCtx.stroke();
+
+      mapCanvas._zones[i]={x,y,radius,zone:i+1};
     }
   }
 
-  const tooltip=document.createElement("div");
-  tooltip.style.position="absolute"; tooltip.style.padding="4px 8px"; tooltip.style.background="rgba(0,0,0,0.8)";
-  tooltip.style.color="#fff"; tooltip.style.borderRadius="4px"; tooltip.style.pointerEvents="none"; tooltip.style.fontSize="0.8rem"; tooltip.style.display="none";
+  // Tooltip
+  const tooltip = document.createElement("div");
+  tooltip.style.position="absolute";
+  tooltip.style.padding="4px 8px";
+  tooltip.style.background="rgba(0,0,0,0.8)";
+  tooltip.style.color="#fff";
+  tooltip.style.borderRadius="4px";
+  tooltip.style.pointerEvents="none";
+  tooltip.style.fontSize="0.8rem";
+  tooltip.style.display="none";
   document.body.appendChild(tooltip);
-  document.getElementById("mapCanvas").addEventListener("mousemove",(e)=>{
-    const rect=e.target.getBoundingClientRect(); const x=e.clientX-rect.left; const y=e.clientY-rect.top; let found=false;
-    if(e.target._zones) for(const z of e.target._zones){
-      const dx=x-z.x,dy=y-z.y; if(Math.sqrt(dx*dx+dy*dy)<z.radius){ tooltip.innerText="Zone "+z.zone; tooltip.style.left=e.clientX+8+"px"; tooltip.style.top=e.clientY+8+"px"; tooltip.style.display="block"; found=true; break; }
+
+  mapCanvas.addEventListener("mousemove", e=>{
+    const rect = mapCanvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+    let hovered=false;
+
+    for(const z of mapCanvas._zones){
+      const dist = Math.hypot(mx-z.x,my-z.y);
+      if(dist<z.radius){
+        const data = sensorLogs[z.zone-1]||{};
+        tooltip.style.left=e.clientX+10+"px";
+        tooltip.style.top=e.clientY+10+"px";
+        tooltip.innerText=`Zone ${z.zone}\nMoisture: ${data.moisture||"N/A"}%`;
+        tooltip.style.display="block";
+        hovered=true;
+        break;
+      }
     }
-    if(!found) tooltip.style.display="none";
+    if(!hovered) tooltip.style.display="none";
   });
 
   /* ============================================================
-     3D PLANTS
+     3D TOMATO PLANTS SETUP
      ============================================================ */
-  let scene,camera,renderer,plantGroup;
-  function init3DPlants(){
-    const container=document.getElementById("threeDContainer");
-    scene=new THREE.Scene(); scene.background=new THREE.Color(0x0f1722);
-    camera=new THREE.PerspectiveCamera(45,container.clientWidth/container.clientHeight,0.1,1000); camera.position.set(0,50,100);
-    renderer=new THREE.WebGLRenderer({antialias:true}); renderer.setSize(container.clientWidth,container.clientHeight); container.appendChild(renderer.domElement);
-    const light=new THREE.DirectionalLight(0xffffff,1); light.position.set(50,100,50); scene.add(light);
-    scene.add(new THREE.AmbientLight(0x888888));
-    plantGroup=new THREE.Group(); scene.add(plantGroup);
-    for(let z=1;z<=ZONES;z++){
-      const stemGeo=new THREE.CylinderGeometry(0.5,0.5,6,6); const stemMat=new THREE.MeshStandardMaterial({color:0x228B22});
-      const stem=new THREE.Mesh(stemGeo,stemMat);
-      stem.position.set((z-1)%4*10,3,Math.floor((z-1)/4)*10);
-      const leafGeo=new THREE.SphereGeometry(1.5,6,6); const leafMat=new THREE.MeshStandardMaterial({color:0x32CD32});
-      const leaf=new THREE.Mesh(leafGeo,leafMat); leaf.position.set(stem.position.x,5,stem.position.z);
-      plantGroup.add(stem); plantGroup.add(leaf);
+  const threeContainer = document.getElementById("threeDContainer");
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0f1722);
+  const camera = new THREE.PerspectiveCamera(45,threeContainer.clientWidth/threeContainer.clientHeight,0.1,1000);
+  camera.position.set(0,15,25);
+
+  const renderer = new THREE.WebGLRenderer({antialias:true});
+  renderer.setSize(threeContainer.clientWidth,threeContainer.clientHeight);
+  threeContainer.appendChild(renderer.domElement);
+
+  const controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+
+  // Light
+  const ambientLight = new THREE.AmbientLight(0xffffff,0.6);
+  scene.add(ambientLight);
+  const dirLight = new THREE.DirectionalLight(0xffffff,0.6);
+  dirLight.position.set(10,20,10);
+  scene.add(dirLight);
+
+  // Ground plane
+  const planeGeometry = new THREE.PlaneGeometry(20,20);
+  const planeMaterial = new THREE.MeshStandardMaterial({color:0x1b2a3c});
+  const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+  plane.rotation.x = -Math.PI/2;
+  scene.add(plane);
+
+  // Tomato plant storage
+  const plantMeshes = [];
+
+  function createTomatoPlant(zone,health){
+    const group = new THREE.Group();
+    const stemGeo = new THREE.CylinderGeometry(0.1,0.1,2,8);
+    const stemMat = new THREE.MeshStandardMaterial({color:0x8b5a2b});
+    const stem = new THREE.Mesh(stemGeo, stemMat);
+    stem.position.y=1;
+    group.add(stem);
+
+    const leafGeo = new THREE.SphereGeometry(0.4,8,8);
+    let leafColor = 0x4caf50;
+    if(health==="Moderate") leafColor=0xffc107;
+    if(health==="Severe") leafColor=0xf44336;
+    const leafMat = new THREE.MeshStandardMaterial({color:leafColor});
+    const leaf = new THREE.Mesh(leafGeo, leafMat);
+    leaf.position.y=2;
+    group.add(leaf);
+
+    const col = (zone-1)%4;
+    const row = Math.floor((zone-1)/4);
+    group.position.set(col*4-6,0,row*4-6);
+
+    scene.add(group);
+    plantMeshes[zone-1]=group;
+  }
+
+  function update3DPlants(){
+    // Remove old
+    for(const p of plantMeshes){
+      if(p) scene.remove(p);
     }
-    animate3D();
-  }
-  function animate3D(){ requestAnimationFrame(animate3D); renderer.render(scene,camera); }
+    plantMeshes.length=0;
 
-  /* ============================================================
-     ANALYSIS ENGINE
-     ============================================================ */
-  function analyzePlantHealthFromPhoto(base64Img){
-    return new Promise((resolve)=>{
-      if(!base64Img) return resolve({health:"Unknown",greenRatio:0});
-      const img=new Image(); img.src=base64Img; img.onload=()=>{
-        const c=document.createElement("canvas"); c.width=img.width; c.height=img.height;
-        const ctx=c.getContext("2d"); ctx.drawImage(img,0,0);
-        const data=ctx.getImageData(0,0,img.width,img.height).data;
-        let greenSum=0,pixelCount=0;
-        for(let i=0;i<data.length;i+=4){
-          const r=data[i],g=data[i+1],b=data[i+2];
-          if(g>r+b) greenSum++; pixelCount++;
-        }
-        const greenRatio=greenSum/pixelCount; let health="Severe";
-        if(greenRatio>0.4) health="Healthy"; else if(greenRatio>0.2) health="Moderate";
-        resolve({health,greenRatio:Math.round(greenRatio*100)});
-      }; img.onerror=()=>resolve({health:"Unknown",greenRatio:0});
-    });
-  }
-  function calculateFloodSeverity(moisture){
-    if(moisture===null||moisture===undefined) return "Unknown";
-    if(moisture>60) return "Low"; if(moisture>40) return "Moderate"; return "High";
-  }
-  async function analyzeZone(zone){
-    const photo=photos[zone]; const sensor=sensorLogs[zone-1]||{};
-    const moisture=sensor.moisture??Math.floor(Math.random()*100);
-    const photoAnalysis=await analyzePlantHealthFromPhoto(photo);
-    const floodSeverity=calculateFloodSeverity(moisture);
-    latestAnalysis[zone]={zone,moisture,health:photoAnalysis.health,greenRatio:photoAnalysis.greenRatio,floodSeverity,recommendation:photoAnalysis.health==="Healthy"?"No immediate action required":"Inspect plants, consider irrigation or drainage"};
-    return latestAnalysis[zone];
+    for(let i=0;i<ZONES;i++){
+      const data = sensorLogs[i]||{};
+      let health="Healthy";
+      if(data.moisture<40) health="Moderate";
+      if(data.moisture<20) health="Severe";
+      createTomatoPlant(i+1,health);
+    }
   }
 
-  async function triggerAnalysis(){
-    const grid=document.getElementById("analysisGrid"); grid.innerHTML="";
-    for(let zone=1;zone<=ZONES;zone++){
-      const card=document.createElement("div"); card.style.background="#1b2a3c"; card.style.padding="8px"; card.style.borderRadius="6px"; card.style.cursor="pointer"; card.style.textAlign="center"; card.innerText=`Zone ${zone}`;
-      card.onclick=async()=>{
-        const result=await analyzeZone(zone);
-        document.getElementById("aiAnalysis").innerText=
-          `Zone ${zone} Analysis:\n- Moisture: ${result.moisture}%\n- Plant Health: ${result.health}\n- Green Coverage: ${result.greenRatio || "N/A"}%\n- Flood Severity: ${result.floodSeverity}\n- Recommendation: ${result.recommendation}\n\nObservations:\nThe system indicates ${result.health.toLowerCase()} plant conditions in this zone.`+
-          (result.floodSeverity==="High"?" Likely affected by post-flood stress.":" Minimal flood impact detected.");
+  function animate(){
+    requestAnimationFrame(animate);
+    controls.update();
+    renderer.render(scene,camera);
+  }
+
+  animate();
+<!-- =========================
+     PART 6: ANALYSIS ENGINE
+     ========================= -->
+<script>
+/* ============================================================
+   Helper: Average Color Extraction (from image)
+   ============================================================ */
+async function getAverageColor(imgSrc) {
+  return new Promise((resolve)=>{
+    const img = new Image();
+    img.crossOrigin = "Anonymous";
+    img.src = imgSrc;
+    img.onload = ()=>{
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img,0,0);
+      const data = ctx.getImageData(0,0,img.width,img.height).data;
+      let r=0,g=0,b=0,count=0;
+      for(let i=0;i<data.length;i+=4){
+        r+=data[i];
+        g+=data[i+1];
+        b+=data[i+2];
+        count++;
+      }
+      resolve({r:Math.round(r/count),g:Math.round(g/count),b:Math.round(b/count)});
+    };
+    img.onerror = ()=>resolve({r:128,g:128,b:128});
+  });
+}
+
+/* ============================================================
+   Health & Flood Scoring
+   ============================================================ */
+async function analyzeZone(zone){
+  const sensor = sensorLogs[zone-1]||{};
+  let healthScore = 100; // start healthy
+  let floodSeverity = "None";
+
+  // Moisture effect
+  if(sensor.moisture<40) healthScore-=30;
+  if(sensor.moisture<20) healthScore-=30;
+
+  // NPK effect
+  const n = sensor.n||0, p = sensor.p||0, k = sensor.k||0;
+  if(n<50) healthScore-=10; if(n>150) healthScore-=5;
+  if(p<30) healthScore-=10; if(p>120) healthScore-=5;
+  if(k<30) healthScore-=10; if(k>120) healthScore-=5;
+
+  // Flood effect based on moisture and photos (placeholder: if photo is very dark/blueish)
+  let colorScore = 0;
+  if(photos[zone]){
+    const avg = await getAverageColor(photos[zone]);
+    colorScore = avg.b - ((avg.r+avg.g)/2); // more blue -> more water stress
+    if(colorScore>30) floodSeverity="Severe";
+    else if(colorScore>15) floodSeverity="Moderate";
+  }
+  if(sensor.moisture<20) floodSeverity="Severe";
+  else if(sensor.moisture<40 && floodSeverity!=="Severe") floodSeverity="Moderate";
+
+  healthScore -= colorScore*0.2;
+  if(healthScore<0) healthScore=0;
+
+  const healthStatus = healthScore>60?"Healthy":healthScore>30?"Moderate":"Severe";
+
+  return {zone,healthScore,healthStatus,floodSeverity,sensor,photo:photos[zone]||null};
+}
+
+/* ============================================================
+   Trigger Full Analysis
+   ============================================================ */
+async function triggerAnalysisEngine(){
+  latestAnalysis={};
+  for(let zone=1;zone<=ZONES;zone++){
+    const result = await analyzeZone(zone);
+    latestAnalysis[zone]=result;
+  }
+  renderAnalysisGrid();
+  update3DPlants(); // update colors based on latest health
+  renderMap(); // refresh 2D map with health-based coloring
+}
+
+/* ============================================================
+   Render Analysis Grid + AI Text
+   ============================================================ */
+function renderAnalysisGrid(){
+  const grid = document.getElementById("analysisGrid");
+  grid.innerHTML="";
+  for(let zone=1;zone<=ZONES;zone++){
+    const data = latestAnalysis[zone];
+    const card = document.createElement("div");
+    card.style.background="#1b2a3c";
+    card.style.padding="8px";
+    card.style.borderRadius="6px";
+    card.style.cursor="pointer";
+    card.style.textAlign="center";
+    card.innerText=`Zone ${zone}\n${data.healthStatus}`;
+    card.onclick=()=>{
+      const sensor = data.sensor;
+      document.getElementById("aiAnalysis").innerText=
+        `Zone ${zone} Detailed Analysis:\n`+
+        `- Moisture: ${sensor.moisture||"N/A"}%\n`+
+        `- N: ${sensor.n||"N/A"}, P: ${sensor.p||"N/A"}, K: ${sensor.k||"N/A"}\n`+
+        `- Flood Severity: ${data.floodSeverity}\n`+
+        `- Health Score: ${data.healthScore.toFixed(1)}\n`+
+        `- Recommendation: ${data.healthStatus==="Healthy"?"No action needed":"Inspect, irrigate, and treat plants"}\n`;
+    };
+    grid.appendChild(card);
+  }
+}
+
+/* ============================================================
+   Overwrite existing triggerAnalysis to call engine
+   ============================================================ */
+async function triggerAnalysis(){
+  await triggerAnalysisEngine();
+}
+<!-- =========================
+     PART 7: RENDERING RESULTS + AI TEXT GENERATION
+     ========================= -->
+<script>
+/* ============================================================
+   Generate Narrative Text for Each Zone
+   ============================================================ */
+function generateZoneNarrative(data) {
+  const sensor = data.sensor || {};
+  const health = data.healthStatus;
+  const flood = data.floodSeverity;
+
+  let narrative = `Zone ${data.zone} Post-Flood Analysis:\n`;
+
+  // Observation based on health score
+  if (health === "Healthy") {
+    narrative += "- Observation: Plants appear robust and unaffected by recent flooding.\n";
+  } else if (health === "Moderate") {
+    narrative += "- Observation: Plants show moderate stress; some signs of wilting or discoloration.\n";
+  } else {
+    narrative += "- Observation: Severe stress detected; plants may be waterlogged or nutrient deficient.\n";
+  }
+
+  // Flood impact
+  narrative += `- Flood Impact: ${flood}\n`;
+
+  // Moisture & NPK
+  narrative += `- Soil Moisture: ${sensor.moisture || "N/A"}%\n`;
+  narrative += `- Nutrients: N=${sensor.n||"N/A"}, P=${sensor.p||"N/A"}, K=${sensor.k||"N/A"}\n`;
+
+  // Recommendation
+  if (health === "Healthy") {
+    narrative += "- Recommendation: Maintain current irrigation and nutrient schedule.\n";
+  } else if (health === "Moderate") {
+    narrative += "- Recommendation: Inspect plants, adjust watering, and apply supplemental nutrients if needed.\n";
+  } else {
+    narrative += "- Recommendation: Immediate intervention required: drain excess water, treat with fertilizers, and remove dead/damaged foliage.\n";
+  }
+
+  return narrative;
+}
+
+/* ============================================================
+   Update AI Analysis Text Panel (for all zones summary)
+   ============================================================ */
+function updateAIAnalysisSummary() {
+  const analysisDiv = document.getElementById("aiAnalysis");
+  let summary = "=== PROJECT SCOUT – Post-Flood Summary ===\n\n";
+
+  for (let zone = 1; zone <= ZONES; zone++) {
+    const data = latestAnalysis[zone];
+    summary += generateZoneNarrative(data) + "\n";
+  }
+
+  analysisDiv.innerText = summary;
+}
+
+/* ============================================================
+   Optional: Auto-generate text when analysis is triggered
+   ============================================================ */
+async function triggerAnalysisEngine(){
+  latestAnalysis={};
+  for(let zone=1;zone<=ZONES;zone++){
+    const result = await analyzeZone(zone);
+    latestAnalysis[zone]=result;
+  }
+  renderAnalysisGrid();
+  update3DPlants(); // update 3D plant colors
+  renderMap(); // refresh 2D map
+  updateAIAnalysisSummary(); // new: full text summary
+}
+<!-- =========================
+     PART 8: ESP32 & THINGSPEAK INTEGRATION + INITIALIZATION
+     ========================= -->
+<script>
+/* ============================================================
+   Constants for ESP32 & ThingSpeak
+   ============================================================ */
+const ESP32_BASE_URL = `http://${ESP32_IP}`;
+const THINGSPEAK_WRITE_URL = `https://api.thingspeak.com/update?api_key=${THINGSPEAK_KEY}`;
+
+/* ============================================================
+   Send Commands to Rover
+   ============================================================ */
+async function sendRoverCommand(cmd) {
+  try {
+    const response = await fetch(`${ESP32_BASE_URL}/${cmd}`);
+    if(response.ok){
+      log(`✅ Command sent: ${cmd}`);
+      document.getElementById("status").innerText = `Last command: ${cmd}`;
+    } else {
+      log(`❌ Failed command: ${cmd}`);
+    }
+  } catch(err){
+    log(`⚠ Error sending command: ${cmd} (${err})`);
+  }
+}
+
+/* ============================================================
+   Fetch Sensor Data from Rover
+   ============================================================ */
+async function fetchRoverSensorData() {
+  try {
+    const res = await fetch(`${ESP32_BASE_URL}/sensors`);
+    const data = await res.json();
+
+    // Update local sensor logs
+    for(let i=0;i<ZONES;i++){
+      sensorLogs[i] = {
+        moisture: data[i]?.moisture || 0,
+        n: data[i]?.n || 0,
+        p: data[i]?.p || 0,
+        k: data[i]?.k || 0
       };
-      grid.appendChild(card);
     }
-    renderMap();
+
+    log("📡 Rover sensor data updated.");
+    triggerAnalysisEngine(); // re-run analysis after new sensor data
+  } catch(err){
+    log(`⚠ Error fetching sensor data: ${err}`);
+  }
+}
+
+/* ============================================================
+   Send Sensor Data to ThingSpeak
+   ============================================================ */
+async function pushDataToThingSpeak() {
+  try {
+    // Example: send average moisture to ThingSpeak
+    const avgMoisture = sensorLogs.reduce((sum,s)=>(sum+(s.moisture||0)),0)/ZONES;
+    const url = `${THINGSPEAK_WRITE_URL}&field1=${avgMoisture}`;
+    const res = await fetch(url);
+    if(res.ok) log("📊 ThingSpeak updated successfully.");
+    else log("❌ ThingSpeak update failed.");
+  } catch(err){
+    log("⚠ ThingSpeak error: "+err);
+  }
+}
+
+/* ============================================================
+   Window Load Initializer
+   ============================================================ */
+window.addEventListener("load", () => {
+  log("🚀 PROJECT SCOUT DASHBOARD INITIALIZING...");
+
+  // Generate photo grid & analysis grid
+  generatePhotoGrid();
+  triggerAnalysisEngine();
+
+  // Start 3D plants persistent rendering
+  init3DPlants();
+
+  // Auto-fetch rover sensor data every 30 seconds
+  setInterval(fetchRoverSensorData, 30000);
+
+  // Auto push to ThingSpeak every 60 seconds
+  setInterval(pushDataToThingSpeak, 60000);
+
+  document.getElementById("status").innerText = "✅ Dashboard Ready";
+});
+
+/* ============================================================
+   Optional: Handle persistent 3D camera and controls
+   ============================================================ */
+let threeDRenderer, threeDScene, threeDCamera, threeDControls;
+function init3DPlants() {
+  // Three.js renderer
+  threeDRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  const container = document.getElementById("threeDContainer");
+  threeDRenderer.setSize(container.clientWidth, container.clientHeight);
+  container.appendChild(threeDRenderer.domElement);
+
+  // Scene and camera
+  threeDScene = new THREE.Scene();
+  threeDCamera = new THREE.PerspectiveCamera(45, container.clientWidth/container.clientHeight, 0.1, 1000);
+  threeDCamera.position.set(10, 15, 25);
+
+  // Orbit controls
+  threeDControls = new THREE.OrbitControls(threeDCamera, threeDRenderer.domElement);
+  threeDControls.enableDamping = true;
+
+  // Ambient & directional light
+  const ambient = new THREE.AmbientLight(0xffffff, 0.7);
+  const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+  dirLight.position.set(10,20,10);
+  threeDScene.add(ambient, dirLight);
+
+  // Initial plant models
+  update3DPlants();
+
+  // Render loop
+  function animate() {
+    requestAnimationFrame(animate);
+    threeDControls.update();
+    threeDRenderer.render(threeDScene, threeDCamera);
+  }
+  animate();
+}
+
+/* ============================================================
+   Update 3D Plants Colors Based on Latest Analysis
+   ============================================================ */
+function update3DPlants(){
+  if(!threeDScene) return;
+
+  // Clear previous plants
+  while(threeDScene.children.length>0){
+    const obj = threeDScene.children[0];
+    if(obj.type!=="AmbientLight" && obj.type!=="DirectionalLight") threeDScene.remove(obj);
+    else break;
   }
 
-  /* ============================================================
-     ThingSpeak Upload
-     ============================================================ */
-  async function pushToThingSpeak(zone){
-    const data=latestAnalysis[zone]; if(!data) return;
-    const url=`https://api.thingspeak.com/update.json?api_key=${THINGSPEAK_KEY}&field1=${data.zone}&field2=${data.moisture}&field3=${data.health}&field4=${data.floodSeverity}`;
-    try{ const res=await fetch(url,{method:"POST"}); if(res.ok) log(`ThingSpeak updated for Zone ${zone}`); else log(`ThingSpeak failed for Zone ${zone}`); }catch(err){ log(`Error pushing to ThingSpeak: ${err}`); }
+  for(let zone=1; zone<=ZONES; zone++){
+    const result = latestAnalysis[zone] || { healthStatus: "Healthy" };
+    let color = 0x4caf50; // green
+    if(result.healthStatus==="Moderate") color = 0xffc107; // yellow
+    if(result.healthStatus==="Severe") color = 0xf44336; // red
+
+    // Simple tomato plant model: cylinder stem + sphere leaves
+    const stemGeo = new THREE.CylinderGeometry(0.1,0.1,1.5);
+    const stemMat = new THREE.MeshStandardMaterial({ color: 0x8b5a2b });
+    const stem = new THREE.Mesh(stemGeo, stemMat);
+    stem.position.set((zone%4)*2,0.75,Math.floor((zone-1)/4)*2);
+
+    const leavesGeo = new THREE.SphereGeometry(0.4,6,6);
+    const leavesMat = new THREE.MeshStandardMaterial({ color: color });
+    const leaves = new THREE.Mesh(leavesGeo, leavesMat);
+    leaves.position.set(stem.position.x, 1.5, stem.position.z);
+
+    threeDScene.add(stem, leaves);
   }
-
-  function scrollToSection(id){ document.getElementById(id).scrollIntoView({behavior:"smooth"}); }
-
-  /* ============================================================
-     INITIALIZATION
-     ============================================================ */
-  window.onload=()=>{
-    log("PROJECT SCOUT Dashboard Initialized");
-    generatePhotoGrid(); triggerAnalysis(); renderMap(); init3DPlants();
-    document.getElementById("status").innerText="Dashboard Ready";
-  };
+}
   </script>
 </body>
 </html>
