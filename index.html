@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>S.C.O.U.T. Rover Post-Flood Data Fusion & Control Console (V32.0 - Critical Fixes)</title>
+<title>S.C.O.U.T. Rover Post-Flood Data Fusion & Control Console (V33.0 - Critical Photo Fix)</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script async src="https://docs.opencv.org/4.x/opencv.js" onload="onOpenCvReady();"></script>
@@ -127,7 +127,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 }
 .grid-cell:hover { border: 3px solid #79c0ff; background-color: #2a3038; } 
 
-/* V32.0: CRITICAL Analysis UI/UX Styles */
+/* Analysis UI/UX Styles */
 .analysis-card {
     background-color: #0d1117; /* Darker tint for the card background */
     padding: 25px;
@@ -188,11 +188,12 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
     background-color: #f85149;
     color: #0d1117;
     border-radius: 50%;
-    pointer-events: all; 
+    /* V33.0: Ensure pointer events are ON for the delete button */
+    pointer-events: auto; 
 }
-/* V32.0: Placeholder text z-index */
+/* Placeholder text z-index (Must be higher than the file input when empty) */
 .placeholder-text {
-    z-index: 1; 
+    z-index: 20; /* Set higher than default input z-index 5 */
     position: relative;
     text-align: center;
 }
@@ -201,7 +202,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 <body>
 <div class="container">
     <div class="controls-panel">
-        <h1>S.C.O.U.T. Post-Flood Assessment Bridge (V32.0)</h1>
+        <h1>S.C.O.U.T. Post-Flood Assessment Bridge (V33.0)</h1>
         <p>System Diagnostic Status: <span id="status">AWAITING SYSTEM BOOT SEQUENCE COMPLETION...</span></p>
 
         <div class="data-display history-controls">
@@ -319,7 +320,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 </div>
 
 <footer>
-    <p>&copy; 2025 S.C.O.U.T. Rover Systems - Operational Bridge V32.0. Hardware ESP32 IP: 10.101.146.88 | ThingSpeak API: 6OXH3SUQ4VNSOJX1</p>
+    <p>&copy; 2025 S.C.O.U.T. Rover Systems - Operational Bridge V33.0. Hardware ESP32 IP: 10.101.146.88 | ThingSpeak API: 6OXH3SUQ4VNSOJX1</p>
 </footer>
 
 <script>
@@ -328,10 +329,10 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 // ----------------------------------------------------------------------------------
 /**
  * @fileoverview S.C.O.U.T. Rover Control System JavaScript Core.
- * Version 32.0: Critical Photo Z-Index Fix and Analysis UI/UX Overhaul.
+ * Version 33.0: Critical Photo Z-Index and Pointer-Event Fix for Visibility.
  */
 // --- 0.2.1 HARDWARE AND NETWORK CONFIGURATION (CRITICAL SYSTEM IDENTIFIERS) ---
-const HARDWARE_ESP32_IP_ADDRESS = '10.101.146.88'; // <<< CRITICAL: IP ADDRESS UPDATED
+const HARDWARE_ESP32_IP_ADDRESS = '10.101.146.88'; 
 const THINGSPEAK_API_KEY = '6OXH3SUQ4VNSOJX1'; 
 const MAX_HISTORY_TRIALS = 50;
 // --- 0.2.2 PHYSICAL SYSTEM AND UI CONSTANTS (STRICT ADHERENCE TO SPECIFICATIONS) ---
@@ -340,7 +341,7 @@ const MAP_CANVAS_PIXELS = 480;
 const MAX_STOCK_PHOTOS = 50;
 const PLANT_CIRCLE_RADIUS = 5;
 const SCORE_CAP_ON_PARTIAL_DATA = 50;
-// --- 0.2.3 DIAGNOSTIC CONSTANTS (V32.0 - HEALTH SCORE AND THRESHOLDS) ---
+// --- 0.2.3 DIAGNOSTIC CONSTANTS (V33.0 - HEALTH SCORE AND THRESHOLDS) ---
 const HEALTH_SCORE_THRESHOLDS = {
     CRITICAL: { max: 40, color: '#f85149', label: 'CRITICAL', class: 'rec-critical' }, // Red (0-40)
     ACTION_REQUIRED: { max: 75, color: '#e3b341', label: 'ACTION REQUIRED', class: 'rec-action' }, // Amber (41-75)
@@ -364,13 +365,12 @@ const MAP_CONTEXT = document.getElementById('roverMap').getContext('2d');
 const HISTORY_MODAL = document.getElementById('historyModal');
 const STOCK_MODAL = document.getElementById('stockImageModal');
 const CURRENT_ZONE_SELECTION_DISPLAY = document.getElementById('currentZoneSelection');
-// V31.0: GLOBAL_FILE_INPUT removed.
 // --- 0.2.5 GLOBAL STATE VARIABLES (Clean Initial State Definition) ---
 let openCvLibraryIsReady = false;
 let systemLoggedSensorDataArray = [];
 let currentPhotoAssignmentData = {};
 let stockPhotoLibraryData = {};
-let currentlySelectedPlantZone = 0; // CRITICAL: Used by photo handlers and manual data entry
+let currentlySelectedPlantZone = 0; 
 let historyIsBeingViewed = false;
 let currentRoverKinematicState = {
     latitude: 'N/A',
@@ -434,8 +434,6 @@ function dispatchRoverMovementCommand(commandIdentifier) {
             
             const mockDataUrl = `data:image/jpeg;base64,mocked_rover_capture_zone_${zoneID}_diag:${mockDiagnosis.replace(/\s/g, '_').replace(/[()]/g, '')}`;
 
-            // *** CRITICAL V31.0: Assign the photo and trigger rendering ***
-            currentPhotoAssignmentData[zoneID] = mockDataUrl;
             renderPhotoInPhotoGridCell(zoneID, mockDataUrl); 
             
             selectZone(zoneID);
@@ -560,7 +558,7 @@ function dispatchManualDataEntry() {
 
 
 // ==================================================================================
-// SECTION 2.0: DIAGNOSTIC KNOWLEDGE BASE & FUSED ANALYSIS CORE (V32.0 FIXES)
+// SECTION 2.0: DIAGNOSTIC KNOWLEDGE BASE & FUSED ANALYSIS CORE (V33.0 Fixes)
 // ----------------------------------------------------------------------------------
 // Base knowledge for photo analysis and associated score penalties
 const TOMATO_DIAGNOSTIC_KB = {
@@ -712,6 +710,7 @@ function triggerComprehensiveAnalysisCycle() {
         
         let photoDiagnosis = null;
         if (photoEntry) {
+             // The analysis engine successfully parses the mocked diagnosis from the data URL string
              const match = photoEntry.match(/diag:([^,]+)/);
              if (match) {
                  photoDiagnosis = match[1].replace(/_/g, ' ');
@@ -786,7 +785,7 @@ function generatePlantAnalysisCardHTML(zoneID, result) {
                 <div class="${scoreClass}">${result.rec_sensor}</div>
             </div>
 
-            <h3>DATA FUSION ENGINE: Detailed Report (V32.0)</h3>
+            <h3>DATA FUSION ENGINE: Detailed Report (V33.0)</h3>
             <pre style="white-space: pre-wrap; word-wrap: break-word; background: #0f131a; padding: 15px; border-radius: 8px; border: 1px solid #30363d; font-size: 0.9em;">${result.analysis}</pre>
         </div>
     `;
@@ -811,7 +810,7 @@ function renderNoDataCards() {
 
 // ==================================================================================
 // SECTION 3.0: 2D MAP VISUALIZATION (No changes)
-// ----------------------------------------------------------------------------------
+// ==================================================================================
 function updateMapVisualization() {
     const ctx = MAP_CONTEXT;
     const size = MAP_CANVAS_PIXELS;
@@ -889,7 +888,7 @@ function findNearestPlantZone(x_m, y_m) {
 
 // ==================================================================================
 // SECTION 4.0: 3D VISUALIZATION CORE (No changes)
-// ----------------------------------------------------------------------------------
+// ==================================================================================
 let scene, camera, renderer, controls;
 let plantCubes = []; 
 
@@ -1019,11 +1018,11 @@ function animate() {
 
 
 // ==================================================================================
-// SECTION 5.0: UTILITY & UI FUNCTIONS (Photo Grid - V32.0 FIX CORE)
+// SECTION 5.0: UTILITY & UI FUNCTIONS (Photo Grid - V33.0 FIX CORE)
 // ----------------------------------------------------------------------------------
 
 /**
- * V32.0: Sets the currently active zone for UI highlighting and manual data entry.
+ * V33.0: Sets the currently active zone for UI highlighting and manual data entry.
  */
 function selectZone(zoneID) {
     currentlySelectedPlantZone = zoneID;
@@ -1038,7 +1037,7 @@ function selectZone(zoneID) {
 }
 
 /**
- * V32.0: Creates and renders the photo grid cells, ensuring the transparent file input is always present.
+ * V33.0: Creates and renders the photo grid cells.
  */
 function generatePhotoGrid() {
     const grid = document.getElementById('photoGrid');
@@ -1048,31 +1047,28 @@ function generatePhotoGrid() {
         cell.className = 'grid-cell';
         cell.id = `zoneCell-${i}`;
         
-        // V32.0: Cell click is now just for highlighting/state sync
         cell.onclick = () => selectZone(i); 
 
-        // V32.0 CRITICAL: Embed the transparent input in EVERY cell
+        // V33.0: Embed the transparent input in EVERY cell
         const fileInput = document.createElement('input');
         fileInput.type = 'file';
         fileInput.id = `file-input-${i}`;
         fileInput.accept = 'image/*';
-        // V32.0 Z-index Fix: Set file input to lower Z-index (5)
-        fileInput.style.cssText = 'opacity: 0; position: absolute; left: 0; top: 0; width: 100%; height: 100%; cursor: pointer; z-index: 5;';
+        // V33.0 Initial Input Styles: Must be visible and on top to capture the click
+        fileInput.style.cssText = 'opacity: 0; position: absolute; left: 0; top: 0; width: 100%; height: 100%; cursor: pointer; z-index: 5; pointer-events: auto;';
         
         fileInput.onchange = (e) => handleLocalPhotoUpload(i, e);
         
-        // Append input first
         cell.appendChild(fileInput);
 
         if (currentPhotoAssignmentData[i]) {
-            // If photo exists, render the image overlay
+            // If photo exists, render the image overlay (and update file input styles)
             renderPhotoInPhotoGridCell(i, currentPhotoAssignmentData[i], false); 
         } else {
             // If no photo, render placeholder text
             const textNode = document.createElement('div');
             textNode.className = 'placeholder-text';
             textNode.innerHTML = `Zone ${i}<br>CLICK TO UPLOAD`;
-            // Append placeholder text after input (z-index 1 is still higher than input's z-index 5 if both are in the flow)
             cell.appendChild(textNode);
         }
         
@@ -1081,7 +1077,7 @@ function generatePhotoGrid() {
 }
 
 /**
- * V32.0: Handles file upload event from the *local* input.
+ * V33.0: Handles file upload event from the *local* input.
  */
 function handleLocalPhotoUpload(zoneID, event) {
     // CRITICAL: Must set the zone selection here since the click went straight to the input
@@ -1092,9 +1088,10 @@ function handleLocalPhotoUpload(zoneID, event) {
         const reader = new FileReader();
         reader.onload = (e) => {
             const mockDiagnosis = (zoneID % 4 === 0) ? 'Edging Burn/Tip Necrosis (K/Salt)' : 'Healthy, Deep Green Foliage';
+            // CRITICAL: Ensure the diagnosis mock data is correctly injected into the URL string
             const dataUrlWithMockDiagnosis = e.target.result.replace('base64,', `base64,mocked_user_upload_diag:${mockDiagnosis.replace(/\s/g, '_').replace(/[()]/g, '')},`);
             
-            // This implicitly calls renderPhotoInPhotoGridCell which handles the new input element
+            // Render photo and trigger analysis
             renderPhotoInPhotoGridCell(zoneID, dataUrlWithMockDiagnosis, true); 
             
             STATUS_ELEMENT.innerText = `User photo uploaded and assigned to Zone ${zoneID}. Diagnosis mocked for now.`;
@@ -1107,7 +1104,7 @@ function handleLocalPhotoUpload(zoneID, event) {
 }
 
 /**
- * V32.0 CRITICAL FIX: Ensures correct z-indexing for image visibility.
+ * V33.0 CRITICAL FIX: Ensures correct z-indexing and element state for image visibility.
  * @param {number} zoneID The ID of the zone being rendered.
  * @param {string} dataUrl The base64 data URL of the image.
  * @param {boolean} triggerAnalysis Should the analysis cycle run afterwards.
@@ -1118,19 +1115,20 @@ function renderPhotoInPhotoGridCell(zoneID, dataUrl, triggerAnalysis = true) {
     if (!cell || !fileInput) return;
     
     // 1. Clear placeholder text / old elements (must keep the file input)
-    // Find and remove the placeholder text if it exists
     cell.querySelectorAll('.placeholder-text').forEach(el => el.remove()); 
-    // Remove any existing image and delete button
     cell.querySelectorAll('img, .delete-photo-btn').forEach(el => el.remove());
     
-    // 2. Create and append Image element 
+    // 2. CRITICAL Z-INDEX FIX: Push input far back and disable interaction.
+    fileInput.style.zIndex = '-1'; 
+    fileInput.style.pointerEvents = 'none'; 
+    
+    // 3. Create and append Image element 
     const img = document.createElement('img');
     img.src = dataUrl;
-    // V32.0 Z-Index Fix: Image z-index (10) is now higher than the input (5)
     img.style.cssText = 'width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 10;'; 
     cell.appendChild(img);
 
-    // 3. Create and append delete button (z-index 100)
+    // 4. Create and append delete button (z-index 100)
     const deleteBtn = document.createElement('button');
     deleteBtn.className = 'delete-photo-btn';
     deleteBtn.innerHTML = 'X';
@@ -1140,7 +1138,7 @@ function renderPhotoInPhotoGridCell(zoneID, dataUrl, triggerAnalysis = true) {
     };
     cell.appendChild(deleteBtn);
     
-    // 4. Update the assignment data
+    // 5. Update the assignment data
     currentPhotoAssignmentData[zoneID] = dataUrl;
     
     if (triggerAnalysis) {
@@ -1156,11 +1154,14 @@ function deletePhotoAssignment(zoneID) {
         // Clear all elements except the file input
         cell.querySelectorAll(':not(#file-input-' + zoneID + ')').forEach(el => el.remove());
         
+        // V33.0: Restore input's visibility and clickability
+        fileInput.style.zIndex = '5';
+        fileInput.style.pointerEvents = 'auto';
+        
         // Re-append the placeholder text
         const textNode = document.createElement('div');
         textNode.className = 'placeholder-text';
         textNode.innerHTML = `Zone ${zoneID}<br>CLICK TO UPLOAD`;
-        textNode.style.zIndex = '1';
         
         // Insert the text node after the file input
         cell.appendChild(textNode);
@@ -1224,7 +1225,7 @@ function executeTrialSaveOperation() {
         kinematics: JSON.parse(JSON.stringify(currentRoverKinematicState)),
         sensorData: JSON.parse(JSON.stringify(systemLoggedSensorDataArray)),
         photoAssignments: JSON.parse(JSON.stringify(currentPhotoAssignmentData)),
-        // V32.0: Store only the generated HTML structure from the analysis grid
+        // V33.0: Store only the generated HTML structure from the analysis grid
         analysisResults: document.getElementById('plantAnalysisGrid').innerHTML 
     };
 
@@ -1266,7 +1267,7 @@ function restoreTrialFromHistory(trial) {
     systemLoggedSensorDataArray = trial.sensorData;
     currentPhotoAssignmentData = trial.photoAssignments;
     
-    // V32.0: Restore the exact analysis HTML structure
+    // V33.0: Restore the exact analysis HTML structure
     document.getElementById('plantAnalysisGrid').innerHTML = trial.analysisResults;
     
     // Re-run the core functions to sync map/3D visualization and photo grid display
@@ -1290,8 +1291,10 @@ function executeAllHistoryClearance() {
 }
 
 function resetSensorAndMapData(clearHistory = true) {
+    // V33.0: CRITICAL: Do NOT clear currentPhotoAssignmentData here if loading from localStorage 
+    // BUT since we don't load from localStorage in this snippet, we must clear it on new run.
     systemLoggedSensorDataArray = [];
-    currentPhotoAssignmentData = {};
+    currentPhotoAssignmentData = {}; 
     currentlySelectedPlantZone = 0;
     CURRENT_ZONE_SELECTION_DISPLAY.innerText = 'N/A';
     
@@ -1348,6 +1351,7 @@ function onDocumentReady() {
     // CRITICAL: Must generate grid first so the cells/inputs exist for rendering
     generatePhotoGrid();
     
+    // We clear data on every fresh load to ensure a clean slate, as state cannot persist between snippet runs
     resetSensorAndMapData(false); 
     
     if (systemLoggedSensorDataArray.length === 0 && Object.keys(currentPhotoAssignmentData).length === 0) {
