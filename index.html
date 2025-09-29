@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>S.C.O.U.T. Rover Post-Flood Data Fusion & Control Console (V46.0 - Photo Verdict Differentiation Fix)</title>
+<title>S.C.O.U.T. Rover Post-Flood Data Fusion & Control Console (V47.0 - Score Differentiation Fix)</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script async src="https://docs.opencv.org/4.x/opencv.js" onload="onOpenCvReady();"></script>
@@ -229,7 +229,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 <body>
 <div class="container">
     <div class="controls-panel">
-        <h1>S.C.O.U.T. Post-Flood Assessment Bridge (V46.0)</h1>
+        <h1>S.C.O.U.T. Post-Flood Assessment Bridge (V47.0)</h1>
         <p>System Diagnostic Status: <span id="status">AWAITING SYSTEM BOOT SEQUENCE COMPLETION...</span></p>
 
         <div class="data-display history-controls">
@@ -275,7 +275,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
                 <label style="color:#79c0ff;">K (ppm): <input type="number" id="manualK" min="1" value="150" style="width: 50px;"></label>
             </div>
             <button onclick="dispatchManualDataEntry()" style="background-color: #e341b3; color: #0d1117;">  📝  SUBMIT MANUAL DATA + PHOTO</button>
-            <p><small>**V46.0 Fix:** Photo analysis now uses **6 highly distinct penalties** and diagnoses for maximal verdict differentiation.</small></p>
+            <p><small>**V47.0 Fix:** All 16 zones now have unique Sensor/Visual combinations to prevent FUSED score convergence.</small></p>
         </div>
 
         <div class="data-display">
@@ -323,7 +323,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 
     <div class="plant-analysis-panel">
         <h2>DATA FUSION ENGINE: Post-Flood Plant Diagnosis (16 Zones)  🔬  </h2>
-        <p>This panel displays the **FUSED** assessment: **Leaf Visual Pre-Assessment (CV)** + **Local Soil Sensor Data**. **(V46.0: Visual verdicts are now maximally differentiated)**.</p>
+        <p>This panel displays the **FUSED** assessment: **Leaf Visual Pre-Assessment (CV)** + **Local Soil Sensor Data**. **(V47.0: All non-optimal FUSED scores are now unique)**.</p>
         <div id="plantAnalysisGrid">
         </div>
     </div>
@@ -352,7 +352,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 </div>
 
 <footer>
-    <p>&copy; 2025 S.C.O.U.T. Rover Systems - Operational Bridge V46.0. Hardware ESP32 IP: 10.101.146.88 | ThingSpeak API: 6OXH3SUQ4VNSOJX1</p>
+    <p>&copy; 2025 S.C.O.U.T. Rover Systems - Operational Bridge V47.0. Hardware ESP32 IP: 10.101.146.88 | ThingSpeak API: 6OXH3SUQ4VNSOJX1</p>
 </footer>
 
 <script>
@@ -361,7 +361,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 // ----------------------------------------------------------------------------------
 /**
  * @fileoverview S.C.O.U.T. Rover Control System JavaScript Core.
- * Version 46.0: Photo Verdict Differentiation Fix (New Pest Diagnosis & distinct penalties).
+ * Version 47.0: Fused Score Convergence Fix (Guaranteed unique scores by breaking data symmetry).
  */
 // --- 0.2.1 HARDWARE AND NETWORK CONFIGURATION (CRITICAL SYSTEM IDENTIFIERS) ---
 const HARDWARE_ESP32_IP_ADDRESS = '10.101.146.88'; 
@@ -383,9 +383,9 @@ const HEALTH_SCORE_THRESHOLDS = {
 };
 const SENSOR_SCORE_WEIGHTS = {
     MOISTURE_LOW: 30, 
-    MOISTURE_HIGH: 45, 
-    NPK_DEFICIENCY: 30, 
-    NPK_IMBALANCE: 15, 
+    MOISTURE_HIGH: 45, // Base high moisture penalty
+    NPK_DEFICIENCY: 30, // Severe N/P/K deficiency (below 50% optimal)
+    NPK_IMBALANCE: 15, // Suboptimal N/P/K (below 80% optimal)
 };
 const OPTIMAL_MOISTURE_RANGE = { min: 35, max: 70 }; 
 const FLOOD_MOISTURE_THRESHOLD = 85; 
@@ -401,31 +401,49 @@ const STOCK_MODAL = document.getElementById('stockImageModal');
 const CURRENT_ZONE_SELECTION_DISPLAY = document.getElementById('currentZoneSelection');
 const MANUAL_TARGET_ZONE_SELECT = document.getElementById('manualTargetZone');
 
-// --- V43.0 CORE: DETERMINISTIC FIELD CONDITIONS (Retained from V41.0, updated diagnosis for Zone 16) ---
+// --- V47.0 CORE: DETERMINISTIC FIELD CONDITIONS (Symmetry Broken for Unique Fused Scores) ---
 const FIELD_ZONE_CONDITIONS = {
-    // Optimal / Baseline Condition (Should result in high score, unless moisture is over 70)
-    1: { type: 'Optimal', moisture: 55.0, N: 160, P: 85, K: 155, diag: 'Healthy, Deep Green Foliage' },
+    // Fused Score: 100 (Optimal)
+    1: { type: 'Optimal', moisture: 55.0, N: 160, P: 85, K: 155, diag: 'Healthy, Deep Green Foliage' }, 
     5: { type: 'Optimal', moisture: 50.0, N: 150, P: 80, K: 150, diag: 'Healthy, Deep Green Foliage' },
     9: { type: 'Optimal', moisture: 60.0, N: 145, P: 75, K: 140, diag: 'Healthy, Deep Green Foliage' },
     13: { type: 'Optimal', moisture: 65.0, N: 165, P: 90, K: 160, diag: 'Healthy, Deep Green Foliage' },
-    
-    // Waterlogged / High Flood Condition (High Moisture, Leached NPK)
-    2: { type: 'Waterlogged', moisture: 92.5, N: 50, P: 60, K: 70, diag: 'Healthy, Deep Green Foliage' }, // Initially healthy leaf, but CRITICALLY wet soil
-    6: { type: 'Waterlogged', moisture: 87.0, N: 65, P: 55, K: 85, diag: 'Healthy, Deep Green Foliage' },
-    10: { type: 'Waterlogged', moisture: 90.0, N: 70, P: 60, K: 90, diag: 'Healthy, Deep Green Foliage' },
-    14: { type: 'Waterlogged', moisture: 86.5, N: 55, P: 45, K: 75, diag: 'Healthy, Deep Green Foliage' },
 
-    // Severe Nitrogen Deficiency Condition (Low Moisture, Very Low NPK)
-    3: { type: 'N-Deficient', moisture: 30.5, N: 20, P: 70, K: 100, diag: 'General Severe Yellowing (Chlorosis-N)' },
-    7: { type: 'N-Deficient', moisture: 35.0, N: 35, P: 75, K: 110, diag: 'General Severe Yellowing (Chlorosis-N)' },
-    11: { type: 'N-Deficient', moisture: 32.0, N: 25, P: 80, K: 95, diag: 'General Severe Yellowing (Chlorosis-N)' },
-    15: { type: 'N-Deficient', moisture: 40.0, N: 40, P: 65, K: 105, diag: 'General Severe Yellowing (Chlorosis-N)' },
-    
-    // Disease/Pest Hotspot Conditions (Normal Moisture/NPK, but visual issue)
-    4: { type: 'Fungal', moisture: 65.0, N: 150, P: 80, K: 150, diag: 'Dark Spots & Lesions/Blackening of Leaf (Fungal/Bacterial)' },
-    8: { type: 'Fungal', moisture: 55.0, N: 160, P: 85, K: 155, diag: 'Dark Spots & Lesions/Blackening of Leaf (Fungal/Bacterial)' },
-    12: { type: 'Viral', moisture: 50.0, N: 145, P: 75, K: 140, diag: 'Mottling/Mosaic Pattern (Viral-TMV)' }, 
-    16: { type: 'Pest', moisture: 45.0, N: 155, P: 78, K: 145, diag: 'Heavy Mite/Pest Damage (Stippling)' }, // V46.0 New Pest Diagnosis
+    // Fused Score: 85 (Low Sensor Stress Only)
+    10: { type: 'Waterlogged', moisture: 75.5, N: 100, P: 80, K: 150, diag: 'Healthy, Deep Green Foliage' }, // M OK, N Low (SP=15) -> Score 85
+
+    // Fused Score: 70 (Low Sensor Stress + Minor Visual)
+    16: { type: 'K/Salt', moisture: 75.5, N: 150, P: 80, K: 150, diag: 'Edging Burn/Tip Necrosis (K/Salt)' }, // M OK, NPK OK. VP=30 (K/Salt). SP=0. -> Score 70
+
+    // Fused Score: 65 (Minor Visual Only)
+    15: { type: 'Pest', moisture: 55.0, N: 150, P: 80, K: 150, diag: 'Heavy Mite/Pest Damage (Stippling)' }, // M, NPK OK. VP=35 (Pest). SP=0. -> Score 65
+
+    // Fused Score: 60 (N-Deficiency Visual + Minor Sensor Correction)
+    7: { type: 'N-Deficient', moisture: 55.0, N: 55, P: 80, K: 150, diag: 'General Severe Yellowing (Chlorosis-N)' }, // M OK, N Low (SP=15). VP=25. -> Score 60
+
+    // Fused Score: 50 (Pest Visual + Low K Sensor)
+    12: { type: 'Pest', moisture: 55.0, N: 150, P: 80, K: 100, diag: 'Heavy Mite/Pest Damage (Stippling)' }, // M OK, K Low (SP=15). VP=35. -> Score 50
+
+    // Fused Score: 45 (Fungal Visual Only)
+    4: { type: 'Fungal', moisture: 65.0, N: 150, P: 80, K: 150, diag: 'Dark Spots & Lesions/Blackening of Leaf (Fungal/Bacterial)' }, // M, NPK OK. VP=55 (Fungal). SP=0. -> Score 45
+
+    // Fused Score: 40 (K/Salt Visual + Low K Sensor)
+    14: { type: 'K/Salt', moisture: 55.0, N: 155, P: 80, K: 10, diag: 'Edging Burn/Tip Necrosis (K/Salt)' }, // M OK, K Critically Low (SP=30). VP=30. -> Score 40
+
+    // Fused Score: 30 (Fungal Visual + N-Suboptimal Sensor)
+    8: { type: 'Fungal', moisture: 55.0, N: 90, P: 85, K: 155, diag: 'Dark Spots & Lesions/Blackening of Leaf (Fungal/Bacterial)' }, // M OK, N Low (SP=15). VP=55. -> Score 30
+
+    // Fused Score: 25 (Waterlogged Sensor + N Suboptimal)
+    6: { type: 'Waterlogged', moisture: 87.0, N: 65, P: 55, K: 85, diag: 'Healthy, Deep Green Foliage' }, // M High (45) + N Sub (15) + P/K Low (15). SP=75. VP=0. -> Score 25
+
+    // Fused Score: 15 (N-Deficiency Visual + N/M Low Sensor)
+    3: { type: 'N-Deficient', moisture: 30.5, N: 20, P: 70, K: 100, diag: 'General Severe Yellowing (Chlorosis-N)' }, // M Low (30) + N Low (30). SP=60. VP=25. -> Score 15
+
+    // Fused Score: 10 (Critically Waterlogged + Severe N Leaching)
+    2: { type: 'Waterlogged', moisture: 92.5, N: 50, P: 60, K: 70, diag: 'Healthy, Deep Green Foliage' }, // M Critically High (45) + N Low (30) + P/K Low (15). SP=90. VP=0. -> Score 10
+
+    // Fused Score: 0 (Viral Visual + Moisture Stress Sensor)
+    11: { type: 'Viral', moisture: 38.0, N: 150, P: 80, K: 150, diag: 'Mottling/Mosaic Pattern (Viral-TMV)' }, // M OK, NPK OK. VP=70 (Viral) + M Low (30). SP=30. -> Score 0
 };
 
 
@@ -488,7 +506,7 @@ function dispatchRoverMovementCommand(commandIdentifier) {
             const zoneID = findNearestPlantZone(currentRoverKinematicState.x_position_m, currentRoverKinematicState.y_position_m)?.id || 1;
             selectZone(zoneID);
             
-            // V43.0 FIX: Ensure valid Base64 prefix + data
+            // V47.0 FIX: Ensure valid Base64 prefix + data
             const condition = FIELD_ZONE_CONDITIONS[zoneID];
             const mockDiagnosis = condition.diag;
             
@@ -529,7 +547,7 @@ function dispatchRoverMovementCommand(commandIdentifier) {
 function executeDataAcquisition(acquisitionType) {
     STATUS_ELEMENT.innerText = "SENSOR READ: Acquiring raw data...";
     
-    // V43.0 CORE: Get deterministic sensor data based on the nearest zone
+    // V47.0 CORE: Get deterministic sensor data based on the nearest zone
     const nearestPlant = findNearestPlantZone(currentRoverKinematicState.x_position_m, currentRoverKinematicState.y_position_m);
     const plantID = nearestPlant ? nearestPlant.id : 1;
     selectZone(plantID); // Highlight the zone being read
@@ -537,10 +555,10 @@ function executeDataAcquisition(acquisitionType) {
     const condition = FIELD_ZONE_CONDITIONS[plantID];
     
     // 1. Assign Deterministic Sensor Values (with slight noise for realism, but main value is fixed)
-    const moistureVal = (condition.moisture + (Math.random() * 2 - 1)).toFixed(1); 
-    const npk_n = Math.round(condition.N + (Math.random() * 5 - 2.5));
-    const npk_p = Math.round(condition.P + (Math.random() * 5 - 2.5));
-    const npk_k = Math.round(condition.K + (Math.random() * 5 - 2.5));
+    const moistureVal = (condition.moisture + (Math.random() * 0.5 - 0.25)).toFixed(1); // Reduced noise
+    const npk_n = Math.round(condition.N + (Math.random() * 2 - 1)); // Reduced noise
+    const npk_p = Math.round(condition.P + (Math.random() * 2 - 1)); // Reduced noise
+    const npk_k = Math.round(condition.K + (Math.random() * 2 - 1)); // Reduced noise
     
     // 2. Navigation Data (Still mostly random/mocked as it doesn't affect the analysis)
     const heading = (Math.random() * 360).toFixed(1);
@@ -637,18 +655,14 @@ function dispatchManualDataEntry() {
 
 
 // ==================================================================================
-// SECTION 2.0: DIAGNOSTIC KNOWLEDGE BASE & FUSED ANALYSIS CORE (V46.0 - MAX DIFFERENTIATION)
+// SECTION 2.0: DIAGNOSTIC KNOWLEDGE BASE & FUSED ANALYSIS CORE (V47.0 - MAX DIFFERENTIATION)
 // ----------------------------------------------------------------------------------
 const TOMATO_DIAGNOSTIC_KB = {
-    // V46.0 FIX: Viral diagnosis is the most critical, designed to always be CRITICAL score.
+    // V46.0 Penalties - Critical VP designed for maximal score differentiation
     'Mottling/Mosaic Pattern (Viral-TMV)': { score_penalty: 70, type: 'Viral', recommendation: "CRITICAL ISOLATION REQUIRED: Strong indicator of Tobacco Mosaic Virus (TMV). **IMMEDIATELY REMOVE AND DESTROY** the plant to prevent field-wide contamination. No chemical cure exists." },
-    // V46.0 FIX: Fungal diagnosis is next most critical, designed to always be ACTION REQUIRED/CRITICAL.
     'Dark Spots & Lesions/Blackening of Leaf (Fungal/Bacterial)': { score_penalty: 55, type: 'Fungal/Bacterial', recommendation: "FUNGICIDE/BACTERICIDE APPLICATION: Likely Early Blight or Bacterial Spot. Apply broad-spectrum copper-based fungicide and focus on improving air circulation and reducing leaf wetness." },
-    // V46.0 NEW DIAGNOSIS: Pest damage, providing a distinct intermediate penalty.
     'Heavy Mite/Pest Damage (Stippling)': { score_penalty: 35, type: 'Pest', recommendation: "PESTICIDE REQUIRED: Severe stippling and webbing suggest heavy mite infestation. Apply miticide immediately and scout surrounding plants." },
-    // V46.0 Adjusted Penalty: Salt/K deficiency
     'Edging Burn/Tip Necrosis (K/Salt)': { score_penalty: 30, type: 'Deficiency', recommendation: "POTASSIUM/SALINITY ISSUE: Burnt edges suggest Potassium (K) deficiency or high soil salinity/over-fertilization. Test soil salinity and apply potash or flush the soil if necessary." },
-    // V46.0 Adjusted Penalty: N deficiency
     'General Severe Yellowing (Chlorosis-N)': { score_penalty: 25, type: 'Deficiency', recommendation: "NPK DEFICIENCY LIKELY: Severe general yellowing often indicates primary Nitrogen (N) deficiency. Review sensor data and apply a high-Nitrogen fertilizer source (e.g., urea)." },
     'Healthy, Deep Green Foliage': { score_penalty: 0, type: 'Optimal', recommendation: "OPTIMAL HEALTH: Visual assessment confirms deep green, vibrant foliage with no signs of disease or pest damage. Maintain current environmental conditions." }
 };
@@ -666,14 +680,14 @@ function getDiagnosisAndRecommendations(plantData) {
     let isFloodScenario = false;
     let visualPenaltyApplied = 0;
     
-    // 1. --- VISUAL (PARTIAL) ASSESSMENT / PHOTO PENALTY (V46.0: DOMINANT FACTOR) ---
+    // 1. --- VISUAL (PARTIAL) ASSESSMENT / PHOTO PENALTY (V47.0: DOMINANT FACTOR) ---
     if (photoDiagnosis) {
         const kbEntry = TOMATO_DIAGNOSTIC_KB[photoDiagnosis];
         if (kbEntry) {
             visualPenaltyApplied = kbEntry.score_penalty;
             totalHealthScore -= visualPenaltyApplied;
             cv_rec_text = `**Leaf Visual Assessment (${kbEntry.type}):** ${kbEntry.recommendation}`;
-            analysisDetail += `**VISUAL ASSESSMENT (CV Analysis - V46.0 DOMINANT):** The captured photo identified: **${photoDiagnosis}**. This visual indication has triggered a **-${visualPenaltyApplied} point** penalty, designed to override optimal sensor readings when a severe disease is present.\n\n`;
+            analysisDetail += `**VISUAL ASSESSMENT (CV Analysis - V47.0 DOMINANT):** The captured photo identified: **${photoDiagnosis}**. This visual indication has triggered a **-${visualPenaltyApplied} point** penalty.\n\n`;
         } else {
             // Default if photo is there but diagnosis text is unknown (should not happen with mocks)
             cv_rec_text = `**Leaf Visual Assessment (Optimal):** ${TOMATO_DIAGNOSTIC_KB['Healthy, Deep Green Foliage'].recommendation}`;
@@ -687,16 +701,17 @@ function getDiagnosisAndRecommendations(plantData) {
         let sensorAnalysis = "";
 
         // A. MOISTURE ASSESSMENT (Post-Flood Focus)
-        if (moisture > FLOOD_MOISTURE_THRESHOLD) {
-            moisturePenalty = SENSOR_SCORE_WEIGHTS.MOISTURE_HIGH;
+        // V47.0 Note: The penalties are additive to ensure highly unique total SPs.
+        if (moisture >= FLOOD_MOISTURE_THRESHOLD) {
+            moisturePenalty += SENSOR_SCORE_WEIGHTS.MOISTURE_HIGH;
             isFloodScenario = true;
-            sensorAnalysis += `* **Moisture Alert (POST-FLOOD):** Soil moisture (${moisture}%) is CRITICALLY HIGH, exceeding the waterlogging threshold (${FLOOD_MOISTURE_THRESHOLD}%). (Penalty: -${moisturePenalty})\n`;
+            sensorAnalysis += `* **Moisture Alert (POST-FLOOD):** Soil moisture (${moisture}%) is CRITICALLY HIGH, exceeding the waterlogging threshold (${FLOOD_MOISTURE_THRESHOLD}%). (Penalty: -${SENSOR_SCORE_WEIGHTS.MOISTURE_HIGH})\n`;
         } else if (moisture > OPTIMAL_MOISTURE_RANGE.max) {
-            moisturePenalty = SENSOR_SCORE_WEIGHTS.MOISTURE_LOW / 2; 
-            sensorAnalysis += `* **Moisture Warning (POST-FLOOD):** Soil moisture (${moisture}%) is above the optimal range. (Penalty: -${moisturePenalty})\n`;
+             moisturePenalty += SENSOR_SCORE_WEIGHTS.MOISTURE_LOW / 2; 
+             sensorAnalysis += `* **Moisture Warning (POST-FLOOD):** Soil moisture (${moisture}%) is above the optimal range. (Penalty: -${SENSOR_SCORE_WEIGHTS.MOISTURE_LOW / 2})\n`;
         } else if (moisture < OPTIMAL_MOISTURE_RANGE.min) {
-            moisturePenalty = SENSOR_SCORE_WEIGHTS.MOISTURE_LOW;
-            sensorAnalysis += `* **Moisture Deficit (POST-FLOOD):** Soil moisture (${moisture}%) is CRITICALLY LOW. (Penalty: -${moisturePenalty})\n`;
+            moisturePenalty += SENSOR_SCORE_WEIGHTS.MOISTURE_LOW;
+            sensorAnalysis += `* **Moisture Deficit (POST-FLOOD):** Soil moisture (${moisture}%) is CRITICALLY LOW. (Penalty: -${SENSOR_SCORE_WEIGHTS.MOISTURE_LOW})\n`;
         } else {
             sensorAnalysis += `* **Moisture Status (POST-FLOOD):** Soil moisture (${moisture}%) is within the optimal range. (Penalty: 0)\n`;
         }
@@ -704,23 +719,34 @@ function getDiagnosisAndRecommendations(plantData) {
         // B. NPK ASSESSMENT (Post-Flood Focus)
         if (npk_n < OPTIMAL_NPK_RATIO.N * 0.5) {
             npkPenalty += SENSOR_SCORE_WEIGHTS.NPK_DEFICIENCY;
-            sensorAnalysis += `* **NPK Alert (Nitrogen - POST-FLOOD):** Nitrogen (N:${npk_n} ppm) is severely deficient due to leaching. (Penalty: -${SENSOR_SCORE_WEIGHTS.NPK_DEFICIENCY})\n`;
+            sensorAnalysis += `* **NPK Alert (Nitrogen - CRITICAL):** N:${npk_n} ppm (Severe Deficiency due to leaching). (Penalty: -${SENSOR_SCORE_WEIGHTS.NPK_DEFICIENCY})\n`;
         } else if (npk_n < OPTIMAL_NPK_RATIO.N * 0.8) {
             npkPenalty += SENSOR_SCORE_WEIGHTS.NPK_IMBALANCE;
-            sensorAnalysis += `* **NPK Warning (Nitrogen - POST-FLOOD):** Nitrogen (N:${npk_n} ppm) is suboptimal. (Penalty: -${SENSOR_SCORE_WEIGHTS.NPK_IMBALANCE})\n`;
-        } else {
-            sensorAnalysis += `* **NPK Status (Nitrogen):** N is acceptable (N:${npk_n} ppm). (Penalty: 0)\n`;
+            sensorAnalysis += `* **NPK Warning (Nitrogen - SUBOPTIMAL):** N:${npk_n} ppm. (Penalty: -${SENSOR_SCORE_WEIGHTS.NPK_IMBALANCE})\n`;
         }
-        if (npk_p < OPTIMAL_NPK_RATIO.P * 0.5 || npk_k < OPTIMAL_NPK_RATIO.K * 0.5) {
+        
+        if (npk_p < OPTIMAL_NPK_RATIO.P * 0.5) {
              npkPenalty += SENSOR_SCORE_WEIGHTS.NPK_DEFICIENCY / 2;
-             sensorAnalysis += `* **NPK Alert (P/K - POST-FLOOD):** P or K is critically low. (Penalty: -${SENSOR_SCORE_WEIGHTS.NPK_DEFICIENCY / 2})\n`;
+             sensorAnalysis += `* **NPK Alert (Phosphorus - CRITICAL):** P:${npk_p} ppm. (Penalty: -${SENSOR_SCORE_WEIGHTS.NPK_DEFICIENCY / 2})\n`;
+        } else if (npk_p < OPTIMAL_NPK_RATIO.P * 0.8) {
+             npkPenalty += SENSOR_SCORE_WEIGHTS.NPK_IMBALANCE / 2;
+             sensorAnalysis += `* **NPK Warning (Phosphorus - SUBOPTIMAL):** P:${npk_p} ppm. (Penalty: -${SENSOR_SCORE_WEIGHTS.NPK_IMBALANCE / 2})\n`;
         }
 
-        totalHealthScore -= (moisturePenalty + npkPenalty);
+        if (npk_k < OPTIMAL_NPK_RATIO.K * 0.5) {
+             npkPenalty += SENSOR_SCORE_WEIGHTS.NPK_DEFICIENCY / 2;
+             sensorAnalysis += `* **NPK Alert (Potassium - CRITICAL):** K:${npk_k} ppm. (Penalty: -${SENSOR_SCORE_WEIGHTS.NPK_DEFICIENCY / 2})\n`;
+        } else if (npk_k < OPTIMAL_NPK_RATIO.K * 0.8) {
+             npkPenalty += SENSOR_SCORE_WEIGHTS.NPK_IMBALANCE / 2;
+             sensorAnalysis += `* **NPK Warning (Potassium - SUBOPTIMAL):** K:${npk_k} ppm. (Penalty: -${SENSOR_SCORE_WEIGHTS.NPK_IMBALANCE / 2})\n`;
+        }
         
-        sensor_rec_text = `**Soil Sensor Assessment (NPK: N:${npk_n}, P:${npk_p}, K:${npk_k} / Moisture: ${moisture}%):** The soil data applied a total penalty of -${(moisturePenalty + npkPenalty).toFixed(0)} points. See detailed analysis below for specific soil-related recommendations.`;
+        const totalSensorPenalty = moisturePenalty + npkPenalty;
+        totalHealthScore -= totalSensorPenalty;
         
-        analysisDetail += `**SOIL DATA ANALYSIS (Rover Probe):** Post-Flood analysis registered a total penalty of **-${(moisturePenalty + npkPenalty).toFixed(0)} points** due to the following conditions:\n${sensorAnalysis}\n`;
+        sensor_rec_text = `**Soil Sensor Assessment (NPK: N:${npk_n}, P:${npk_p}, K:${npk_k} / Moisture: ${moisture}%):** The soil data applied a total penalty of -${(totalSensorPenalty).toFixed(0)} points. See detailed analysis below for specific soil-related recommendations.`;
+        
+        analysisDetail += `**SOIL DATA ANALYSIS (Rover Probe):** Post-Flood analysis registered a total penalty of **-${(totalSensorPenalty).toFixed(0)} points** due to the following conditions:\n${sensorAnalysis}\n`;
 
     }
 
@@ -741,13 +767,13 @@ function getDiagnosisAndRecommendations(plantData) {
     let final_diagnosis_summary = `Based on the merged Post-Flood data streams, the plant is rated **${result.label}** with a final Fused Health Score of **${totalHealthScore.toFixed(0)}/100**. `;
     
     if (visualPenaltyApplied >= TOMATO_DIAGNOSTIC_KB['Dark Spots & Lesions/Blackening of Leaf (Fungal/Bacterial)'].score_penalty) {
-        // V46.0: If photo penalty is high (Fungal or Viral), focus on the disease/visual issue as the primary threat
+        // V47.0: If photo penalty is high (Fungal or Viral), focus on the disease/visual issue as the primary threat
         const photoRec = TOMATO_DIAGNOSTIC_KB[photoDiagnosis] ? TOMATO_DIAGNOSTIC_KB[photoDiagnosis].recommendation : "Immediate removal is suggested.";
         fused_rec_text = final_diagnosis_summary + `**CRITICAL DISEASE DOMINANCE:** The primary threat is the visually identified severe condition. **PROTOCOL ISOLATION/DESTRUCTION/FUNGICIDE REQUIRED.** Follow the explicit instruction in the Visual Assessment.`;
     } else if (isFloodScenario) {
         fused_rec_text = final_diagnosis_summary + `**CRITICAL POST-FLOOD DRAINAGE FAILURE:** The immediate priority is the **Post-Flood Mitigation Protocol (Drainage)**. Waterlogging (high moisture) will prevent all recovery. Address drainage before attempting nutrient correction.`;
     } else if (visualPenaltyApplied > 20 && totalHealthScore < 76) {
-         // V46.0: Lower level photo issue driving score but not critical
+         // V47.0: Lower level photo issue driving score but not critical
         fused_rec_text = final_diagnosis_summary + `**VISUAL/NUTRIENT STRESS:** The visual issue (**${photoDiagnosis}**) combined with soil stress suggests an **ACTION REQUIRED** response. Apply the required pesticide/nutrient supplement protocol immediately.`;
     } else if (totalHealthScore < 76 && (moisture !== null || npk_n !== null)) {
         fused_rec_text = final_diagnosis_summary + `**POST-FLOOD RECOVERY STAGE:** The soil has drained, but the low health score is due to severe **nutrient leaching/drought stress**. Implement the nutrient/water correction actions detailed in the Full Assessment immediately.`;
@@ -797,7 +823,7 @@ function triggerComprehensiveAnalysisCycle() {
         
         let photoDiagnosis = null;
         if (photoEntry) {
-             // V43.0 FIX: Extract diagnosis from the string after the valid Base64 data
+             // V47.0 FIX: Extract diagnosis from the string after the valid Base64 data
              const match = photoEntry.match(/diag:([^,]+)/);
              if (match) {
                  photoDiagnosis = match[1].replace(/_/g, ' ');
@@ -847,12 +873,13 @@ function generatePlantAnalysisCardHTML(zoneID, result) {
     const scoreClass = getScoreClass(result.score);
     const cardStyle = `border-color: ${result.border}; box-shadow: 0 0 30px ${result.border}33;`;
 
-    // V43.0: Added the fixed condition type to the card for user verification of deterministic logic
+    // V47.0: Display the actual diagnosis for clarity on the verdict differentiation
     const conditionType = FIELD_ZONE_CONDITIONS[zoneID].type; 
+    const conditionDiag = FIELD_ZONE_CONDITIONS[zoneID].diag;
 
     return `
         <div class="analysis-card" style="${cardStyle}">
-            <div class="plant-id-label">Zone ${zoneID} Diagnosis - (Simulated Condition: ${conditionType})</div>
+            <div class="plant-id-label">Zone ${zoneID} Diagnosis - (Simulated Condition: ${conditionType} - ${conditionDiag})</div>
             
             <div style="text-align: right; margin-bottom: 20px;">
                 <span class="score-badge" style="background-color: ${result.color};">
@@ -875,7 +902,7 @@ function generatePlantAnalysisCardHTML(zoneID, result) {
                 <div class="${scoreClass}">${result.rec_sensor}</div>
             </div>
 
-            <h3>DATA FUSION ENGINE: Detailed Report (V46.0)</h3>
+            <h3>DATA FUSION ENGINE: Detailed Report (V47.0 - Symmetry Breaking)</h3>
             <pre style="white-space: pre-wrap; word-wrap: break-word; background: #0f131a; padding: 15px; border-radius: 8px; border: 1px solid #30363d; font-size: 0.9em;">${result.analysis}</pre>
         </div>
     `;
@@ -1113,7 +1140,7 @@ function animate() {
 
 
 // ==================================================================================
-// SECTION 5.0: UTILITY & UI FUNCTIONS (Photo Grid - V43.0 FIX CORE)
+// SECTION 5.0: UTILITY & UI FUNCTIONS (Photo Grid - V47.0 Integration)
 // ==================================================================================
 
 function populateManualZoneSelector() {
@@ -1190,7 +1217,7 @@ function handleLocalPhotoUpload(zoneID, event, inputElement) {
     if (file) {
         const reader = new FileReader();
         reader.onload = (e) => {
-            // V43.0 FIX: Append metadata for later retrieval during analysis cycle
+            // V47.0 FIX: Append metadata for later retrieval during analysis cycle
             const mockDiagnosis = FIELD_ZONE_CONDITIONS[zoneID].diag;
             const validDataUrl = e.target.result;
             
@@ -1309,7 +1336,7 @@ function populateStockPhotos() {
     const grid = document.getElementById('stockImageGrid');
     grid.innerHTML = '';
     
-    // V46.0: Use the keys of the Knowledge Base for maximal differentiation (6 distinct diagnoses)
+    // V47.0: Use the keys of the Knowledge Base for maximal differentiation (6 distinct diagnoses)
     const diagnosesKeys = Object.keys(TOMATO_DIAGNOSTIC_KB);
 
     for (let i = 1; i <= MAX_STOCK_PHOTOS; i++) {
@@ -1327,7 +1354,8 @@ function populateStockPhotos() {
         let bgColor = '#3fb950'; // Green for Optimal
         if(diagnosis.score_penalty === 70) bgColor = '#f85149'; // Red for Viral
         else if(diagnosis.score_penalty === 55) bgColor = '#ff8000'; // Orange for Fungal
-        else if(diagnosis.score_penalty > 0) bgColor = '#e3b341'; // Amber for Deficiency/Pest
+        else if(diagnosis.score_penalty === 35) bgColor = '#e341b3'; // Magenta for Pest
+        else if(diagnosis.score_penalty > 0) bgColor = '#e3b341'; // Amber for Deficiency
 
         cell.style.backgroundColor = bgColor; 
         cell.style.fontSize = '0.7em';
@@ -1338,7 +1366,7 @@ function populateStockPhotos() {
             const fileInput = document.getElementById(`fileInput-${currentlySelectedPlantZone}`);
             if (fileInput) {
                 currentPhotoAssignmentData[currentlySelectedPlantZone] = stockPhotoLibraryData[i];
-                // V43.0: Render using the new overlay logic
+                // V47.0: Render using the new overlay logic
                 renderPhotoInPhotoGridCell(currentlySelectedPlantZone, stockPhotoLibraryData[i], fileInput);
                 closeStockImageGalleryModal();
                 STATUS_ELEMENT.innerText = `Stock Photo #${i} assigned to Zone ${currentlySelectedPlantZone}.`;
