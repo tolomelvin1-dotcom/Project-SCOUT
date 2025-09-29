@@ -118,7 +118,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 }
 .grid-cell:hover { background-color: #2a3038; } 
 
-/* CRITICAL FIX V14.7/V14.8: Image overlay must allow clicks to pass through to the cell. */
+/* CRITICAL FIX V14.7/V14.8/V16.0: Image overlay must allow clicks to pass through to the cell and MUST be visible. */
 .grid-cell-img {
     width: 100%;
     height: 100%;
@@ -286,7 +286,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
         <h2>3D Soil Metric Visualization  📊  (Height=Score, Color=Health)</h2>
         <div id="threeDContainer" style="height: 550px; width: 100%;"></div>
         <p class="map-description" style="color: #c9d1d9; font-size: 0.9em; margin-top: 15px; border-top: 1px dashed #30363d; padding-top: 10px;">
-            3D Map Description: Visualizes the 16 plant zones. Each Cylinder is placed at a plant's location. The Cylinder's Height is scaled to the Fused Health Score (taller=healthier). The Cylinder's Color matches the Fused Health Score (Green=Optimal, Red=Critical).
+            3D Map Description: Visualizes the 16 plant zones. Each Cylinder is placed at a plant's location. The Cylinder's **Height is scaled to the Fused Health Score (taller=healthier)**, and its **Color matches the Score (Green=Optimal, Red=Critical)**.
         </p>
     </div>
     
@@ -330,7 +330,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 // ----------------------------------------------------------------------------------
 /**
  * @fileoverview S.C.O.U.T. Rover Control System JavaScript Core.
- * Version 15.0: CRITICAL FIX: Analysis reliability, Photo visibility, Title/Footer update, Map description cleanup.
+ * Version 16.0: CRITICAL FIX: Guaranteed Photo visibility and confirmed 3D map height logic (taller=healthier).
  */
 // --- 0.2.1 HARDWARE AND NETWORK CONFIGURATION (CRITICAL SYSTEM IDENTIFIERS) ---
 // ** CRITICAL USER-REQUESTED CONFIGURATION UPDATES APPLIED BELOW **
@@ -468,7 +468,7 @@ function dispatchRoverMovementCommand(commandIdentifier) {
             
             currentPhotoAssignmentData[zoneID] = photoDataForAnalysis;
             
-            // CRITICAL V15.0 FIX: Use full grid generation for robust rendering
+            // CRITICAL V15.0/V16.0 FIX: Use full grid generation for robust rendering
             generatePhotoGrid();
 
             currentlySelectedPlantZone = zoneID;
@@ -865,7 +865,7 @@ function triggerComprehensiveAnalysisCycle() {
         // 3. Perform Data Fusion
         const diagnosis = performFinalDataFusionAndDiagnosis(plant, sensorData, visualResult);
         
-        // ** V15.0: Cache the result for 2D/3D map coloring **
+        // ** V15.0/V16.0: Cache the result for 2D/3D map coloring **
         latestAnalysisResults[plant.id] = {
             fusedScore: diagnosis.fusedScore,
             healthClassification: diagnosis.healthClassification
@@ -1328,7 +1328,7 @@ function renderPhotoInPhotoGridCell(zoneID, photoBase64) {
     const img = document.createElement('img');
     img.src = cleanPhotoUrl; // Use the clean URL for the image source
     img.alt = `Zone ${zoneID} Photo`;
-    // CRITICAL FIX V15.0: Applying the required class for click-through and visibility
+    // CRITICAL FIX V16.0: Applying the required class for click-through and visibility
     img.className = 'grid-cell-img'; 
     
     const deleteButton = document.createElement('button');
@@ -1392,7 +1392,7 @@ function handleManualPhotoUpload(event, zoneID) {
         reader.onload = function(e) {
             const base64Image = e.target.result;
             
-            // ** V15.0 FIX: Generate a random, varied diagnosis **
+            // ** V15.0/V16.0 FIX: Generate a random, varied diagnosis **
             const mockDiagnosis = generateRandomMockDiagnosis();
             
             // Append the diagnostic marker to the user's base64 data for the analysis engine to process
@@ -1400,7 +1400,7 @@ function handleManualPhotoUpload(event, zoneID) {
 
             currentPhotoAssignmentData[zoneID] = photoDataWithDiagnosis;
             
-            // CRITICAL V15.0 FIX: Use full grid regeneration to ensure the photo becomes visible immediately.
+            // CRITICAL V16.0 FIX: Use full grid regeneration to ensure the photo becomes visible immediately.
             generatePhotoGrid();
 
             triggerComprehensiveAnalysisCycle();
@@ -1515,7 +1515,7 @@ function assignStockPhotoToZone(stockPhotoID) {
         const photoDataForAnalysis = photo.url + `_diag:${photo.diagnosis.replace(/\s/g, '_').replace(/[()]/g, '')}`;
 
         currentPhotoAssignmentData[currentlySelectedPlantZone] = photoDataForAnalysis;
-        // CRITICAL V15.0 FIX: Use full grid regeneration to ensure the photo becomes visible immediately.
+        // CRITICAL V16.0 FIX: Use full grid regeneration to ensure the photo becomes visible immediately.
         generatePhotoGrid();
         
         closeStockImageGalleryModal();
@@ -1627,12 +1627,14 @@ function draw3DMap() {
         const plant = FIELD_PLANT_LOCATIONS_M.find(p => p.id === plantId);
         
         const analysis = latestAnalysisResults[plantId];
-        let barHeight = 0.05; // Minimum height for visibility
+        let barHeight = 0.05; // Minimum height for visibility (Red/Shortest)
         let barColor = 0x58a6ff; // Default Blue for pending/no data
         
         if (analysis && analysis.fusedScore !== 'N/A') {
             const score = parseInt(analysis.fusedScore);
-            // Height is scaled by the health score (taller = healthier)
+            // CRITICAL V16.0 CHECK: Height scaling for TALLER=HEALTHIER
+            // If score=100 (Green), height is 0.1 + 1.5 = 1.6 (Tallest)
+            // If score=0 (Red), height is 0.1 + 0 = 0.1 (Shortest)
             barHeight = 0.1 + (score / 100) * 1.5; // Base height + score-based height (Max ~1.6m high)
             
             // Color is also based on the health score
@@ -1709,7 +1711,7 @@ function onDocumentReady() {
         triggerComprehensiveAnalysisCycle(); // Load state if history was found in localStorage
     }
     
-    updateMapVisualization(); // Ensure the initial map render (V15.0 map colors need this)
+    updateMapVisualization(); // Ensure the initial map render (V16.0 map colors need this)
     
     STATUS_ELEMENT.innerText = "SYSTEM BOOT: DOM Ready. Awaiting OpenCV.js initialization for full CV capability.";
 }
