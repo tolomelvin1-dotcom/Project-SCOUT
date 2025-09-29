@@ -2,48 +2,68 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<title>PROJECT SCOUT – Post-Flood Crop Assessment Dashboard</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PROJECT SCOUT – Crop Assessment Dashboard</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r152/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.152.0/examples/js/controls/OrbitControls.js"></script>
 <style>
-*{margin:0;padding:0;box-sizing:border-box;font-family:Arial,sans-serif;}
-body{background:#0a111a;color:#e4e4e4;display:flex;flex-direction:column;min-height:100vh;}
-header{background:#112131;padding:15px 25px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:100;box-shadow:0 2px 4px rgba(0,0,0,0.5);}
-header h1{font-size:1.2rem;}
-header .status{font-size:0.9rem;color:#9fdf9f;font-weight:bold;}
-.layout{display:grid;grid-template-columns:260px 1fr;flex:1;min-height:calc(100vh - 60px);}
-.sidebar{background:#131c29;padding:20px;border-right:2px solid #1d2c3c;display:flex;flex-direction:column;gap:15px;}
-.sidebar h2{font-size:1rem;text-transform:uppercase;color:#7fb4ff;margin-bottom:8px;}
-.sidebar button{background:#1c2f47;border:none;padding:10px;color:#fff;border-radius:6px;text-align:left;transition:0.2s;}
-.sidebar button:hover{background:#2c4f77;}
-main{padding:20px;overflow-y:auto;display:grid;grid-template-columns:1fr;grid-gap:20px;}
-.panel{background:#162233;padding:15px;border-radius:10px;box-shadow:0 2px 6px rgba(0,0,0,0.6);}
-.panel h3{color:#7fb4ff;margin-bottom:10px;}
-button.btn{background:#2c4f77;color:#fff;padding:8px 12px;border:none;border-radius:6px;margin:2px;}
-button.btn:hover{background:#3e68a1;}
-input,select{padding:6px;border-radius:4px;border:none;background:#1c2f47;color:#fff;width:100%;}
-.photo-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
-.photo-cell{position:relative;border:1px solid #2c3e50;border-radius:6px;height:100px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#0f1722;}
-.photo-cell img{width:100%;height:100%;object-fit:cover;}
-#stockGrid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:10px;}
-#stockGrid img{width:100%;border-radius:6px;}
-#mapCanvas{border:1px solid #333;border-radius:10px;background:#0f1722;width:100%;height:400px;}
-#threeDContainer{width:100%;height:500px;border:1px solid #333;border-radius:10px;}
-#analysisGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:15px;}
-#aiAnalysis{background:#0f1722;padding:12px;border-radius:8px;font-size:0.9rem;line-height:1.4;white-space:pre-wrap;min-height:120px;}
-#log{background:#0f1722;padding:10px;border-radius:8px;max-height:200px;overflow-y:auto;font-size:0.85rem;line-height:1.3;}
-footer{background:#112131;padding:12px 20px;font-size:0.85rem;text-align:center;border-top:2px solid #1d2c3c;}
-@media(max-width:900px){.layout{grid-template-columns:1fr;}.sidebar{flex-direction:row;overflow-x:auto;}.sidebar button{flex:1;}}
+/* Reset & base */
+* { box-sizing:border-box; margin:0; padding:0; font-family:Arial, sans-serif;}
+body { background:#0a111a; color:#e4e4e4; display:flex; flex-direction:column; min-height:100vh; }
+h1,h2,h3,h4 { font-weight:600; margin-bottom:10px; }
+p { margin-bottom:10px; line-height:1.5; }
+button { cursor:pointer; }
+
+/* Layout */
+.layout { display:grid; grid-template-columns:260px 1fr; flex:1; min-height:calc(100vh - 60px);}
+header { background:#112131; color:#fff; padding:15px 25px; display:flex; justify-content:space-between; align-items:center; height:60px; position:sticky; top:0; z-index:100; box-shadow:0 2px 4px rgba(0,0,0,0.5);}
+header h1 { font-size:1.2rem; letter-spacing:1px;}
+header .status { font-size:0.9rem; color:#9fdf9f; font-weight:bold;}
+
+/* Sidebar */
+.sidebar { background:#131c29; padding:20px; border-right:2px solid #1d2c3c; display:flex; flex-direction:column; gap:15px;}
+.sidebar h2 { font-size:1rem; text-transform:uppercase; margin-bottom:10px; color:#7fb4ff;}
+.sidebar button { background:#1c2f47; border:none; padding:10px; color:#fff; font-size:0.9rem; border-radius:6px; text-align:left; transition:background 0.2s;}
+.sidebar button:hover { background:#2c4f77;}
+
+/* Main dashboard */
+.main { padding:20px; overflow-y:auto; display:grid; grid-template-columns:1fr 1fr; gap:20px;}
+.panel { background:#162233; padding:15px; border-radius:10px; box-shadow:0 2px 6px rgba(0,0,0,0.6);}
+.panel h3 { color:#7fb4ff; margin-bottom:12px; }
+
+/* Footer */
+footer { background:#112131; padding:12px 20px; font-size:0.85rem; text-align:center; border-top:2px solid #1d2c3c; }
+
+/* Photo grid */
+#photoGridContainer { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+
+/* Stock gallery */
+#stockGrid { display:grid; grid-template-columns:repeat(5,1fr); gap:6px; margin-top:10px; }
+
+/* Manual form */
+form input, form button { width:100%; padding:6px; margin-top:4px; border-radius:4px; border:none; }
+form button { background:#2c4f77; color:#fff; margin-top:10px; }
+
+/* Map canvas */
+#mapCanvas { border:1px solid #333; border-radius:10px; background:#0f1722; }
+
+/* 3D container */
+#threeDContainer { width:100%; height:500px; border:1px solid #333; border-radius:10px; }
+
+/* AI Analysis */
+#aiAnalysis { background:#0f1722; padding:12px; border-radius:8px; font-size:0.9rem; line-height:1.4; white-space:pre-wrap; min-height:150px; }
+
+/* Logs */
+#log { background:#0f1722; padding:10px; border-radius:8px; max-height:200px; overflow-y:auto; font-size:0.85rem; line-height:1.3;}
 </style>
 </head>
 <body>
+
 <header>
-  <h1>PROJECT SCOUT – Crop Assessment</h1>
-  <div class="status" id="status">Initializing...</div>
+<h1>PROJECT SCOUT – Post-Flood Crop Assessment</h1>
+<div class="status" id="status">Initializing...</div>
 </header>
 
 <div class="layout">
+
 <aside class="sidebar">
 <h2>Navigation</h2>
 <button onclick="scrollToSection('roverControls')">Rover Controls</button>
@@ -56,69 +76,83 @@ footer{background:#112131;padding:12px 20px;font-size:0.85rem;text-align:center;
 <button onclick="scrollToSection('logs')">Logs</button>
 </aside>
 
-<main>
+<main class="main">
+
+<!-- Rover Controls -->
 <section class="panel" id="roverControls">
 <h3>Rover Controls</h3>
-<p>Move the rover and operate the probe.</p>
-<div>
-<button class="btn" onclick="sendCommand('forward')">⬆ Forward</button>
-<button class="btn" onclick="sendCommand('backward')">⬇ Backward</button>
-<button class="btn" onclick="sendCommand('left')">⬅ Left</button>
-<button class="btn" onclick="sendCommand('right')">➡ Right</button>
-<button class="btn" onclick="sendCommand('stop')">⏹ Stop</button>
-<button class="btn" onclick="sendCommand('probe_up')">🔼 Probe Up</button>
-<button class="btn" onclick="sendCommand('probe_down')">🔽 Probe Down</button>
-<button class="btn" onclick="fetchSensorData()">📡 Read Sensors</button>
+<p>Use these buttons to move the rover and operate the probe arm.</p>
+<div style="display:flex;flex-wrap:wrap;gap:10px;">
+<button onclick="sendCommandToESP32('forward')">⬆ Forward</button>
+<button onclick="sendCommandToESP32('backward')">⬇ Backward</button>
+<button onclick="sendCommandToESP32('left')">⬅ Left</button>
+<button onclick="sendCommandToESP32('right')">➡ Right</button>
+<button onclick="sendCommandToESP32('stop')">⏹ Stop</button>
+<button onclick="sendCommandToESP32('probe_up')">🔼 Probe Up</button>
+<button onclick="sendCommandToESP32('probe_down')">🔽 Probe Down</button>
+<button onclick="fetchSensorData()">📡 Read Sensors</button>
 </div>
 </section>
 
+<!-- Photo Grid -->
 <section class="panel" id="photoGrid">
 <h3>Zone Photo Grid (16 zones)</h3>
-<p>Upload images per zone.</p>
-<div id="photoGridContainer" class="photo-grid"></div>
+<p>Upload field images per zone for analysis.</p>
+<div id="photoGridContainer"></div>
 </section>
 
+<!-- Stock Gallery -->
 <section class="panel" id="stockGallery">
 <h3>Stock Gallery</h3>
+<p>Upload and manage stock images.</p>
 <input type="file" accept="image/*" multiple onchange="handleStockUpload(event)">
 <div id="stockGrid"></div>
 </section>
 
+<!-- Manual Entry -->
 <section class="panel" id="manualEntry">
 <h3>Manual Data Entry</h3>
-<form onsubmit="submitManualEntry();return false;" style="display:grid; gap:10px; max-width:300px;">
-<label>Zone: <input type="number" id="manual_zone" min="1" max="16" required></label>
-<label>Soil Moisture (%): <input type="number" id="manual_moisture" min="0" max="100"></label>
-<label>Nitrogen (N): <input type="number" id="manual_n" min="0" max="200"></label>
-<label>Phosphorus (P): <input type="number" id="manual_p" min="0" max="200"></label>
-<label>Potassium (K): <input type="number" id="manual_k" min="0" max="200"></label>
-<label>Upload Photo: <input type="file" id="manual_photo" accept="image/*"></label>
-<button class="btn" type="submit">➕ Submit Manual Entry</button>
+<p>If rover or sensors fail, manually input values for each zone.</p>
+<form onsubmit="submitManualEntry();return false;">
+<label>Zone:<input id="manual_zone" type="number" min="1" max="16" value="1" required></label>
+<label>Soil Moisture (%):<input id="manual_moisture" type="number" min="0" max="100"></label>
+<label>Nitrogen (N):<input id="manual_n" type="number" min="0" max="200"></label>
+<label>Phosphorus (P):<input id="manual_p" type="number" min="0" max="200"></label>
+<label>Potassium (K):<input id="manual_k" type="number" min="0" max="200"></label>
+<label>Upload Photo:<input id="manual_photo" type="file" accept="image/*"></label>
+<button type="submit">➕ Submit Manual Entry</button>
 </form>
 </section>
 
+<!-- 2D Map -->
 <section class="panel" id="mapSection">
 <h3>2D Field Map</h3>
-<p>Each circle represents soil condition: size & color reflect moisture/NPK.</p>
-<canvas id="mapCanvas"></canvas>
+<p>The field is divided into 16 zones. Circle colors represent soil condition: green = healthy, yellow = moderate, red = stressed.</p>
+<canvas id="mapCanvas" width="600" height="600"></canvas>
+<p style="font-size:0.8rem;color:#aaa;margin-top:6px">Hover over a circle to view zone details.</p>
 </section>
 
+<!-- 3D Plants -->
 <section class="panel" id="threeDSection">
 <h3>3D Tomato Plant Visualization</h3>
-<p>16 plants: stem + leaves, color reflects health.</p>
+<p>Each plant represents a zone and changes color based on health analysis.</p>
 <div id="threeDContainer"></div>
 </section>
 
+<!-- Analysis -->
 <section class="panel" id="analysisSection">
-<h3>AI-Based Analysis</h3>
-<div id="analysisGrid"></div>
-<div id="aiAnalysis">No zone selected.</div>
+<h3>AI-Based Analysis Results</h3>
+<p>Select a zone to view detailed post-flood crop health analysis.</p>
+<div id="analysisGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:15px"></div>
+<div id="aiAnalysis">No zone selected. Click a zone card above to see analysis.</div>
 </section>
 
+<!-- Logs -->
 <section class="panel" id="logs">
 <h3>System Logs</h3>
 <div id="log"></div>
 </section>
+
 </main>
 </div>
 
@@ -126,102 +160,131 @@ footer{background:#112131;padding:12px 20px;font-size:0.85rem;text-align:center;
 PROJECT SCOUT • ESP32: 10.101.146.88 • ThingSpeak Key: 6OXH3SUQ4VNSOJX1
 </footer>
 
+<script src="https://cdn.jsdelivr.net/npm/three@0.155.0/build/three.min.js"></script>
 <script>
 const ESP32_IP="10.101.146.88";
 const THINGSPEAK_KEY="6OXH3SUQ4VNSOJX1";
 const ZONES=16;
 let photos={}, stockGallery={}, sensorLogs=[], latestAnalysis={};
 
-function log(msg){const d=document.createElement("div"); d.innerText=`[${new Date().toLocaleTimeString()}] ${msg}`; document.getElementById("log").prepend(d); console.log(msg);}
-function readFileAsDataURL(file){return new Promise((res,reject)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=reject;r.readAsDataURL(file);});}
+// Logger
+function log(msg){const d=document.createElement("div");d.innerText=`[${new Date().toLocaleTimeString()}] ${msg}`;document.getElementById("log").prepend(d);console.log(msg);}
 
+// File reader
+function readFileAsDataURL(file){return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(file);});}
+
+// Photo grid
 function generatePhotoGrid(){
-  const grid=document.getElementById("photoGridContainer"); grid.innerHTML="";
-  for(let z=1;z<=ZONES;z++){
-    const cell=document.createElement("div"); cell.className="photo-cell"; cell.dataset.zone=z;
-    const label=document.createElement("div"); label.innerText="Zone "+z; label.style.position="absolute"; label.style.top="2px"; label.style.left="4px"; label.style.fontSize="0.8rem"; label.style.background="rgba(0,0,0,0.5)"; label.style.padding="1px 3px"; label.style.borderRadius="4px"; cell.appendChild(label);
-    const input=document.createElement("input"); input.type="file"; input.accept="image/*"; input.style.position="absolute"; input.style.width="100%"; input.style.height="100%"; input.style.opacity="0";
-    input.onchange=async(e)=>{const f=e.target.files[0]; if(!f) return; const b64=await readFileAsDataURL(f); photos[z]=b64; log("Photo uploaded for Zone "+z); generatePhotoGrid(); triggerAnalysis();};
-    cell.appendChild(input);
-    if(photos[z]){const img=document.createElement("img"); img.src=photos[z]; cell.appendChild(img);
-      const del=document.createElement("button"); del.innerText="×"; del.style.position="absolute"; del.style.top="2px"; del.style.right="2px"; del.style.background="rgba(255,0,0,0.7)"; del.style.border="none"; del.style.borderRadius="4px"; del.style.color="#fff"; del.style.padding="2px 6px"; del.onclick=(ev)=>{ev.stopPropagation(); delete photos[z]; log("Deleted photo for Zone "+z); generatePhotoGrid();}; cell.appendChild(del);}
-    grid.appendChild(cell);
-  }
+ const grid=document.getElementById("photoGridContainer");grid.innerHTML="";
+ for(let zone=1;zone<=ZONES;zone++){
+  const cell=document.createElement("div");cell.style.position="relative";cell.style.border="1px solid #2c3e50";cell.style.borderRadius="6px";cell.style.overflow="hidden";cell.style.height="100px";cell.style.background="#0f1722";cell.style.display="flex";cell.style.alignItems="center";cell.style.justifyContent="center";cell.dataset.zone=zone;
+  const label=document.createElement("div");label.innerText="Zone "+zone;label.style.position="absolute";label.style.top="2px";label.style.left="4px";label.style.fontSize="0.8rem";label.style.background="rgba(0,0,0,0.5)";label.style.padding="1px 3px";label.style.borderRadius="4px";cell.appendChild(label);
+  const input=document.createElement("input");input.type="file";input.accept="image/*";input.style.position="absolute";input.style.opacity="0";input.style.width="100%";input.style.height="100%";input.onchange=async(e)=>{const f=e.target.files[0];if(!f)return;const b64=await readFileAsDataURL(f);photos[zone]=b64;log("Photo uploaded for Zone "+zone);generatePhotoGrid();triggerAnalysis();};cell.appendChild(input);
+  if(photos[zone]){const img=document.createElement("img");img.src=photos[zone];img.style.width="100%";img.style.height="100%";img.style.objectFit="cover";cell.appendChild(img);const del=document.createElement("button");del.innerText="×";del.style.position="absolute";del.style.top="2px";del.style.right="2px";del.style.background="rgba(255,0,0,0.7)";del.style.border="none";del.style.borderRadius="4px";del.style.color="#fff";del.style.padding="2px 6px";del.onclick=(ev)=>{ev.stopPropagation();delete photos[zone];log("Deleted photo for Zone "+zone);generatePhotoGrid();};cell.appendChild(del);}
+  grid.appendChild(cell);
+ }
 }
 
-function handleStockUpload(event){for(const f of event.target.files){readFileAsDataURL(f).then(b64=>{const id=Object.keys(stockGallery).length+1; stockGallery[id]={id,url:b64,name:f.name}; log("Added stock image: "+f.name); renderStockGrid();});}}
-function renderStockGrid(){const g=document.getElementById("stockGrid"); g.innerHTML=""; for(const id in stockGallery){const it=stockGallery[id]; const img=document.createElement("img"); img.src=it.url; img.title=it.name; g.appendChild(img);}}
+// Stock gallery
+function handleStockUpload(event){for(const f of event.target.files){readFileAsDataURL(f).then(b64=>{const id=Object.keys(stockGallery).length+1;stockGallery[id]={id,url:b64,name:f.name};log("Added stock image: "+f.name);renderStockGrid();});}}
+function renderStockGrid(){const g=document.getElementById("stockGrid");g.innerHTML="";for(const id in stockGallery){const it=stockGallery[id];const img=document.createElement("img");img.src=it.url;img.title=it.name;img.style.width="100%";img.style.borderRadius="6px";g.appendChild(img);}}
+ 
+// Manual entry
+function submitManualEntry(){
+ const zone=parseInt(document.getElementById("manual_zone").value);
+ const moisture=parseFloat(document.getElementById("manual_moisture").value)||0;
+ const n=parseFloat(document.getElementById("manual_n").value)||0;
+ const p=parseFloat(document.getElementById("manual_p").value)||0;
+ const k=parseFloat(document.getElementById("manual_k").value)||0;
+ const photoFile=document.getElementById("manual_photo").files[0];
+ let photoPromise=Promise.resolve(null);
+ if(photoFile) photoPromise=readFileAsDataURL(photoFile);
+ photoPromise.then(b64=>{sensorLogs.push({zone,moisture,n,p,k,photo:b64,timestamp:new Date()});if(b64)photos[zone]=b64;log(`Manual entry submitted for Zone ${zone}`);generatePhotoGrid();triggerAnalysis();document.getElementById("manual_photo").value="";});
+}
 
-function submitManualEntry(){const zone=parseInt(document.getElementById("manual_zone").value); const moisture=parseFloat(document.getElementById("manual_moisture").value)||0; const n=parseFloat(document.getElementById("manual_n").value)||0; const p=parseFloat(document.getElementById("manual_p").value)||0; const k=parseFloat(document.getElementById("manual_k").value)||0; const photoInput=document.getElementById("manual_photo"); const photoFile=photoInput.files[0]; let photoPromise=Promise.resolve(null); if(photoFile) photoPromise=readFileAsDataURL(photoFile); photoPromise.then(b64=>{sensorLogs[zone-1]={zone,moisture,n,p,k,photo:b64,timestamp:new Date()}; if(b64) photos[zone]=b64; log(`Manual entry submitted for Zone ${zone}`); generatePhotoGrid(); photoInput.value=""; triggerAnalysis();});}
+// Rover commands
+async function sendCommandToESP32(cmd){try{const res=await fetch(`http://${ESP32_IP}/${cmd}`);if(res.ok){log(`Command sent: ${cmd}`);document.getElementById("status").innerText=`Last command: ${cmd}`;}else{log(`Failed command: ${cmd}`);}}catch(err){log(`Error sending command: ${cmd} (${err})`);}}
+async function fetchSensorData(){try{const res=await fetch(`http://${ESP32_IP}/sensors`);const data=await res.json();log(`Sensor data: ${JSON.stringify(data)}`);}catch(err){log("Error fetching sensor data: "+err);}}
 
-async function sendCommand(cmd){try{const res=await fetch(`http://${ESP32_IP}/${cmd}`); if(res.ok){log("Command sent: "+cmd); document.getElementById("status").innerText=`Last command: ${cmd}`;} else log("Failed command: "+cmd);} catch(err){log(`Error sending command: ${cmd} (${err})`);}}
+// 2D map
+function renderMap(){
+ const canvas=document.getElementById("mapCanvas");
+ const ctx=canvas.getContext("2d");
+ ctx.clearRect(0,0,canvas.width,canvas.height);
+ const radius=25, padding=50, cols=4;
+ for(let i=0;i<ZONES;i++){
+  const col=i%cols,row=Math.floor(i/cols);
+  const x=padding+col*(radius*3);const y=padding+row*(radius*3);
+  let moisture=sensorLogs[i]?.moisture||0;
+  let color="#4caf50";
+  if(moisture<40) color="#ffc107";
+  if(moisture<20) color="#f44336";
+  ctx.beginPath();ctx.arc(x,y,radius,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();ctx.strokeStyle="#222";ctx.stroke();
+  canvas._zones=canvas._zones||[];canvas._zones[i]={x,y,radius,zone:i+1};
+ }
+}
+const tooltip=document.createElement("div");tooltip.style.position="absolute";tooltip.style.padding="4px 8px";tooltip.style.background="rgba(0,0,0,0.8)";tooltip.style.color="#fff";tooltip.style.borderRadius="4px";tooltip.style.pointerEvents="none";tooltip.style.fontSize="0.8rem";tooltip.style.display="none";document.body.appendChild(tooltip);
+document.getElementById("mapCanvas").addEventListener("mousemove",e=>{
+ const canvas=e.target;const rect=canvas.getBoundingClientRect();const mx=e.clientX-rect.left,my=e.clientY-rect.top;let hovered=false;
+ if(canvas._zones){for(const z of canvas._zones){const dist=Math.hypot(mx-z.x,my-z.y);if(dist<z.radius){tooltip.style.left=e.clientX+10+"px";tooltip.style.top=e.clientY+10+"px";tooltip.innerText=`Zone ${z.zone}\nMoisture: ${sensorLogs[z.zone-1]?.moisture||"N/A"}%`;tooltip.style.display="block";hovered=true;break;}}}if(!hovered) tooltip.style.display="none";});
 
-async function fetchSensorData(){try{const res=await fetch(`http://${ESP32_IP}/sensors`); const data=await res.json(); log("Sensor data: "+JSON.stringify(data));}catch(err){log("Error fetching sensor data: "+err);}}
+// Analysis & recommendations
+let scene, camera, renderer, plants=[];
+function init3D(){
+ scene=new THREE.Scene();scene.background=new THREE.Color(0x0a111a);
+ camera=new THREE.PerspectiveCamera(75,1.5,0.1,1000);camera.position.set(0,50,100);
+ renderer=new THREE.WebGLRenderer({antialias:true});renderer.setSize(document.getElementById("threeDContainer").clientWidth,document.getElementById("threeDContainer").clientHeight);
+ document.getElementById("threeDContainer").appendChild(renderer.domElement);
+ const light=new THREE.DirectionalLight(0xffffff,1);light.position.set(0,50,50);scene.add(light);
+ const ambient=new THREE.AmbientLight(0x404040);scene.add(ambient);
+ for(let i=0;i<ZONES;i++){
+  const group=new THREE.Group();
+  const stem=new THREE.CylinderGeometry(0.5,0.5,10);const stemMat=new THREE.MeshStandardMaterial({color:0x4caf50});const stemMesh=new THREE.Mesh(stem,stemMat);stemMesh.position.y=5;group.add(stemMesh);
+  for(let j=0;j<3;j++){const leaf=new THREE.ConeGeometry(1,3,8);const leafMat=new THREE.MeshStandardMaterial({color:0x4caf50});const leafMesh=new THREE.Mesh(leaf,leafMat);leafMesh.position.set(0,6+j*2,2);leafMesh.rotation.z=Math.PI/2;group.add(leafMesh);}
+  group.position.set((i%4)*5-7.5,0,Math.floor(i/4)*5-7.5);
+  scene.add(group);plants.push(group);
+ }
+ animate3D();
+}
+function animate3D(){requestAnimationFrame(animate3D);renderer.render(scene,camera);}
 
-const canvas=document.getElementById("mapCanvas"); const ctx=canvas.getContext("2d"); canvas.width=canvas.clientWidth; canvas.height=canvas.clientHeight;
-function renderMap(){ctx.clearRect(0,0,canvas.width,canvas.height); const radius=20; const paddingX=50; const paddingY=50; const cols=4; const rows=4; canvas._zones=[]; for(let i=0;i<ZONES;i++){const col=i%cols; const row=Math.floor(i/cols); const x=paddingX+col*100; const y=paddingY+row*100; ctx.beginPath(); ctx.arc(x,y,radius,0,Math.PI*2); ctx.fillStyle="#555"; ctx.fill(); ctx.strokeStyle="#222"; ctx.stroke(); canvas._zones[i]={x,y,radius,zone:i+1};}}
+// Health analysis
+function triggerAnalysis(){
+ const grid=document.getElementById("analysisGrid");grid.innerHTML="";
+ for(let i=0;i<ZONES;i++){
+  const zone=i+1;const entry=sensorLogs.find(e=>e.zone===zone)||{moisture:0,n:0,p:0,k:0};
+  const health=Math.round(entry.moisture*0.4+entry.n*0.2+entry.p*0.2+entry.k*0.2);
+  const card=document.createElement("button");card.innerText=`Zone ${zone}\nHealth: ${health}`;card.style.background="#1c2f47";card.style.color="#fff";card.style.borderRadius="6px";card.style.padding="6px";card.onclick=()=>showAIAnalysis(zone,health);grid.appendChild(card);
+  // Update 3D color
+  const color=health<40?0xf44336:health<70?0xffc107:0x4caf50;
+  plants[i].children.forEach(m=>m.material.color.setHex(color));
+ }
+ renderMap();
+}
+function showAIAnalysis(zone,health){
+ let rec="";
+ const entry=sensorLogs.find(e=>e.zone===zone)||{moisture:0,n:0,p:0,k:0};
+ if(health<40){
+  rec=`Zone ${zone} is in **severe stress**.\n\nSituation: The soil is either flooded or nutrient-deficient, threatening crop survival.\nDiagnosis: High water content or nutrient scarcity may damage roots and stunt growth.\nAction: Improve drainage immediately, adjust irrigation, apply corrective fertilizers, consider replacing damaged seedlings, and monitor every 2-3 hours.`;}
+ else if(health<70){
+  rec=`Zone ${zone} shows **moderate stress**.\n\nSituation: Soil moisture or nutrients are suboptimal.\nDiagnosis: Mild deficiencies could reduce growth.\nAction: Apply balanced NPK fertilizers, adjust watering schedule, remove weeds, and monitor for next 2-3 days.`;}
+ else{
+  rec=`Zone ${zone} is **healthy**.\n\nSituation: Soil moisture and nutrients are optimal.\nDiagnosis: Crops are thriving with no immediate stress.\nAction: Maintain care routine, ensure sunlight, monitor for pests or diseases regularly.`;}
+ document.getElementById("aiAnalysis").innerText=rec;
+ log(`Analysis generated for Zone ${zone}`);
+}
 
+// Utilities
 function scrollToSection(id){document.getElementById(id).scrollIntoView({behavior:"smooth"});}
 
-/* ================== 3D ================== */
-let scene,camera,renderer,controls,plantGroup=[];
-function init3D(){
-  const container=document.getElementById("threeDContainer"); scene=new THREE.Scene(); scene.background=new THREE.Color(0x0a111a);
-  camera=new THREE.PerspectiveCamera(45,container.clientWidth/container.clientHeight,0.1,200); camera.position.set(20,30,40);
-  renderer=new THREE.WebGLRenderer({antialias:true}); renderer.setSize(container.clientWidth,container.clientHeight); container.appendChild(renderer.domElement);
-  controls=new THREE.OrbitControls(camera,renderer.domElement); controls.enableDamping=true;
-  const light=new THREE.DirectionalLight(0xffffff,1); light.position.set(50,50,50); scene.add(light); scene.add(new THREE.AmbientLight(0xaaaaaa,0.5));
-  for(let z=0; z<ZONES; z++){
-    const stemGeom=new THREE.CylinderGeometry(0.2,0.2,3,8);
-    const stemMat=new THREE.MeshStandardMaterial({color:0x228833});
-    const stem=new THREE.Mesh(stemGeom,stemMat);
-    stem.position.set((z%4)*3,1.5,Math.floor(z/4)*3);
-    const leafGeom=new THREE.SphereGeometry(0.5,8,6);
-    const leafMat=new THREE.MeshStandardMaterial({color:0x228833});
-    const leaf=new THREE.Mesh(leafGeom,leafMat); leaf.position.set(0,2.2,0); stem.add(leaf);
-    scene.add(stem); plantGroup[z]=stem;
-  }
-  animate3D();
-}
-function animate3D(){requestAnimationFrame(animate3D); controls.update(); renderer.render(scene,camera);}
-function update3DColor(zone,score){const plant=plantGroup[zone-1]; if(!plant) return; let color=0x228833; if(score<40) color=0xff2222; else if(score<70) color=0xffaa22; plant.material.color.setHex(color); plant.children[0].material.color.setHex(color);}
-
-/* ================== ANALYSIS ================== */
-function triggerAnalysis(){
-  const grid=document.getElementById("analysisGrid"); grid.innerHTML="";
-  for(let z=1; z<=ZONES; z++){
-    const card=document.createElement("div"); card.style.background="#1b2a3c"; card.style.padding="8px"; card.style.borderRadius="6px"; card.style.cursor="pointer"; card.style.textAlign="center"; card.innerText=`Zone ${z}`;
-    card.onclick=()=>{
-      const entry=sensorLogs[z-1]||{moisture:0,n:0,p:0,k:0}; const {moisture,n,p,k}=entry;
-      const healthScore=Math.round((moisture*0.4 + n*0.2 + p*0.2 + k*0.2));
-      let rec="Keep monitoring."; if(healthScore<40) rec="Severe flood damage. Consider replant & fertilizer."; else if(healthScore<70) rec="Moderate stress. Apply nutrients & check drainage."; else rec="Healthy. Maintain regular care.";
-      document.getElementById("aiAnalysis").innerText=`Zone ${z} Analysis:\nMoisture: ${moisture}%\nN: ${n} P: ${p} K: ${k}\nHealth Score: ${healthScore}\nRecommendation: ${rec}`;
-      latestAnalysis[z]={moisture,n,p,k,healthScore,recommendation:rec};
-      update3DColor(z,healthScore); updateMapColors();
-    };
-    grid.appendChild(card);
-  }
-}
-
-function updateMapColors(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  const radiusBase=15; const cols=4; const rows=4;
-  for(let i=0;i<ZONES;i++){
-    const col=i%cols; const row=Math.floor(i/cols);
-    const x=50+col*100; const y=50+row*100;
-    ctx.beginPath(); ctx.arc(x,y,radiusBase,0,Math.PI*2);
-    const entry=latestAnalysis[i+1]||{healthScore:0,moisture:0}; const score=entry.healthScore; const moisture=entry.moisture;
-    ctx.fillStyle=score<40?"#ff2222":score<70?"#ffaa22":"#22ff33";
-    ctx.globalAlpha=0.5+0.5*(moisture/100); ctx.fill(); ctx.globalAlpha=1;
-    ctx.strokeStyle="#222"; ctx.stroke();
-  }
-}
-
-/* ================== INIT ================== */
+// Init
 window.onload=()=>{
-  document.getElementById("status").innerText="Dashboard Ready";
-  generatePhotoGrid(); renderStockGrid(); renderMap(); init3D(); triggerAnalysis(); log("Dashboard initialized.");
-};
+ generatePhotoGrid();
+ renderStockGrid();
+ init3D();
+ triggerAnalysis();
+ document.getElementById("status").innerText="System Ready";
+}
 </script>
 </body>
 </html>
