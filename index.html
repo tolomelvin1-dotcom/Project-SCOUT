@@ -1109,7 +1109,35 @@ function animate() {
 
 function populateManualZoneSelector() {
     let options = '';
-    for (let i = 1; i i < FIELD_GRID_SIZE_M * FIELD_GRID_SIZE_M; i++) {
+    for (let i = 1; i < FIELD_GRID_SIZE_M * FIELD_GRID_SIZE_M; i++) {
+        options += `<option value="${i}">${i}</option>`;
+    }
+    MANUAL_TARGET_ZONE_SELECT.innerHTML = options;
+}
+
+function selectZone(zoneID) {
+    if (currentlySelectedPlantZone !== 0) {
+        const oldCell = document.getElementById(`zoneCell-${currentlySelectedPlantZone}`);
+        if (oldCell) {
+            oldCell.style.border = '1px solid #3fb950'; // Default border
+        }
+    }
+    
+    currentlySelectedPlantZone = zoneID;
+    CURRENT_ZONE_SELECTION_DISPLAY.innerText = zoneID;
+    document.getElementById('modalCurrentZoneSelection').innerText = zoneID;
+    
+    const newCell = document.getElementById(`zoneCell-${zoneID}`);
+    if (newCell) {
+        newCell.style.border = '3px solid #ffaa00'; // Selected border
+    }
+}
+
+function generatePhotoGrid() {
+    const grid = document.getElementById('photoGrid');
+    grid.innerHTML = ''; // Clear existing cells
+    
+    for (let i = 1; i <= FIELD_GRID_SIZE_M * FIELD_GRID_SIZE_M; i++) {
         const cell = document.createElement('div');
         cell.className = 'grid-cell';
         cell.id = `zoneCell-${i}`;
@@ -1242,7 +1270,10 @@ function deletePhotoAssignment(zoneID) {
         textNode.innerHTML = `Zone ${zoneID}<br>CLICK TO UPLOAD`;
         cell.appendChild(textNode);
         
-        cell.style.border = '3px solid #ffaa00'; // Keep selected highlight
+        cell.style.border = '1px solid #3fb950'; // Revert border
+        if(currentlySelectedPlantZone === zoneID) {
+            cell.style.border = '3px solid #ffaa00'; // Keep selected highlight if it was selected
+        }
     }
     // Re-run analysis to update diagnosis without the photo
     triggerComprehensiveAnalysisCycle();
@@ -1356,6 +1387,39 @@ function restoreTrialFromHistory(trial) {
     
     document.getElementById('plantAnalysisGrid').innerHTML = trial.analysisResults;
     
+    // Re-initialize 3D data based on restored state for visual consistency
+    FIELD_PLANT_LOCATIONS_M.forEach(zone => {
+        const latestSensorData = getLatestSensorDataForZone(zone.id);
+        const index = zone.id - 1;
+        
+        let photoDiagnosis = null;
+        if (currentPhotoAssignmentData[zone.id]) {
+             const match = currentPhotoAssignmentData[zone.id].match(/diag:([^,]+)/);
+             if (match) {
+                 photoDiagnosis = match[1].replace(/_/g, ' ');
+             }
+        }
+        
+        let analysisResult;
+        if (latestSensorData || photoDiagnosis) {
+            analysisResult = getDiagnosisAndRecommendations({
+                moisture: latestSensorData ? latestSensorData.moisture : null,
+                npk_n: latestSensorData ? latestSensorData.npk_n : null,
+                npk_p: latestSensorData ? latestSensorData.npk_p : null,
+                npk_k: latestSensorData ? latestSensorData.npk_k : null,
+                photoDiagnosis: photoDiagnosis
+            });
+            field3DData[index].moisture = latestSensorData ? latestSensorData.moisture : field3DData[index].moisture;
+            field3DData[index].healthScore = analysisResult.score;
+            field3DData[index].color = analysisResult.color;
+        } else {
+            // No data for this specific zone in this trial
+            field3DData[index].moisture = 50; 
+            field3DData[index].healthScore = 75;
+            field3DData[index].color = HEALTH_SCORE_THRESHOLDS.OPTIMAL.color;
+        }
+    });
+
     updateMapVisualization();
     draw3DMap();
     generatePhotoGrid(); 
