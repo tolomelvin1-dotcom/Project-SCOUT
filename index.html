@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>S.C.O.U.T. Rover Full-Spectrum Data Fusion & Control Console (V14.2 - Analysis Fix)</title>
+<title>S.C.O.U.T. Rover Full-Spectrum Data Fusion & Control Console (V14.2 - Manual Upload Fix)</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script async src="https://docs.opencv.org/4.x/opencv.js" onload="onOpenCvReady();"></script>
@@ -117,7 +117,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
     color: #4ac9b0;
     transition: border 0.2s, background-color 0.2s;
 }
-.grid-cell:hover { border: 3px solid #79c0ff; background-color: #2a3038; }
+.grid-cell:hover { background-color: #2a3038; } /* Removed border hover since selection handles border */
 /* Styles for delete button for embedded file input to work */
 .delete-photo-btn {
     position: absolute;
@@ -255,7 +255,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
     <div class="photo-panel">
         <div class="camera-control data-display">
             <h2>Image Capture & Stock Library</h2>
-            <p>TO UPLOAD: **Click any Zone (1-16)** to select it, then click to upload or use the stock library.</p>
+            <p>TO UPLOAD: **Click any Zone (1-16)** to trigger the file dialog or use the stock library.</p>
             <button onclick="dispatchRoverMovementCommand('capture')" class="photo-controls">  📸  TRIGGER CAMERA CAPTURE</button>
             <button onclick="openStockImageGalleryModal()" class="photo-controls">  🖼 ️ VIEW STOCK PHOTOS (50 Presets)</button>
             <p>Current Target Zone: **Zone <span id="currentZoneSelection">N/A</span>**</p>
@@ -1186,16 +1186,28 @@ function generatePhotoGrid() {
         const cell = document.createElement('div');
         cell.className = 'grid-cell';
         cell.id = `zone-cell-${i}`;
-        cell.innerHTML = `Zone ${i}`;
-        cell.setAttribute('onclick', `selectPlantZoneForPhoto(${i})`);
+        cell.innerHTML = `Zone ${i}`; // Initial text for cell
+
+        // Always embed the hidden file input for manual upload/replacement.
+        // This is the CRITICAL FIX to enable re-uploading on populated cells.
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.id = `file-input-${i}`;
+        fileInput.accept = 'image/*';
+        fileInput.style.display = 'none';
+        // Clear value after change to allow re-uploading the same file immediately
+        fileInput.setAttribute('onchange', `handleManualPhotoUpload(event, ${i}); event.target.value=null;`);
+        cell.appendChild(fileInput);
         
-        // If photo exists, show it
+        cell.setAttribute('onclick', `selectPlantZoneForPhoto(${i})`);
+
+        // If photo exists, show it (renderPhotoInPhotoGridCell now handles content layering)
         const photoData = currentPhotoAssignmentData[i];
         if (photoData) {
             renderPhotoInPhotoGridCell(i, photoData);
         } else {
-             // Embed a hidden file input for manual upload
-            cell.innerHTML += `<input type="file" id="file-input-${i}" accept="image/*" style="display:none;" onchange="handleManualPhotoUpload(event, ${i})">`;
+            // Ensure border is reset for empty cells
+            cell.style.border = '1px solid #3fb950';
         }
         
         PHOTO_GRID_ELEMENT.appendChild(cell);
@@ -1204,7 +1216,7 @@ function generatePhotoGrid() {
 
 /**
  * @function renderPhotoInPhotoGridCell
- * Places a photo (or mock data image) into a specific grid cell.
+ * Places a photo (or mock data image) into a specific grid cell, while preserving the hidden input.
  * @param {number} zoneID - The ID of the zone (1-16).
  * @param {string} photoBase64 - The base64 image data.
  */
@@ -1212,9 +1224,14 @@ function renderPhotoInPhotoGridCell(zoneID, photoBase64) {
     const cell = document.getElementById(`zone-cell-${zoneID}`);
     if (!cell) return;
     
-    // Clear existing content
-    cell.innerHTML = '';
+    // 1. Identify and preserve the hidden file input
+    const fileInput = document.getElementById(`file-input-${zoneID}`);
     
+    // 2. Clear all previous image/button/text content but keep the file input
+    cell.innerHTML = `Zone ${zoneID}`; // Reset to initial text
+    if(fileInput) cell.appendChild(fileInput); // Re-append the input
+    
+    // 3. Add new image/overlay content
     const img = document.createElement('img');
     img.src = photoBase64;
     img.alt = `Zone ${zoneID} Photo`;
@@ -1234,7 +1251,7 @@ function renderPhotoInPhotoGridCell(zoneID, photoBase64) {
 
 /**
  * @function selectPlantZoneForPhoto
- * Sets the currently active zone for manual upload or stock photo selection.
+ * Sets the currently active zone and triggers the file dialog for upload/replacement.
  * @param {number} zoneID - The ID of the zone (1-16).
  */
 function selectPlantZoneForPhoto(zoneID) {
@@ -1242,21 +1259,25 @@ function selectPlantZoneForPhoto(zoneID) {
     CURRENT_ZONE_SELECTION_DISPLAY.innerText = zoneID;
     MODAL_ZONE_SELECTION_DISPLAY.innerText = zoneID;
     
-    STATUS_ELEMENT.innerText = `Zone ${zoneID} selected. Click "Trigger Camera Capture" or manually upload.`;
-
     // Visually highlight the selected zone
     document.querySelectorAll('.grid-cell').forEach(cell => {
         cell.style.boxShadow = 'none';
-        cell.style.border = (cell.id === `zone-cell-${zoneID}`) ? '3px solid #ffd700' : '1px solid #3fb950';
+        const currentCellID = parseInt(cell.id.split('-')[2]);
+        if (currentCellID === zoneID) {
+            cell.style.border = '3px solid #ffd700'; // Highlight selected zone with yellow border
+        } else if (currentPhotoAssignmentData[currentCellID]) {
+            cell.style.border = '3px solid #3fb950'; // Keep green border for other zones with photos
+        } else {
+             cell.style.border = '1px solid #3fb950'; // Default border for empty zones
+        }
     });
-    
-    // Programmatically click the hidden file input if the cell is currently empty
+
+    // Programmatically click the hidden file input to trigger upload dialog for manual replacement/upload
     const fileInput = document.getElementById(`file-input-${zoneID}`);
     if (fileInput) {
-        // Only trigger the file selector if the zone is empty
-        if (!currentPhotoAssignmentData[zoneID]) {
-             fileInput.click();
-        }
+        // This is the FIX: Always trigger the file selector, allowing the user to replace an existing photo
+        fileInput.click();
+        STATUS_ELEMENT.innerText = `Zone ${zoneID} selected. File upload dialog opened for manual photo assignment/replacement.`;
     }
 }
 
@@ -1299,7 +1320,7 @@ function deletePhotoFromZone(zoneID) {
     if (currentPhotoAssignmentData[zoneID]) {
         delete currentPhotoAssignmentData[zoneID];
         
-        // Re-generate the grid cell to restore the file input
+        // Re-generate the grid to clear photo content, reset border, and ensure the file input remains.
         generatePhotoGrid(); 
         triggerComprehensiveAnalysisCycle();
         STATUS_ELEMENT.innerText = `Photo cleared from Zone ${zoneID}.`;
@@ -1589,7 +1610,7 @@ function updateRoverLiveDisplays(latestLog) {
      // Note: GPS/IMU data is updated directly in executeDataAcquisition as it's separate from a soil probe.
 }
 
-// CRITICAL: Document.querySelector for :contains is not standard, this polyfill is required for the code's logic.
+// CRITICAL: Polyfill for :contains is not standard, this is required for the code's logic.
 (function(D){
     D.querySelector = function(s){
         if(s.indexOf(':contains') === -1) return D.querySelector(s);
