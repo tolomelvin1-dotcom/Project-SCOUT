@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>S.C.O.U.T. Rover Full-Spectrum Data Fusion & Control Console (V29.0 - Photo/Button Fix)</title>
+<title>PROJECT S.C.O.U.T.(V30.0)</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script async src="https://docs.opencv.org/4.x/opencv.js" onload="onOpenCvReady();"></script>
@@ -134,7 +134,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
     right: 5px;
     padding: 2px 5px;
     font-size: 0.8em;
-    z-index: 99; /* V29.0: High z-index to sit on top of the image */
+    z-index: 99; /* V30.0: High z-index to sit on top of the image */
     background-color: #f85149;
     color: #0d1117;
     border-radius: 50%;
@@ -238,7 +238,7 @@ footer {
 <body>
 <div class="container">
     <div class="controls-panel">
-        <h1>S.C.O.U.T. Rover Control & Telemetry Bridge (V29.0)</h1>
+        <h1>S.C.O.U.T. Rover Control & Telemetry Bridge (V30.0)</h1>
         <p>System Diagnostic Status: <span id="status">AWAITING SYSTEM BOOT SEQUENCE COMPLETION...</span></p>
 
         <div class="data-display history-controls">
@@ -354,10 +354,10 @@ footer {
     </div>
 </div>
 
-<input type="file" id="globalFileInput" accept="image/*" onchange="handleGlobalPhotoUpload(event)" style="display: none;">
+<input type="file" id="globalFileInput" accept="image/*" onchange="handleGlobalPhotoUpload(event)" style="position: fixed; left: -9999px;">
 
 <footer>
-    <p>&copy; 2025 S.C.O.U.T. Rover Systems - Operational Bridge V29.0. Hardware ESP32 IP: 10.101.146.88 | ThingSpeak API: 6OXH3SUQ4VNSOJX1</p>
+    <p>&copy; 2025 S.C.O.U.T. Rover Systems - Operational Bridge V30.0. Hardware ESP32 IP: 10.101.146.88 | ThingSpeak API: 6OXH3SUQ4VNSOJX1</p>
 </footer>
 
 <script>
@@ -366,7 +366,7 @@ footer {
 // ----------------------------------------------------------------------------------
 /**
  * @fileoverview S.C.O.U.T. Rover Control System JavaScript Core.
- * Version 29.0: CRITICAL Photo Visibility Fix (Global File Input Delegation).
+ * Version 30.0: CRITICAL File Upload Reliability Fix (CSS change for delegation).
  */
 // --- 0.2.1 HARDWARE AND NETWORK CONFIGURATION (CRITICAL SYSTEM IDENTIFIERS) ---
 const HARDWARE_ESP32_IP_ADDRESS = '10.101.146.88'; // <<< CRITICAL: IP ADDRESS UPDATED
@@ -378,7 +378,7 @@ const MAP_CANVAS_PIXELS = 480;
 const MAX_STOCK_PHOTOS = 50;
 const PLANT_CIRCLE_RADIUS = 5;
 const SCORE_CAP_ON_PARTIAL_DATA = 50;
-// --- 0.2.3 DIAGNOSTIC CONSTANTS (V29.0 - HEALTH SCORE AND THRESHOLDS) ---
+// --- 0.2.3 DIAGNOSTIC CONSTANTS (V30.0 - HEALTH SCORE AND THRESHOLDS) ---
 const HEALTH_SCORE_THRESHOLDS = {
     CRITICAL: { max: 40, color: '#f85149', label: 'CRITICAL', class: 'rec-critical' }, // Red (0-40)
     ACTION_REQUIRED: { max: 75, color: '#e3b341', label: 'ACTION REQUIRED', class: 'rec-action' }, // Amber (41-75)
@@ -402,7 +402,7 @@ const MAP_CONTEXT = document.getElementById('roverMap').getContext('2d');
 const HISTORY_MODAL = document.getElementById('historyModal');
 const STOCK_MODAL = document.getElementById('stockImageModal');
 const CURRENT_ZONE_SELECTION_DISPLAY = document.getElementById('currentZoneSelection');
-const GLOBAL_FILE_INPUT = document.getElementById('globalFileInput'); // V29.0
+const GLOBAL_FILE_INPUT = document.getElementById('globalFileInput'); // V30.0
 // --- 0.2.5 GLOBAL STATE VARIABLES (Clean Initial State Definition) ---
 let openCvLibraryIsReady = false;
 let systemLoggedSensorDataArray = [];
@@ -475,7 +475,7 @@ function dispatchRoverMovementCommand(commandIdentifier) {
             // Mock capture assignment
             const mockDataUrl = `data:image/jpeg;base64,mocked_rover_capture_zone_${zoneID}_diag:${mockDiagnosis.replace(/\s/g, '_').replace(/[()]/g, '')}`;
 
-            // *** CRITICAL V29.0: Assign the photo and trigger rendering ***
+            // *** CRITICAL V30.0: Assign the photo and trigger rendering ***
             currentPhotoAssignmentData[zoneID] = mockDataUrl;
             renderPhotoInPhotoGridCell(zoneID, mockDataUrl); // Call the fixed rendering function
             
@@ -616,7 +616,7 @@ function dispatchManualDataEntry() {
 
 
 // ==================================================================================
-// SECTION 2.0: DIAGNOSTIC KNOWLEDGE BASE & FUSED ANALYSIS CORE (V29.0)
+// SECTION 2.0: DIAGNOSTIC KNOWLEDGE BASE & FUSED ANALYSIS CORE (V30.0)
 // ----------------------------------------------------------------------------------
 // Base knowledge for photo analysis and associated score penalties
 const TOMATO_DIAGNOSTIC_KB = {
@@ -771,7 +771,7 @@ function getLatestSensorDataForZone(zoneID) {
 }
 
 /**
- * V29.0: Main analysis loop. Updates 2D map and 3D visualization.
+ * V30.0: Main analysis loop. Updates 2D map and 3D visualization.
  */
 function triggerComprehensiveAnalysisCycle() {
     const analysisGrid = document.getElementById('plantAnalysisGrid');
@@ -866,7 +866,7 @@ function generatePlantAnalysisCardHTML(zoneID, result) {
                 <div class="${scoreClass}">${result.rec_sensor}</div>
             </div>
 
-            <h3>DATA FUSION ENGINE: Detailed Report (V29.0)</h3>
+            <h3>DATA FUSION ENGINE: Detailed Report (V30.0)</h3>
             <pre style="white-space: pre-wrap; word-wrap: break-word; background: #0f131a; padding: 15px; border-radius: 8px; border: 1px solid #30363d; font-size: 0.9em;">${result.analysis}</pre>
         </div>
     `;
@@ -977,7 +977,7 @@ function findNearestPlantZone(x_m, y_m) {
 }
 
 // ==================================================================================
-// SECTION 4.0: 3D VISUALIZATION CORE (V29.0 - No changes)
+// SECTION 4.0: 3D VISUALIZATION CORE (V30.0 - No changes)
 // ----------------------------------------------------------------------------------
 let scene, camera, renderer, controls;
 let plantCubes = []; 
@@ -1154,21 +1154,22 @@ function animate() {
 
 
 // ==================================================================================
-// SECTION 5.0: UTILITY & UI FUNCTIONS (Photo Grid - V29.0 FIX)
+// SECTION 5.0: UTILITY & UI FUNCTIONS (Photo Grid - V30.0 FIX)
 // ----------------------------------------------------------------------------------
 
 /**
- * V29.0: Main entry point for file upload trigger.
+ * V30.0: Main entry point for file upload trigger.
  */
 function triggerUploadForZone(zoneID) {
     selectZone(zoneID); // 1. Set the active zone state
     
     // 2. Trigger the hidden global file input
+    // This relies on the GLOBAL_FILE_INPUT being off-screen (left: -9999px) instead of display: none
     GLOBAL_FILE_INPUT.click();
 }
 
 /**
- * V29.0: Simple function to set the currently active zone for UI highlighting and manual data entry.
+ * V30.0: Simple function to set the currently active zone for UI highlighting and manual data entry.
  */
 function selectZone(zoneID) {
     currentlySelectedPlantZone = zoneID;
@@ -1183,7 +1184,7 @@ function selectZone(zoneID) {
 }
 
 /**
- * V29.0: Renders the photo grid, now relying on click delegation.
+ * V30.0: Renders the photo grid, relying on click delegation.
  */
 function generatePhotoGrid() {
     const grid = document.getElementById('photoGrid');
@@ -1193,7 +1194,7 @@ function generatePhotoGrid() {
         cell.className = 'grid-cell';
         cell.id = `zoneCell-${i}`;
         
-        // V29.0 FIX: The cell itself now triggers the upload via delegation
+        // V30.0 FIX: The cell itself now triggers the upload via delegation
         cell.onclick = () => triggerUploadForZone(i); 
 
         if (currentPhotoAssignmentData[i]) {
@@ -1212,7 +1213,7 @@ function generatePhotoGrid() {
 }
 
 /**
- * V29.0 CRITICAL FIX: Simplifies rendering now that file input is gone.
+ * V30.0 CRITICAL FIX: Simplifies rendering now that file input is gone.
  * @param {number} zoneID The ID of the zone being rendered.
  * @param {string} dataUrl The base64 data URL of the image.
  * @param {boolean} triggerAnalysis Should the analysis cycle run afterwards.
@@ -1259,7 +1260,7 @@ function renderPhotoInPhotoGridCell(zoneID, dataUrl, triggerAnalysis = true) {
 }
 
 /**
- * V29.0: Handles file upload event from the SINGLE global input.
+ * V30.0: Handles file upload event from the SINGLE global input.
  */
 function handleGlobalPhotoUpload(event) {
     const zoneID = currentlySelectedPlantZone;
@@ -1418,7 +1419,7 @@ function restoreTrialFromHistory(trial) {
     // Restore UI elements
     document.getElementById('plantAnalysisGrid').innerHTML = trial.analysisResults;
     
-    // V29.0: Re-run the full cycle to ensure 2D/3D visualizations are updated correctly
+    // V30.0: Re-run the full cycle to ensure 2D/3D visualizations are updated correctly
     triggerComprehensiveAnalysisCycle();
     
     // Restore photo grid display
