@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>S.C.O.U.T. Rover Post-Flood Data Fusion & Control Console (V42.0 - Absolute Visibility Hyper-Fix)</title>
+<title>S.C.O.U.T. Rover Post-Flood Data Fusion & Control Console (V43.0 - Ultra-Maximal Visibility Fix)</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script async src="https://docs.opencv.org/4.x/opencv.js" onload="onOpenCvReady();"></script>
@@ -177,61 +177,68 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 .rec-no-data { color: #58a6ff; font-style: italic; } 
 
 
-/* V42.0 CRITICAL FIX: Absolute Layering Guarantee */
+/* V43.0 CRITICAL FIX: Ultra-Maximal Visibility Guarantee */
 
 /* The visual layer that holds the image and sits on top of everything else (Z: 1000) */
 .photo-overlay {
-    position: absolute; 
-    top: 0; 
-    left: 0; 
-    width: 100%; 
-    height: 100%; 
+    position: absolute !important; 
+    top: 0 !important; 
+    left: 0 !important; 
+    width: 100% !important; 
+    height: 100% !important; 
     z-index: 1000 !important; 
-    pointer-events: none; /* The overlay should be invisible to clicks */
+    pointer-events: none !important; /* The overlay should be invisible to clicks */
+    
+    /* V43.0 Debugging/Confirmation Line */
+    border: 1px dashed white !important; 
 }
 .photo-overlay img {
-    width: 100%; 
-    height: 100%; 
-    object-fit: cover; 
+    /* V43.0 Aggressive Priority */
+    display: block !important; 
+    width: 100% !important; 
+    height: 100% !important; 
+    /* V43.0 Fix: Use contain to ensure the whole mock image is visible */
+    object-fit: contain !important; 
+    pointer-events: none !important;
 }
 /* The delete button must be the single highest element (Z: 1001) */
 .delete-photo-btn {
-    position: absolute;
-    top: 5px;
-    right: 5px;
-    padding: 2px 5px;
-    font-size: 0.8em;
+    position: absolute !important;
+    top: 5px !important;
+    right: 5px !important;
+    padding: 2px 5px !important;
+    font-size: 0.8em !important;
     z-index: 1001 !important; /* ULTIMATE TOP LAYER */
-    background-color: #f85149;
-    color: #0d1117;
-    border-radius: 50%;
-    pointer-events: auto; /* MUST be auto to be clickable */
+    background-color: #f85149 !important;
+    color: #0d1117 !important;
+    border-radius: 50% !important;
+    pointer-events: auto !important; /* MUST be auto to be clickable */
 }
 /* The file input remains the click target when no photo is present (Z: 1) */
 .grid-cell input[type="file"] {
-    position: absolute; 
-    top: 0; 
-    left: 0; 
-    width: 100%; 
-    height: 100%; 
-    opacity: 0; 
-    z-index: 1; 
-    cursor: pointer; 
-    pointer-events: auto; 
+    position: absolute !important; 
+    top: 0 !important; 
+    left: 0 !important; 
+    width: 100% !important; 
+    height: 100% !important; 
+    opacity: 0 !important; 
+    z-index: 1 !important; 
+    cursor: pointer !important; 
+    pointer-events: auto !important; 
 }
 /* Placeholder text is now dynamically hidden/removed in JS */
 .placeholder-text {
-    position: relative;
-    text-align: center;
-    z-index: 0; 
-    pointer-events: none; 
+    position: relative !important;
+    text-align: center !important;
+    z-index: 0 !important; 
+    pointer-events: none !important; 
 }
 </style>
 </head>
 <body>
 <div class="container">
     <div class="controls-panel">
-        <h1>S.C.O.U.T. Post-Flood Assessment Bridge (V42.0)</h1>
+        <h1>S.C.O.U.T. Post-Flood Assessment Bridge (V43.0)</h1>
         <p>System Diagnostic Status: <span id="status">AWAITING SYSTEM BOOT SEQUENCE COMPLETION...</span></p>
 
         <div class="data-display history-controls">
@@ -277,7 +284,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
                 <label style="color:#79c0ff;">K (ppm): <input type="number" id="manualK" min="1" value="150" style="width: 50px;"></label>
             </div>
             <button onclick="dispatchManualDataEntry()" style="background-color: #e341b3; color: #0d1117;">  📝  SUBMIT MANUAL DATA + PHOTO</button>
-            <p><small>**V42.0 Fix:** Photo visibility is **Z-1000/1001** via a new **Absolute Overlay** for guaranteed rendering.</small></p>
+            <p><small>**V43.0 Fix:** Photo visibility is **Z-1000/1001** + **Base64 Data Integrity Enforced** for guaranteed rendering.</small></p>
         </div>
 
         <div class="data-display">
@@ -325,7 +332,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 
     <div class="plant-analysis-panel">
         <h2>DATA FUSION ENGINE: Post-Flood Plant Diagnosis (16 Zones)  🔬  </h2>
-        <p>This panel displays the **FUSED** assessment: **Leaf Visual Pre-Assessment (CV)** + **Local Soil Sensor Data**. **(V42.0: Results are based on fixed, deterministic zone conditions)**.</p>
+        <p>This panel displays the **FUSED** assessment: **Leaf Visual Pre-Assessment (CV)** + **Local Soil Sensor Data**. **(V43.0: Results are based on fixed, deterministic zone conditions)**.</p>
         <div id="plantAnalysisGrid">
         </div>
     </div>
@@ -354,7 +361,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 </div>
 
 <footer>
-    <p>&copy; 2025 S.C.O.U.T. Rover Systems - Operational Bridge V42.0. Hardware ESP32 IP: 10.101.146.88 | ThingSpeak API: 6OXH3SUQ4VNSOJX1</p>
+    <p>&copy; 2025 S.C.O.U.T. Rover Systems - Operational Bridge V43.0. Hardware ESP32 IP: 10.101.146.88 | ThingSpeak API: 6OXH3SUQ4VNSOJX1</p>
 </footer>
 
 <script>
@@ -363,7 +370,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 // ----------------------------------------------------------------------------------
 /**
  * @fileoverview S.C.O.U.T. Rover Control System JavaScript Core.
- * Version 42.0: Absolute Layering and Deterministic Scoring.
+ * Version 43.0: Absolute Layering and Base64 Integrity Fix.
  */
 // --- 0.2.1 HARDWARE AND NETWORK CONFIGURATION (CRITICAL SYSTEM IDENTIFIERS) ---
 const HARDWARE_ESP32_IP_ADDRESS = '10.101.146.88'; 
@@ -375,7 +382,9 @@ const MAP_CANVAS_PIXELS = 480;
 const MAX_STOCK_PHOTOS = 50;
 const PLANT_CIRCLE_RADIUS = 5;
 const SCORE_CAP_ON_PARTIAL_DATA = 50;
-// --- 0.2.3 DIAGNOSTIC CONSTANTS (V42.0 - HEALTH SCORE AND THRESHOLDS) ---
+// V43.0 CRITICAL FIX: A valid, tiny PNG image (1x1 green pixel) to ensure Base64 image integrity
+const VALID_MOCK_BASE64_DATA = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP4z8BQDwAEhQGAhKmMIwAAAABJRU5ErkJggg=='; 
+// --- 0.2.3 DIAGNOSTIC CONSTANTS (V43.0 - HEALTH SCORE AND THRESHOLDS) ---
 const HEALTH_SCORE_THRESHOLDS = {
     CRITICAL: { max: 40, color: '#f85149', label: 'CRITICAL', class: 'rec-critical' }, // Red (0-40)
     ACTION_REQUIRED: { max: 75, color: '#e3b341', label: 'ACTION REQUIRED', class: 'rec-action' }, // Amber (41-75)
@@ -401,7 +410,7 @@ const STOCK_MODAL = document.getElementById('stockImageModal');
 const CURRENT_ZONE_SELECTION_DISPLAY = document.getElementById('currentZoneSelection');
 const MANUAL_TARGET_ZONE_SELECT = document.getElementById('manualTargetZone');
 
-// --- V42.0 CORE: DETERMINISTIC FIELD CONDITIONS (Retained from V41.0) ---
+// --- V43.0 CORE: DETERMINISTIC FIELD CONDITIONS (Retained from V41.0) ---
 const FIELD_ZONE_CONDITIONS = {
     // Optimal / Baseline Condition (Should result in high score, unless moisture is over 70)
     1: { type: 'Optimal', moisture: 55.0, N: 160, P: 85, K: 155, diag: 'Healthy, Deep Green Foliage' },
@@ -488,12 +497,12 @@ function dispatchRoverMovementCommand(commandIdentifier) {
             const zoneID = findNearestPlantZone(currentRoverKinematicState.x_position_m, currentRoverKinematicState.y_position_m)?.id || 1;
             selectZone(zoneID);
             
-            // V42.0: Use deterministic diagnosis for the photo
+            // V43.0 FIX: Ensure valid Base64 prefix + data
             const condition = FIELD_ZONE_CONDITIONS[zoneID];
             const mockDiagnosis = condition.diag;
             
-            // This is a mock base64 string, the diagnosis is embedded in the string for easy retrieval later
-            const mockDataUrl = `data:image/jpeg;base64,mocked_rover_capture_zone_${zoneID}_diag:${mockDiagnosis.replace(/\s/g, '_').replace(/[()]/g, '')}`;
+            // Injecting the custom diagnosis text *after* the valid Base64 data with a comma separator
+            const mockDataUrl = `data:image/png;base64,${VALID_MOCK_BASE64_DATA},diag:${mockDiagnosis.replace(/\s/g, '_').replace(/[()]/g, '')}`;
 
             const fileInput = document.getElementById(`fileInput-${zoneID}`);
             if(fileInput) {
@@ -503,7 +512,7 @@ function dispatchRoverMovementCommand(commandIdentifier) {
             }
             
 
-            STATUS_ELEMENT.innerText = `Photo captured and assigned to nearest Zone ${zoneID}. Visibility guaranteed by Absolute Z-Stack.`;
+            STATUS_ELEMENT.innerText = `Photo captured and assigned to nearest Zone ${zoneID}. Visibility guaranteed by Absolute Z-Stack and Base64 Integrity.`;
         } else {
             // Simulate Rover Kinematics Update (0.1m step)
             const step = 0.1;
@@ -529,7 +538,7 @@ function dispatchRoverMovementCommand(commandIdentifier) {
 function executeDataAcquisition(acquisitionType) {
     STATUS_ELEMENT.innerText = "SENSOR READ: Acquiring raw data...";
     
-    // V42.0 CORE: Get deterministic sensor data based on the nearest zone
+    // V43.0 CORE: Get deterministic sensor data based on the nearest zone
     const nearestPlant = findNearestPlantZone(currentRoverKinematicState.x_position_m, currentRoverKinematicState.y_position_m);
     const plantID = nearestPlant ? nearestPlant.id : 1;
     selectZone(plantID); // Highlight the zone being read
@@ -584,7 +593,7 @@ function executeDataAcquisition(acquisitionType) {
 }
 
 /**
- * V42.0: Manual Data Entry logic.
+ * V43.0: Manual Data Entry logic.
  */
 function dispatchManualDataEntry() {
     const zoneID = parseInt(MANUAL_TARGET_ZONE_SELECT.value); 
@@ -637,7 +646,7 @@ function dispatchManualDataEntry() {
 
 
 // ==================================================================================
-// SECTION 2.0: DIAGNOSTIC KNOWLEDGE BASE & FUSED ANALYSIS CORE (V42.0 - Reliable Logic)
+// SECTION 2.0: DIAGNOSTIC KNOWLEDGE BASE & FUSED ANALYSIS CORE (V43.0 - Reliable Logic)
 // ----------------------------------------------------------------------------------
 const TOMATO_DIAGNOSTIC_KB = {
     'Mottling/Mosaic Pattern (Viral-TMV)': { score_penalty: 45, type: 'Viral', recommendation: "CRITICAL ISOLATION REQUIRED: Strong indicator of Tobacco Mosaic Virus (TMV). **IMMEDIATELY REMOVE AND DESTROY** the plant to prevent field-wide contamination. No chemical cure exists." },
@@ -787,6 +796,7 @@ function triggerComprehensiveAnalysisCycle() {
         
         let photoDiagnosis = null;
         if (photoEntry) {
+             // V43.0 FIX: Extract diagnosis from the string after the valid Base64 data
              const match = photoEntry.match(/diag:([^,]+)/);
              if (match) {
                  photoDiagnosis = match[1].replace(/_/g, ' ');
@@ -836,7 +846,7 @@ function generatePlantAnalysisCardHTML(zoneID, result) {
     const scoreClass = getScoreClass(result.score);
     const cardStyle = `border-color: ${result.border}; box-shadow: 0 0 30px ${result.border}33;`;
 
-    // V42.0: Added the fixed condition type to the card for user verification of deterministic logic
+    // V43.0: Added the fixed condition type to the card for user verification of deterministic logic
     const conditionType = FIELD_ZONE_CONDITIONS[zoneID].type; 
 
     return `
@@ -864,7 +874,7 @@ function generatePlantAnalysisCardHTML(zoneID, result) {
                 <div class="${scoreClass}">${result.rec_sensor}</div>
             </div>
 
-            <h3>DATA FUSION ENGINE: Detailed Report (V42.0)</h3>
+            <h3>DATA FUSION ENGINE: Detailed Report (V43.0)</h3>
             <pre style="white-space: pre-wrap; word-wrap: break-word; background: #0f131a; padding: 15px; border-radius: 8px; border: 1px solid #30363d; font-size: 0.9em;">${result.analysis}</pre>
         </div>
     `;
@@ -1097,7 +1107,7 @@ function animate() {
 
 
 // ==================================================================================
-// SECTION 5.0: UTILITY & UI FUNCTIONS (Photo Grid - V42.0 FIX CORE)
+// SECTION 5.0: UTILITY & UI FUNCTIONS (Photo Grid - V43.0 FIX CORE)
 // ----------------------------------------------------------------------------------
 
 function populateManualZoneSelector() {
@@ -1124,7 +1134,7 @@ function selectZone(zoneID) {
 
 
 /**
- * V42.0: Core fix logic. Creates and renders the photo grid cells using the PIVO protocol.
+ * V43.0: Core fix logic. Creates and renders the photo grid cells using the PIVO protocol.
  */
 function generatePhotoGrid() {
     const grid = document.getElementById('photoGrid');
@@ -1166,17 +1176,22 @@ function generatePhotoGrid() {
 }
 
 /**
- * V42.0: Handles file upload event.
+ * V43.0: Handles file upload event.
  */
 function handleLocalPhotoUpload(zoneID, event, inputElement) {
     const file = event.target.files[0];
     if (file) {
         const reader = new FileReader();
         reader.onload = (e) => {
-            // V42.0: Use deterministic diagnosis for mock-up on user upload
-            const mockDiagnosis = FIELD_ZONE_CONDITIONS[zoneID].diag;
-            const dataUrlWithMockDiagnosis = e.target.result.replace('base64,', `base64,mocked_user_upload_diag:${mockDiagnosis.replace(/\s/g, '_').replace(/[()]/g, '')},`);
+            // V43.0 FIX: Do NOT inject the diagnosis into the middle of the Base64 string from a *real* file.
+            // We append it *after* the valid Base64 data with a safe comma separator.
             
+            const mockDiagnosis = FIELD_ZONE_CONDITIONS[zoneID].diag;
+            const validDataUrl = e.target.result;
+            
+            // Append metadata for later retrieval during analysis cycle
+            const dataUrlWithMockDiagnosis = `${validDataUrl},diag:${mockDiagnosis.replace(/\s/g, '_').replace(/[()]/g, '')}`;
+
             // CRITICAL FIX: Ensure the state is updated and photo is rendered
             renderPhotoInPhotoGridCell(zoneID, dataUrlWithMockDiagnosis, inputElement, true); 
             
@@ -1192,9 +1207,9 @@ function handleLocalPhotoUpload(zoneID, event, inputElement) {
 }
 
 /**
- * V42.0 CRITICAL FIX: Uses a dedicated overlay DIV (Z-1000) for guaranteed photo visibility.
+ * V43.0 CRITICAL FIX: Uses a dedicated overlay DIV (Z-1000) for guaranteed photo visibility.
  */
-function renderPhotoInPhotoGridCell(zoneID, dataUrl, fileInput, triggerAnalysis = true) {
+function renderPhotoInPhotoGridCell(zoneID, dataUrlWithMetadata, fileInput, triggerAnalysis = true) {
     const cell = document.getElementById(`zoneCell-${zoneID}`);
     const placeholder = document.getElementById(`placeholder-${zoneID}`);
     if (!cell) return;
@@ -1207,12 +1222,15 @@ function renderPhotoInPhotoGridCell(zoneID, dataUrl, fileInput, triggerAnalysis 
     // CRITICAL FIX: Disable pointer events on the input (Z-1) so it doesn't intercept clicks
     fileInput.style.pointerEvents = 'none'; 
     
+    // Extract only the image data part for rendering (up to the first comma if it's there)
+    const imageOnlyDataUrl = dataUrlWithMetadata.split(',').slice(0, 2).join(',');
+    
     // 2. Create and append the high-Z photo overlay (Z-1000)
     const overlay = document.createElement('div');
     overlay.className = 'photo-overlay';
     
     const img = document.createElement('img');
-    img.src = dataUrl;
+    img.src = imageOnlyDataUrl; // Only the valid image data goes here
     overlay.appendChild(img);
     cell.appendChild(overlay);
 
@@ -1227,7 +1245,7 @@ function renderPhotoInPhotoGridCell(zoneID, dataUrl, fileInput, triggerAnalysis 
     cell.appendChild(deleteBtn);
     
     // 4. Update the assignment data
-    currentPhotoAssignmentData[zoneID] = dataUrl;
+    currentPhotoAssignmentData[zoneID] = dataUrlWithMetadata;
     
     if (triggerAnalysis) {
         triggerComprehensiveAnalysisCycle();
@@ -1288,8 +1306,9 @@ function populateStockPhotos() {
         const diagnosisKey = diagnoses[i % diagnoses.length];
         const diagnosis = TOMATO_DIAGNOSTIC_KB[diagnosisKey];
         
-        const mockDataUrl = `data:image/png;base64,mocked_stock_photo_${i}_diag:${diagnosisKey.replace(/\s/g, '_').replace(/[()]/g, '')}`;
-        stockPhotoLibraryData[i] = mockDataUrl; 
+        // V43.0 FIX: Use the valid base64 data + append the diagnosis string after the base64 data
+        const dataUrlWithMockDiagnosis = `data:image/png;base64,${VALID_MOCK_BASE64_DATA},diag:${diagnosisKey.replace(/\s/g, '_').replace(/[()]/g, '')}`;
+        stockPhotoLibraryData[i] = dataUrlWithMockDiagnosis; 
 
         const cell = document.createElement('div');
         cell.className = 'grid-cell';
@@ -1302,7 +1321,7 @@ function populateStockPhotos() {
             const fileInput = document.getElementById(`fileInput-${currentlySelectedPlantZone}`);
             if (fileInput) {
                 currentPhotoAssignmentData[currentlySelectedPlantZone] = stockPhotoLibraryData[i];
-                // V42.0: Render using the new overlay logic
+                // V43.0: Render using the new overlay logic
                 renderPhotoInPhotoGridCell(currentlySelectedPlantZone, stockPhotoLibraryData[i], fileInput);
                 closeStockImageGalleryModal();
                 STATUS_ELEMENT.innerText = `Stock Photo #${i} assigned to Zone ${currentlySelectedPlantZone}.`;
