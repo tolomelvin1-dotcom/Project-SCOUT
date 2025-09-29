@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>S.C.O.U.T. Rover Post-Flood Data Fusion & Control Console (V36.0 - Nuclear DOM Fix)</title>
+<title>S.C.O.U.T. Rover Post-Flood Data Fusion & Control Console (V37.0 - Redundancy Protocol Fix)</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script async src="https://docs.opencv.org/4.x/opencv.js" onload="onOpenCvReady();"></script>
@@ -201,7 +201,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 <body>
 <div class="container">
     <div class="controls-panel">
-        <h1>S.C.O.U.T. Post-Flood Assessment Bridge (V36.0)</h1>
+        <h1>S.C.O.U.T. Post-Flood Assessment Bridge (V37.0)</h1>
         <p>System Diagnostic Status: <span id="status">AWAITING SYSTEM BOOT SEQUENCE COMPLETION...</span></p>
 
         <div class="data-display history-controls">
@@ -319,7 +319,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 </div>
 
 <footer>
-    <p>&copy; 2025 S.C.O.U.T. Rover Systems - Operational Bridge V36.0. Hardware ESP32 IP: 10.101.146.88 | ThingSpeak API: 6OXH3SUQ4VNSOJX1</p>
+    <p>&copy; 2025 S.C.O.U.T. Rover Systems - Operational Bridge V37.0. Hardware ESP32 IP: 10.101.146.88 | ThingSpeak API: 6OXH3SUQ4VNSOJX1</p>
 </footer>
 
 <script>
@@ -328,7 +328,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 // ----------------------------------------------------------------------------------
 /**
  * @fileoverview S.C.O.U.T. Rover Control System JavaScript Core.
- * Version 36.0: Critical Rendering Fix for Photo Visibility (Nuclear DOM Fix).
+ * Version 37.0: Redundancy Protocol - Fixes V36.0 bug preventing re-upload/replacement of photos.
  */
 // --- 0.2.1 HARDWARE AND NETWORK CONFIGURATION (CRITICAL SYSTEM IDENTIFIERS) ---
 const HARDWARE_ESP32_IP_ADDRESS = '10.101.146.88'; 
@@ -340,7 +340,7 @@ const MAP_CANVAS_PIXELS = 480;
 const MAX_STOCK_PHOTOS = 50;
 const PLANT_CIRCLE_RADIUS = 5;
 const SCORE_CAP_ON_PARTIAL_DATA = 50;
-// --- 0.2.3 DIAGNOSTIC CONSTANTS (V36.0 - HEALTH SCORE AND THRESHOLDS) ---
+// --- 0.2.3 DIAGNOSTIC CONSTANTS (V37.0 - HEALTH SCORE AND THRESHOLDS) ---
 const HEALTH_SCORE_THRESHOLDS = {
     CRITICAL: { max: 40, color: '#f85149', label: 'CRITICAL', class: 'rec-critical' }, // Red (0-40)
     ACTION_REQUIRED: { max: 75, color: '#e3b341', label: 'ACTION REQUIRED', class: 'rec-action' }, // Amber (41-75)
@@ -557,7 +557,7 @@ function dispatchManualDataEntry() {
 
 
 // ==================================================================================
-// SECTION 2.0: DIAGNOSTIC KNOWLEDGE BASE & FUSED ANALYSIS CORE (V36.0 Fixes)
+// SECTION 2.0: DIAGNOSTIC KNOWLEDGE BASE & FUSED ANALYSIS CORE (V37.0 Fixes)
 // ----------------------------------------------------------------------------------
 // Base knowledge for photo analysis and associated score penalties
 const TOMATO_DIAGNOSTIC_KB = {
@@ -784,7 +784,7 @@ function generatePlantAnalysisCardHTML(zoneID, result) {
                 <div class="${scoreClass}">${result.rec_sensor}</div>
             </div>
 
-            <h3>DATA FUSION ENGINE: Detailed Report (V36.0)</h3>
+            <h3>DATA FUSION ENGINE: Detailed Report (V37.0)</h3>
             <pre style="white-space: pre-wrap; word-wrap: break-word; background: #0f131a; padding: 15px; border-radius: 8px; border: 1px solid #30363d; font-size: 0.9em;">${result.analysis}</pre>
         </div>
     `;
@@ -1017,11 +1017,11 @@ function animate() {
 
 
 // ==================================================================================
-// SECTION 5.0: UTILITY & UI FUNCTIONS (Photo Grid - V36.0 FIX CORE)
+// SECTION 5.0: UTILITY & UI FUNCTIONS (Photo Grid - V37.0 FIX CORE)
 // ----------------------------------------------------------------------------------
 
 /**
- * V36.0: Sets the currently active zone for UI highlighting and manual data entry.
+ * V37.0: Sets the currently active zone for UI highlighting and manual data entry.
  */
 function selectZone(zoneID) {
     currentlySelectedPlantZone = zoneID;
@@ -1036,16 +1036,14 @@ function selectZone(zoneID) {
 }
 
 /**
- * V36.0: Handles the click on the grid cell, selects the zone, and dynamically
+ * V37.0: Handles the click on the grid cell, selects the zone, and dynamically
  * creates the file input to trigger the upload dialog.
+ * CRITICAL FIX: Removed the check that prevented re-uploading (if a photo was present).
  */
 function selectZoneAndTriggerUpload(zoneID) {
     selectZone(zoneID); // Set highlight
 
-    // If photo already exists, clicking the cell should only select the zone, not re-open the file dialog
-    if (currentPhotoAssignmentData[zoneID]) {
-        return; 
-    }
+    // V37.0 FIX: Removed the check for existing photo. Clicking a cell always opens the file dialog now.
     
     // 1. Create a transient file input element
     const fileInput = document.createElement('input');
@@ -1054,7 +1052,6 @@ function selectZoneAndTriggerUpload(zoneID) {
     fileInput.style.display = 'none'; // Keep it hidden
 
     // 2. CRITICAL: Attach the onchange handler which includes the DOM destruction logic
-    // The input element must be passed to the handler so it can remove itself later.
     fileInput.onchange = (e) => handleLocalPhotoUpload(zoneID, e, fileInput);
 
     // 3. Temporarily append to the body, trigger the click, and open the file dialog
@@ -1074,7 +1071,7 @@ function generatePhotoGrid() {
         cell.className = 'grid-cell';
         cell.id = `zoneCell-${i}`;
         
-        // V36.0: The cell itself is the click target, which calls the dynamic creation logic
+        // V37.0: The cell itself is the click target, which calls the dynamic creation logic
         cell.onclick = () => selectZoneAndTriggerUpload(i); 
 
         if (currentPhotoAssignmentData[i]) {
@@ -1099,7 +1096,7 @@ function generatePhotoGrid() {
  * @param {HTMLInputElement} inputElement The dynamically created input to be destroyed.
  */
 function handleLocalPhotoUpload(zoneID, event, inputElement) {
-    // CRITICAL: Ensure the file input element is removed immediately before proceeding.
+    // CRITICAL (V36.0 Visibility Fix): Ensure the file input element is removed immediately before proceeding.
     if (inputElement && inputElement.parentNode) {
         inputElement.parentNode.removeChild(inputElement);
     }
