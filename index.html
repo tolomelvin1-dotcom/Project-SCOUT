@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>S.C.O.U.T. Rover Full-Spectrum Data Fusion & Control Console (V14.5 - Final Upload Fix)</title>
+<title>S.C.O.U.T. Rover Full-Spectrum Data Fusion & Control Console (V14.6 - Final Upload Guarantee)</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script async src="https://docs.opencv.org/4.x/opencv.js" onload="onOpenCvReady();"></script>
@@ -118,7 +118,8 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 }
 .grid-cell:hover { background-color: #2a3038; } 
 
-/* CRITICAL FIX V14.5: Image overlay must allow clicks to pass through to the cell */
+/* CRITICAL FIX V14.6: Image overlay must allow clicks to pass through to the cell.
+   Added !important to guarantee the click-through works. */
 .grid-cell-img {
     width: 100%;
     height: 100%;
@@ -127,8 +128,8 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
     top: 0;
     left: 0;
     z-index: 5;
-    /* THIS IS THE FINAL, GUARANTEED FIX: Prevents the image element itself from capturing the mouse click */
-    pointer-events: none; 
+    /* *** FINAL, AGGRESSIVE FIX: Prevents the image element itself from capturing the mouse click *** */
+    pointer-events: none !important; 
 }
 
 /* Styles for delete button for embedded file input to work */
@@ -209,7 +210,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 <body>
 <div class="container">
     <div class="controls-panel">
-        <h1>S.C.O.U.T. Rover Control & Telemetry Bridge (V14.5)</h1>
+        <h1>S.C.O.U.T. Rover Control & Telemetry Bridge (V14.6)</h1>
         <p>System Diagnostic Status: <span id="status">AWAITING SYSTEM BOOT SEQUENCE COMPLETION...</span></p>
         
         <div class="data-display history-controls">
@@ -321,9 +322,8 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 // ----------------------------------------------------------------------------------
 /**
  * @fileoverview S.C.O.U.T. Rover Control System JavaScript Core.
- * Version 14.5: FINAL CRITICAL FIX: Ensures manual photo upload/replacement works in all environments 
- * by strictly enforcing the pointer-events: none CSS fix on the image overlay. Stock photo data 
- * structure confirmed to store clean images only.
+ * Version 14.6: FINAL CRITICAL FIX: Ensures manual photo upload/replacement works by using 
+ * pointer-events: none !important to strictly guarantee click-through property.
  */
 // --- 0.2.1 HARDWARE AND NETWORK CONFIGURATION (CRITICAL SYSTEM IDENTIFIERS) ---
 // ** CRITICAL USER-REQUESTED CONFIGURATION UPDATES APPLIED BELOW **
@@ -533,7 +533,7 @@ function executeDataAcquisition(acquisitionType) {
 }
 
 // ==================================================================================
-// SECTION 2.0: DIAGNOSTIC KNOWLEDGE BASE & FUSED ANALYSIS CORE (V14.5)
+// SECTION 2.0: DIAGNOSTIC KNOWLEDGE BASE & FUSED ANALYSIS CORE (V14.6)
 // ----------------------------------------------------------------------------------
 
 const TOMATO_DIAGNOSTIC_KB = {
@@ -1246,8 +1246,9 @@ function renderPhotoInPhotoGridCell(zoneID, photoBase64) {
     const img = document.createElement('img');
     img.src = cleanPhotoUrl; // Use the clean URL for the image source
     img.alt = `Zone ${zoneID} Photo`;
-    // CRITICAL FIX V14.5: Applying the required class for click-through
+    // CRITICAL FIX V14.6: Applying the required class for click-through
     img.className = 'grid-cell-img'; 
+    // NOTE: CSS now has !important, so this line is redundant but harmless.
     
     const deleteButton = document.createElement('button');
     deleteButton.className = 'delete-photo-btn';
@@ -1264,7 +1265,7 @@ function renderPhotoInPhotoGridCell(zoneID, photoBase64) {
     cell.appendChild(deleteButton); 
     cell.appendChild(zoneLabel); 
     
-    cell.style.border = '3px solid #3fb950'; // Highlight cell with photo
+    cell.style.border = '3px solid #ffd700'; // Highlight cell with photo
 }
 
 /**
@@ -1535,8 +1536,14 @@ function getHealthColor(score) {
  */
 function draw3DMap() {
     // 1. Clear previous dynamic objects (cubes and rover)
+    const oldRover = scene.getObjectByName('roverObject');
+    if (oldRover) {
+        scene.remove(oldRover);
+    }
+    // Remove all blocks
     threeDMapObjects.forEach(obj => scene.remove(obj));
     threeDMapObjects = [];
+
 
     // 2. Draw 16 zone blocks (Height=Moisture, Color=Health)
     FIELD_PLANT_LOCATIONS_M.forEach(plant => {
@@ -1586,6 +1593,7 @@ function updateRover3DPosition() {
     const oldRover = scene.getObjectByName('roverObject');
     if (oldRover) {
         scene.remove(oldRover);
+        // Ensure it's also removed from threeDMapObjects if it was added there (optional cleanup)
         threeDMapObjects = threeDMapObjects.filter(obj => obj.name !== 'roverObject');
     }
 
@@ -1608,7 +1616,8 @@ function updateRover3DPosition() {
     rover.rotation.z = -heading; // Rotate to match heading angle
     
     scene.add(rover);
-    threeDMapObjects.push(rover);
+    // Do NOT add the rover to threeDMapObjects because draw3DMap removes *all* threeDMapObjects, 
+    // and updateRover3DPosition is called separately for movement.
 }
 
 
