@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>S.C.O.U.T. Rover Post-Flood Data Fusion & Control Console (V39.0 - Visibility Stack & Zone Selector Fix)</title>
+<title>S.C.O.U.T. Rover Post-Flood Data Fusion & Control Console (V40.0 - Definitive Z-Stack Enforcement)</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script async src="https://docs.opencv.org/4.x/opencv.js" onload="onOpenCvReady();"></script>
@@ -113,7 +113,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 .grid-cell {
     background-color: #21262d;
     border: 1px solid #3fb950;
-    position: relative;
+    position: relative; /* CRITICAL for Z-index to work */
     overflow: hidden;
     aspect-ratio: 1/1;
     display: flex;
@@ -124,7 +124,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
     font-weight: bold;
     color: #4ac9b0;
     transition: border 0.2s, background-color 0.2s;
-    cursor: pointer; /* Ensure the cell is clickable */
+    cursor: pointer; 
 }
 .grid-cell:hover { border: 3px solid #79c0ff; background-color: #2a3038; } 
 
@@ -184,7 +184,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
     right: 5px;
     padding: 2px 5px;
     font-size: 0.8em;
-    z-index: 100; /* CRITICAL: Must be highest for accessibility */
+    z-index: 100 !important; /* CRITICAL: MUST be 100 for top-most layer, as requested */
     background-color: #f85149;
     color: #0d1117;
     border-radius: 50%;
@@ -196,16 +196,22 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
     text-align: center;
     z-index: 0; 
 }
-/* CRITICAL V39.0 FIX: Style for the image, making it higher than the hidden input */
+/* CRITICAL V40.0 FIX: Style for the image, making it the highest layer, just under the X button */
 .grid-cell img {
-    z-index: 10 !important; /* Higher than file input's z-index 5 */
+    /* Enforce full coverage and high z-index */
+    position: absolute; 
+    width: 100%; 
+    height: 100%; 
+    top: 0; 
+    left: 0;
+    z-index: 99 !important; /* CRITICAL: Must be just below 100 for the delete button */
 }
 </style>
 </head>
 <body>
 <div class="container">
     <div class="controls-panel">
-        <h1>S.C.O.U.T. Post-Flood Assessment Bridge (V39.0)</h1>
+        <h1>S.C.O.U.T. Post-Flood Assessment Bridge (V40.0)</h1>
         <p>System Diagnostic Status: <span id="status">AWAITING SYSTEM BOOT SEQUENCE COMPLETION...</span></p>
 
         <div class="data-display history-controls">
@@ -251,7 +257,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
                 <label style="color:#79c0ff;">K (ppm): <input type="number" id="manualK" min="1" value="150" style="width: 50px;"></label>
             </div>
             <button onclick="dispatchManualDataEntry()" style="background-color: #e341b3; color: #0d1117;">  📝  SUBMIT MANUAL DATA + PHOTO</button>
-            <p><small>**V39.0 Fix:** Select the zone above, then click the button. The photo upload will open automatically.</small></p>
+            <p><small>**V40.0 Fix:** Visibility enforced. The photo layer (Z-99) is only obscured by the 'X' button (Z-100).</small></p>
         </div>
 
         <div class="data-display">
@@ -328,7 +334,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 </div>
 
 <footer>
-    <p>&copy; 2025 S.C.O.U.T. Rover Systems - Operational Bridge V39.0. Hardware ESP32 IP: 10.101.146.88 | ThingSpeak API: 6OXH3SUQ4VNSOJX1</p>
+    <p>&copy; 2025 S.C.O.U.T. Rover Systems - Operational Bridge V40.0. Hardware ESP32 IP: 10.101.146.88 | ThingSpeak API: 6OXH3SUQ4VNSOJX1</p>
 </footer>
 
 <script>
@@ -337,8 +343,8 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 // ----------------------------------------------------------------------------------
 /**
  * @fileoverview S.C.O.U.T. Rover Control System JavaScript Core.
- * Version 39.0: Visibility Stack & Zone Selector Fix - Guarantees photo visibility 
- * and adds dedicated zone selector to manual entry.
+ * Version 40.0: Definitive Z-Stack Enforcement - Guarantees photo visibility 
+ * by setting Z-index 99 for image, and Z-index 100 for 'X' delete button.
  */
 // --- 0.2.1 HARDWARE AND NETWORK CONFIGURATION (CRITICAL SYSTEM IDENTIFIERS) ---
 const HARDWARE_ESP32_IP_ADDRESS = '10.101.146.88'; 
@@ -576,7 +582,7 @@ function dispatchManualDataEntry() {
     // 2. V39.0: Update the current state to highlight the zone visually
     selectZone(zoneID); 
     
-    // 3. CRITICAL V38.0/V39.0 Fused Entry Fix: Programmatically click the file input
+    // 3. CRITICAL Fused Entry Fix: Programmatically click the file input
     const fileInput = document.getElementById(`fileInput-${zoneID}`);
     if (fileInput) {
         fileInput.click();
@@ -815,7 +821,7 @@ function generatePlantAnalysisCardHTML(zoneID, result) {
                 <div class="${scoreClass}">${result.rec_sensor}</div>
             </div>
 
-            <h3>DATA FUSION ENGINE: Detailed Report (V39.0)</h3>
+            <h3>DATA FUSION ENGINE: Detailed Report (V40.0)</h3>
             <pre style="white-space: pre-wrap; word-wrap: break-word; background: #0f131a; padding: 15px; border-radius: 8px; border: 1px solid #30363d; font-size: 0.9em;">${result.analysis}</pre>
         </div>
     `;
@@ -1048,7 +1054,7 @@ function animate() {
 
 
 // ==================================================================================
-// SECTION 5.0: UTILITY & UI FUNCTIONS (Photo Grid - V39.0 FIX CORE)
+// SECTION 5.0: UTILITY & UI FUNCTIONS (Photo Grid - V40.0 FIX CORE)
 // ----------------------------------------------------------------------------------
 
 /**
@@ -1082,7 +1088,7 @@ function selectZone(zoneID) {
 
 
 /**
- * V39.0: Creates and renders the photo grid cells using the PIVO protocol.
+ * V40.0: Creates and renders the photo grid cells using the PIVO protocol.
  * Each cell contains a permanent, invisible file input that acts as the click area.
  */
 function generatePhotoGrid() {
@@ -1096,14 +1102,14 @@ function generatePhotoGrid() {
         // V39.0: Click the cell to select it (for highlighting/stock photo modal). The file input handles the upload dialog.
         cell.onclick = () => selectZone(i); 
 
-        // V38.0: PIVO Protocol - Create the permanent, invisible file input
+        // V40.0: PIVO Protocol - Create the permanent, invisible file input
         const fileInput = document.createElement('input');
         fileInput.type = 'file';
         fileInput.accept = 'image/*';
         fileInput.id = `fileInput-${i}`; 
         
-        // V39.0 CRITICAL FIX: Set file input Z-index low to ensure image is visible over it
-        fileInput.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; z-index: 5; cursor: pointer; pointer-events: auto;'; 
+        // V40.0 CRITICAL FIX: Set file input Z-index low (1) to ensure image (99) completely covers it
+        fileInput.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; z-index: 1; cursor: pointer; pointer-events: auto;'; 
         
         fileInput.onchange = (e) => handleLocalPhotoUpload(i, e, fileInput);
         cell.appendChild(fileInput);
@@ -1124,7 +1130,7 @@ function generatePhotoGrid() {
 }
 
 /**
- * V39.0: Handles file upload event from the *permanent* input.
+ * V40.0: Handles file upload event from the *permanent* input.
  */
 function handleLocalPhotoUpload(zoneID, event, inputElement) {
     const file = event.target.files[0];
@@ -1134,7 +1140,7 @@ function handleLocalPhotoUpload(zoneID, event, inputElement) {
             const mockDiagnosis = (zoneID % 4 === 0) ? 'Edging Burn/Tip Necrosis (K/Salt)' : 'Healthy, Deep Green Foliage';
             const dataUrlWithMockDiagnosis = e.target.result.replace('base64,', `base64,mocked_user_upload_diag:${mockDiagnosis.replace(/\s/g, '_').replace(/[()]/g, '')},`);
             
-            // V39.0 CRITICAL FIX: Ensure the state is updated and photo is rendered
+            // CRITICAL FIX: Ensure the state is updated and photo is rendered
             renderPhotoInPhotoGridCell(zoneID, dataUrlWithMockDiagnosis, inputElement, true); 
             
             STATUS_ELEMENT.innerText = `User photo uploaded and assigned to Zone ${zoneID}. Visibility guaranteed by Z-Stack.`;
@@ -1149,7 +1155,8 @@ function handleLocalPhotoUpload(zoneID, event, inputElement) {
 }
 
 /**
- * V39.0 CRITICAL FIX: Ensures correct z-indexing and element state for image visibility.
+ * V40.0 CRITICAL FIX: Enforces z-indexing to guarantee image visibility.
+ * Image is Z-99. Input is Z-1. Delete Button is Z-100.
  */
 function renderPhotoInPhotoGridCell(zoneID, dataUrl, fileInput, triggerAnalysis = true) {
     const cell = document.getElementById(`zoneCell-${zoneID}`);
@@ -1158,18 +1165,18 @@ function renderPhotoInPhotoGridCell(zoneID, dataUrl, fileInput, triggerAnalysis 
     // 1. Clear placeholder text / old elements, but PRESERVE the file input
     cell.querySelectorAll(':not(input[type="file"])').forEach(el => el.remove());
 
-    // CRITICAL FIX: Disable pointer events on the input to let the image be clicked on (though cell click handles the logic)
-    // The image now has a higher Z-index (10 vs 5), making it visually dominant.
+    // CRITICAL FIX: Disable pointer events on the input to ensure it can't accidentally capture clicks
+    // The input's z-index is 1, image is 99. The image covers it.
     fileInput.style.pointerEvents = 'none';
     
     // 2. Create and append Image element 
     const img = document.createElement('img');
     img.src = dataUrl;
-    // V39.0: Set z-index to 10 via CSS class/style to ensure it's OVER the input (z-index 5)
-    img.style.cssText = 'width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 10;'; 
+    // V40.0: Set z-index to 99 via inline style to ensure it's OVER the input (z-index 1) and just under the delete button (z-index 100)
+    img.style.cssText = 'width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 99 !important;'; 
     cell.appendChild(img);
 
-    // 3. Create and append delete button (z-index 100)
+    // 3. Create and append delete button (z-index 100 in CSS)
     const deleteBtn = document.createElement('button');
     deleteBtn.className = 'delete-photo-btn';
     deleteBtn.innerHTML = 'X';
@@ -1196,7 +1203,7 @@ function deletePhotoAssignment(zoneID) {
         // Clear all elements (image, delete button) but keep the input
         cell.querySelectorAll(':not(input[type="file"])').forEach(el => el.remove());
         
-        // V39.0 CRITICAL FIX: Re-enable pointer events on the hidden input to make it clickable
+        // CRITICAL FIX: Re-enable pointer events on the hidden input to make it clickable
         if (fileInput) {
             fileInput.style.pointerEvents = 'auto';
         }
