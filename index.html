@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>S.C.O.U.T. Rover Full-Spectrum Data Fusion & Control Console (V26.0 - Upload/3D Attachment Fix)</title>
+<title>S.C.O.U.T. Rover Full-Spectrum Data Fusion & Control Console (V27.0 - Photo/3D Color Fix)</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script async src="https://docs.opencv.org/4.x/opencv.js" onload="onOpenCvReady();"></script>
@@ -238,7 +238,7 @@ footer {
 <body>
 <div class="container">
     <div class="controls-panel">
-        <h1>S.C.O.U.T. Rover Control & Telemetry Bridge (V26.0)</h1>
+        <h1>S.C.O.U.T. Rover Control & Telemetry Bridge (V27.0)</h1>
         <p>System Diagnostic Status: <span id="status">AWAITING SYSTEM BOOT SEQUENCE COMPLETION...</span></p>
 
         <div class="data-display history-controls">
@@ -355,7 +355,7 @@ footer {
 </div>
 
 <footer>
-    <p>&copy; 2025 S.C.O.U.T. Rover Systems - Operational Bridge V26.0. Hardware ESP32 IP: 10.101.146.88 | ThingSpeak API: 6OXH3SUQ4VNSOJX1</p>
+    <p>&copy; 2025 S.C.O.U.T. Rover Systems - Operational Bridge V27.0. Hardware ESP32 IP: 10.101.146.88 | ThingSpeak API: 6OXH3SUQ4VNSOJX1</p>
 </footer>
 
 <script>
@@ -364,7 +364,7 @@ footer {
 // ----------------------------------------------------------------------------------
 /**
  * @fileoverview S.C.O.U.T. Rover Control System JavaScript Core.
- * Version 26.0: CRITICAL Photo Upload Fix (Overlay), Direct Leaf-to-Stem Attachment.
+ * Version 27.0: CRITICAL Photo Visibility Fix, 3D Leaf Material Fix (Unique per plant).
  */
 // --- 0.2.1 HARDWARE AND NETWORK CONFIGURATION (CRITICAL SYSTEM IDENTIFIERS) ---
 const HARDWARE_ESP32_IP_ADDRESS = '10.101.146.88'; // <<< CRITICAL: IP ADDRESS UPDATED
@@ -376,7 +376,7 @@ const MAP_CANVAS_PIXELS = 480;
 const MAX_STOCK_PHOTOS = 50;
 const PLANT_CIRCLE_RADIUS = 5;
 const SCORE_CAP_ON_PARTIAL_DATA = 50;
-// --- 0.2.3 DIAGNOSTIC CONSTANTS (V26.0 - HEALTH SCORE AND THRESHOLDS) ---
+// --- 0.2.3 DIAGNOSTIC CONSTANTS (V27.0 - HEALTH SCORE AND THRESHOLDS) ---
 const HEALTH_SCORE_THRESHOLDS = {
     CRITICAL: { max: 40, color: '#f85149', label: 'CRITICAL', class: 'rec-critical' }, // Red (0-40)
     ACTION_REQUIRED: { max: 75, color: '#e3b341', label: 'ACTION REQUIRED', class: 'rec-action' }, // Amber (41-75)
@@ -472,15 +472,15 @@ function dispatchRoverMovementCommand(commandIdentifier) {
             // Mock capture assignment
             const mockDataUrl = `data:image/jpeg;base64,mocked_rover_capture_zone_${zoneID}_diag:${mockDiagnosis.replace(/\s/g, '_').replace(/[()]/g, '')}`;
 
-            // *** CRITICAL V26.0: Now we just assign the photo and trigger analysis ***
+            // *** CRITICAL V27.0: Now we just assign the photo and trigger analysis ***
             currentPhotoAssignmentData[zoneID] = mockDataUrl;
-            renderPhotoInPhotoGridCell(zoneID, mockDataUrl);
+            renderPhotoInPhotoGridCell(zoneID, mockDataUrl); // Call the fixed rendering function
             
             // Set the zone selection explicitly after capture
             selectZone(zoneID);
 
             STATUS_ELEMENT.innerText = `Photo captured and assigned to nearest Zone ${zoneID}. Triggering Analysis.`;
-            triggerComprehensiveAnalysisCycle();
+            // Analysis is triggered inside renderPhotoInPhotoGridCell
         } else {
             // Simulate Rover Kinematics Update (0.1m step)
             const step = 0.1;
@@ -571,7 +571,7 @@ function executeDataAcquisition(acquisitionType) {
 }
 
 /**
- * V26.0: Submits manually entered sensor data. Confirms current zone must be selected.
+ * V27.0: Submits manually entered sensor data. Confirms current zone must be selected.
  */
 function dispatchManualDataEntry() {
     if (currentlySelectedPlantZone === 0) {
@@ -613,7 +613,7 @@ function dispatchManualDataEntry() {
 
 
 // ==================================================================================
-// SECTION 2.0: DIAGNOSTIC KNOWLEDGE BASE & FUSED ANALYSIS CORE (V26.0)
+// SECTION 2.0: DIAGNOSTIC KNOWLEDGE BASE & FUSED ANALYSIS CORE (V27.0)
 // ----------------------------------------------------------------------------------
 // Base knowledge for photo analysis and associated score penalties
 const TOMATO_DIAGNOSTIC_KB = {
@@ -625,7 +625,7 @@ const TOMATO_DIAGNOSTIC_KB = {
 };
 
 /**
- * V26.0 CORE FUNCTION: Calculates health score and generates the detailed analysis.
+ * V27.0 CORE FUNCTION: Calculates health score and generates the detailed analysis.
  */
 function getDiagnosisAndRecommendations(plantData) {
     let totalHealthScore = 100;
@@ -768,7 +768,7 @@ function getLatestSensorDataForZone(zoneID) {
 }
 
 /**
- * V26.0: Main analysis loop. Updates 2D map and 3D visualization.
+ * V27.0: Main analysis loop. Updates 2D map and 3D visualization.
  */
 function triggerComprehensiveAnalysisCycle() {
     const analysisGrid = document.getElementById('plantAnalysisGrid');
@@ -793,13 +793,20 @@ function triggerComprehensiveAnalysisCycle() {
             // Case 1: No data for this zone
             analysisResult = {
                 score: NaN,
-                color: HEALTH_SCORE_THRESHOLDS.CRITICAL.color, 
+                color: HEALTH_SCORE_THRESHOLDS.OPTIMAL.color, // Use optimal color as default for 3D/2D circle
                 border: '#58a6ff',
                 analysis: 'Awaiting both image and sensor data for this zone. No diagnosis possible.',
                 rec_cv: '<span class="rec-no-data">N/A: No photo data available.</span>',
                 rec_sensor: '<span class="rec-no-data">N/A: No sensor data available.</span>',
                 rec_fused: '<span class="rec-no-data">**AWAITING DATA:** Please move the rover to this zone (X: ${zone.x}, Y: ${zone.y}) to acquire at least a soil reading and an image.</span>'
             };
+            
+            // Set 3D data structure defaults
+            const index = zone.id - 1;
+            field3DData[index].moisture = 50; 
+            field3DData[index].healthScore = 75;
+            field3DData[index].color = HEALTH_SCORE_THRESHOLDS.OPTIMAL.color;
+
         } else {
             // Case 2: Run the full (or partial) analysis
             analysisResult = getDiagnosisAndRecommendations({
@@ -856,7 +863,7 @@ function generatePlantAnalysisCardHTML(zoneID, result) {
                 <div class="${scoreClass}">${result.rec_sensor}</div>
             </div>
 
-            <h3>DATA FUSION ENGINE: Detailed Report (V26.0)</h3>
+            <h3>DATA FUSION ENGINE: Detailed Report (V27.0)</h3>
             <pre style="white-space: pre-wrap; word-wrap: break-word; background: #0f131a; padding: 15px; border-radius: 8px; border: 1px solid #30363d; font-size: 0.9em;">${result.analysis}</pre>
         </div>
     `;
@@ -869,7 +876,7 @@ function renderNoDataCards() {
     FIELD_PLANT_LOCATIONS_M.forEach(zone => {
         const result = {
                 score: NaN,
-                color: '#58a6ff',
+                color: HEALTH_SCORE_THRESHOLDS.OPTIMAL.color,
                 border: '#58a6ff',
                 analysis: 'System initialized. Awaiting first data acquisition (image or sensor reading) for a zone diagnosis.',
                 rec_cv: '<span class="rec-no-data">Awaiting Photo.</span>',
@@ -881,7 +888,7 @@ function renderNoDataCards() {
 }
 
 // ==================================================================================
-// SECTION 3.0: 2D MAP VISUALIZATION
+// SECTION 3.0: 2D MAP VISUALIZATION (No changes)
 // ----------------------------------------------------------------------------------
 function updateMapVisualization() {
     const ctx = MAP_CONTEXT;
@@ -967,7 +974,7 @@ function findNearestPlantZone(x_m, y_m) {
 }
 
 // ==================================================================================
-// SECTION 4.0: 3D VISUALIZATION CORE (V26.0 - OVAL LEAVES ATTACHMENT FIX)
+// SECTION 4.0: 3D VISUALIZATION CORE (V27.0 - MATERIAL FIX APPLIED)
 // ----------------------------------------------------------------------------------
 let scene, camera, renderer, controls;
 let plantCubes = []; 
@@ -1022,20 +1029,20 @@ function initThreeD() {
 }
 
 /**
- * V26.0 FIX: Creates the stem (cylinder) and multiple oval-like leaf shapes
- * ATTACHED DIRECTLY to the top of the stem.
+ * V27.0 FIX: Creates a unique material for each plant group to allow individual color changes.
  */
 function drawFieldCubes() {
     // 1. Stem Geometry (Cylinder)
     const stemGeometry = new THREE.CylinderGeometry(0.05, 0.05, 1, 8); // Base height 1
-    const leafMaterial = new THREE.MeshLambertMaterial({ color: 0x3fb950 }); 
     const offset = FIELD_GRID_SIZE_M / 2;
 
     FIELD_PLANT_LOCATIONS_M.forEach((plant) => {
+        // V27.0 FIX: Create a unique material for each plant group's leaves
+        const individualLeafMaterial = new THREE.MeshLambertMaterial({ color: 0x3fb950 }); 
+        
         // Stem (will be scaled later)
         const stemMaterial = new THREE.MeshLambertMaterial({ color: 0x472e1e }); // Brown
         const stem = new THREE.Mesh(stemGeometry, stemMaterial);
-        // Initial position is 0,0,0. It will be moved up/scaled in draw3DMap
 
         // Leaf Assembly Group
         const leafGroup = new THREE.Group();
@@ -1046,18 +1053,19 @@ function drawFieldCubes() {
         // Create multiple leaves connected to the group/stem
         const numLeaves = 6;
         for (let i = 0; i < numLeaves; i++) {
-            const leaf = new THREE.Mesh(leafBaseGeometry, leafMaterial);
+            // CRITICAL V27.0 FIX: Use the unique material object
+            const leaf = new THREE.Mesh(leafBaseGeometry, individualLeafMaterial); 
             
             // Position/Rotation for canopy
             const angle = (i / numLeaves) * Math.PI * 2;
             const radius = 0.15; // Small radius for attachment point
 
-            // V26.0 FIX: Position leaves slightly out from the center (0,0) of the leaf group origin
+            // Position leaves slightly out from the center (0,0) of the leaf group origin
             leaf.position.x = radius * Math.cos(angle);
             leaf.position.z = radius * Math.sin(angle);
             leaf.position.y = 0.0; // All leaves start exactly at the group's origin (y=0)
 
-            // V26.0 FIX: Rotate to face outward
+            // Rotate to face outward
             leaf.rotation.y = angle + Math.PI / 2; // Point the long axis outward
             leaf.rotation.x = Math.PI / 8; // Slight downward pitch
             
@@ -1069,13 +1077,19 @@ function drawFieldCubes() {
         plantGroup.add(stem);
         plantGroup.add(leafGroup); 
         
-        // Position the whole group in the 3D scene
+        // Position the whole group in the 3D scene (Center map to origin)
         plantGroup.position.x = plant.x - offset;
         plantGroup.position.z = plant.y - offset;
         plantGroup.position.y = 0; 
 
         // CRITICAL: Store the components for individual updates
-        plantCubes.push({ group: plantGroup, stem: stem, leaves: leafGroup, id: plant.id });
+        plantCubes.push({ 
+            group: plantGroup, 
+            stem: stem, 
+            leaves: leafGroup, 
+            id: plant.id,
+            material: individualLeafMaterial // Store the unique material reference for easy update
+        });
         scene.add(plantGroup);
     });
     
@@ -1089,7 +1103,7 @@ function drawFieldCubes() {
 }
 
 /**
- * V26.0 FIX: Updates the plant structure's height and color, ensuring direct attachment.
+ * V27.0 FIX: Uses the unique material reference to update color without affecting other plants.
  */
 function draw3DMap() {
     plantCubes.forEach((plantObj, index) => {
@@ -1107,24 +1121,19 @@ function draw3DMap() {
         // Stem center must be at stemHeight/2 to keep the base at Y=0
         plantObj.stem.position.y = stemHeight / 2; 
         
-        // V26.0 FIX: Leaves group origin must be exactly at the top of the stem (y=stemHeight)
-        // Since leaves are positioned at Y=0 relative to the group, they will start here.
+        // Leaves group origin must be exactly at the top of the stem (y=stemHeight)
         plantObj.leaves.position.y = stemHeight; 
 
         // 2. Update Color (Health Score) - Changes leaf color
         const newColor = new THREE.Color(data.color);
-        // Change the color of ALL leaf meshes in the group
-        plantObj.leaves.children.forEach(leafMesh => {
-            if (leafMesh.material) {
-                leafMesh.material.color.set(newColor);
-            }
-        });
+        
+        // CRITICAL V27.0 FIX: Change the material color directly using the stored reference
+        plantObj.material.color.set(newColor);
     });
 }
 
 function updateRover3DPosition() {
     // Kinematic updates in 3D are currently not visualized in this iteration 
-    // to maintain focus on the stationary plant data visualization.
 }
 
 function onWindowResize() {
@@ -1142,11 +1151,11 @@ function animate() {
 
 
 // ==================================================================================
-// SECTION 5.0: UTILITY & UI FUNCTIONS (History, Modals, Initialization - V26.0)
+// SECTION 5.0: UTILITY & UI FUNCTIONS (Photo Grid - V27.0 FIX)
 // ----------------------------------------------------------------------------------
 
 /**
- * V26.0: Simple function to set the currently active zone for UI highlighting and manual data entry.
+ * V27.0: Simple function to set the currently active zone for UI highlighting and manual data entry.
  */
 function selectZone(zoneID) {
     currentlySelectedPlantZone = zoneID;
@@ -1161,7 +1170,7 @@ function selectZone(zoneID) {
 }
 
 /**
- * V26.0 FIX: Uses a transparent file input overlay to ensure browser security allows upload.
+ * V27.0 FIX: Re-renders the photo grid, preserving the file input and fixing the render loop.
  */
 function generatePhotoGrid() {
     const grid = document.getElementById('photoGrid');
@@ -1171,11 +1180,11 @@ function generatePhotoGrid() {
         cell.className = 'grid-cell';
         cell.id = `zoneCell-${i}`;
         
-        // 1. CRITICAL V26.0 FIX: Transparent File Input Overlay
+        // 1. CRITICAL: Transparent File Input Overlay
         const fileInput = document.createElement('input');
         fileInput.type = 'file';
         fileInput.accept = 'image/*';
-        fileInput.setAttribute('data-zone-id', i); // Custom attribute to identify the zone
+        fileInput.setAttribute('data-zone-id', i); 
         fileInput.style.cssText = `
             opacity: 0; 
             position: absolute; 
@@ -1183,73 +1192,81 @@ function generatePhotoGrid() {
             width: 100%; 
             height: 100%; 
             cursor: pointer;
-            z-index: 5; /* Below the delete button (10), above the image/text */
+            z-index: 5;
         `;
         
-        // Attach the main file handler
         fileInput.onchange = handlePhotoUpload; 
         
-        cell.appendChild(fileInput);
+        cell.appendChild(fileInput); // Add the file input first
         
-        // 2. Simple click handler for visual selection/highlighting (the file input click is now native)
+        // 2. Simple click handler for visual selection/highlighting
         cell.onclick = () => selectZone(i); 
 
-        // 3. Photo display content
+        // 3. Render content if photo exists, otherwise render placeholder text
         if (currentPhotoAssignmentData[i]) {
-            renderPhotoInPhotoGridCell(i, currentPhotoAssignmentData[i]);
+            // Note: renderPhotoInPhotoGridCell will handle clearing the cell's old placeholder/content
+            renderPhotoInPhotoGridCell(i, currentPhotoAssignmentData[i], false); // The false flag prevents double-triggering analysis on load
         } else {
-            // Inner HTML is positioned *behind* the transparent input
-            cell.innerHTML += `Zone ${i}<br>CLICK TO UPLOAD`;
+            // Inner HTML (Placeholder text)
+            const textNode = document.createElement('div');
+            textNode.innerHTML = `Zone ${i}<br>CLICK TO UPLOAD`;
+            textNode.style.zIndex = '0'; // Ensure it's under the file input
+            cell.appendChild(textNode);
         }
         
         grid.appendChild(cell);
     }
 }
 
-function renderPhotoInPhotoGridCell(zoneID, dataUrl) {
+/**
+ * V27.0 FIX: Uses robust DOM manipulation to clear the cell and re-attach elements 
+ * in the correct order, ensuring the image is visible (z-index 1).
+ */
+function renderPhotoInPhotoGridCell(zoneID, dataUrl, triggerAnalysis = true) {
     const cell = document.getElementById(`zoneCell-${zoneID}`);
     if (!cell) return;
     
-    // CRITICAL: Find and keep the file input, then clear the rest of the cell content
+    // 1. Find the file input (must be preserved and re-appended)
     const fileInput = cell.querySelector('input[type="file"]');
-    cell.innerHTML = ''; 
-    if (fileInput) {
-        cell.appendChild(fileInput); // Re-attach the file input first
-    }
 
-    // Create image element
+    // 2. V27.0 FIX: Manually remove all existing children *except* the fileInput
+    Array.from(cell.children).forEach(child => {
+        if (child !== fileInput) {
+            cell.removeChild(child);
+        }
+    });
+
+    // 3. Create and append Image element (z-index 1)
     const img = document.createElement('img');
     img.src = dataUrl;
-    img.style.width = '100%';
-    img.style.height = '100%';
-    img.style.objectFit = 'cover';
-    img.style.position = 'absolute';
-    img.style.top = '0';
-    img.style.left = '0';
-    img.style.zIndex = '1';
+    img.style.cssText = 'width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 1;';
+    cell.appendChild(img);
 
-    // Create delete button
+    // 4. Create and append delete button (z-index 10)
     const deleteBtn = document.createElement('button');
     deleteBtn.className = 'delete-photo-btn';
     deleteBtn.innerHTML = 'X';
     deleteBtn.onclick = (e) => {
-        e.stopPropagation(); // Prevent the parent cell click/upload trigger
+        e.stopPropagation(); // Prevent the file input click
         deletePhotoAssignment(zoneID);
     };
-    deleteBtn.style.zIndex = '10'; // Ensure delete is on top
-
-    cell.appendChild(img);
     cell.appendChild(deleteBtn);
     
+    // 5. Ensure the file input is the *last* appended child (z-index 5) 
+    // to guarantee it's on top of the image/delete button for the click-through.
+    cell.appendChild(fileInput);
+
     // Update the assignment data
     currentPhotoAssignmentData[zoneID] = dataUrl;
     
-    // Trigger analysis immediately after photo assignment
-    triggerComprehensiveAnalysisCycle();
+    if (triggerAnalysis) {
+        // Trigger analysis immediately after photo assignment
+        triggerComprehensiveAnalysisCycle();
+    }
 }
 
 /**
- * V26.0: Handles file upload event from the transparent input.
+ * V27.0: Handles file upload event from the transparent input.
  */
 function handlePhotoUpload(event) {
     const fileInput = event.target;
@@ -1269,7 +1286,7 @@ function handlePhotoUpload(event) {
             const dataUrlWithMockDiagnosis = e.target.result.replace('base64,', `base64,mocked_user_upload_diag:${mockDiagnosis.replace(/\s/g, '_').replace(/[()]/g, '')},`);
             
             currentPhotoAssignmentData[zoneID] = dataUrlWithMockDiagnosis;
-            renderPhotoInPhotoGridCell(zoneID, dataUrlWithMockDiagnosis);
+            renderPhotoInPhotoGridCell(zoneID, dataUrlWithMockDiagnosis); // This will trigger analysis
             
             STATUS_ELEMENT.innerText = `User photo uploaded and assigned to Zone ${zoneID}. Diagnosis mocked for now.`;
         };
@@ -1277,7 +1294,6 @@ function handlePhotoUpload(event) {
     } 
     
     // CRITICAL: Reset the file input value so that the 'onchange' event fires again 
-    // if the user uploads the *same* file twice (or cancels and then uploads).
     fileInput.value = '';
 }
 
@@ -1285,13 +1301,25 @@ function deletePhotoAssignment(zoneID) {
     delete currentPhotoAssignmentData[zoneID];
     const cell = document.getElementById(`zoneCell-${zoneID}`);
     if (cell) {
-        // Clear all content except the file input overlay
+        // Find the file input to preserve it
         const fileInput = cell.querySelector('input[type="file"]');
-        cell.innerHTML = '';
-        if (fileInput) {
-            cell.appendChild(fileInput); // Re-attach the file input
-        }
-        cell.innerHTML += `Zone ${zoneID}<br>CLICK TO UPLOAD`;
+        
+        // Clear all content except the file input overlay
+        Array.from(cell.children).forEach(child => {
+            if (child !== fileInput) {
+                cell.removeChild(child);
+            }
+        });
+        
+        // Re-append the placeholder text
+        const textNode = document.createElement('div');
+        textNode.innerHTML = `Zone ${zoneID}<br>CLICK TO UPLOAD`;
+        textNode.style.zIndex = '0';
+        cell.appendChild(textNode);
+        
+        // Ensure file input is on top
+        cell.appendChild(fileInput);
+        
         cell.style.border = '3px solid #ffaa00'; // Keep selected highlight
     }
     // Re-run analysis to update diagnosis without the photo
@@ -1400,8 +1428,9 @@ function restoreTrialFromHistory(trial) {
     
     // Restore UI elements
     document.getElementById('plantAnalysisGrid').innerHTML = trial.analysisResults;
-    updateMapVisualization();
-    draw3DMap(); 
+    
+    // V27.0: Re-run the full cycle to ensure 2D/3D visualizations are updated correctly
+    triggerComprehensiveAnalysisCycle();
     
     // Restore photo grid display
     generatePhotoGrid();
@@ -1483,6 +1512,10 @@ function onDocumentReady() {
     initThreeD();
     populateStockPhotos(); 
     
+    // CRITICAL: Must generate grid first so the cells exist for rendering
+    generatePhotoGrid();
+    
+    // Initialize map/data state
     resetSensorAndMapData(false); 
     
     // CRITICAL FIX: Guarantee analysis view is rendered with the 16 card structure on load.
