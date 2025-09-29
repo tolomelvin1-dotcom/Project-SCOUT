@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>S.C.O.U.T. Rover Post-Flood Data Fusion & Control Console (V40.0 - Definitive Z-Stack Enforcement)</title>
+<title>S.C.O.U.T. Rover Post-Flood Data Fusion & Control Console (V41.0 - Deterministic Scoring)</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script async src="https://docs.opencv.org/4.x/opencv.js" onload="onOpenCvReady();"></script>
@@ -177,14 +177,14 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 .rec-no-data { color: #58a6ff; font-style: italic; } 
 
 
-/* Styles for delete button for embedded file input to work */
+/* V41.0 CRITICAL FIX: Definitive Z-Index Overhaul */
 .delete-photo-btn {
     position: absolute;
     top: 5px;
     right: 5px;
     padding: 2px 5px;
     font-size: 0.8em;
-    z-index: 100 !important; /* CRITICAL: MUST be 100 for top-most layer, as requested */
+    z-index: 1001 !important; /* ULTIMATE TOP LAYER: Ensures it's ONLY thing above the image (1000) */
     background-color: #f85149;
     color: #0d1117;
     border-radius: 50%;
@@ -195,8 +195,9 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
     position: relative;
     text-align: center;
     z-index: 0; 
+    pointer-events: none; /* Ensure it never blocks clicks to the hidden input */
 }
-/* CRITICAL V40.0 FIX: Style for the image, making it the highest layer, just under the X button */
+/* V41.0 CRITICAL FIX: Style for the image, making it the highest layer, just under the X button */
 .grid-cell img {
     /* Enforce full coverage and high z-index */
     position: absolute; 
@@ -204,14 +205,14 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
     height: 100%; 
     top: 0; 
     left: 0;
-    z-index: 99 !important; /* CRITICAL: Must be just below 100 for the delete button */
+    z-index: 1000 !important; /* ABSOLUTE VISIBILITY LAYER: Must be just below 1001 for the delete button */
 }
 </style>
 </head>
 <body>
 <div class="container">
     <div class="controls-panel">
-        <h1>S.C.O.U.T. Post-Flood Assessment Bridge (V40.0)</h1>
+        <h1>S.C.O.U.T. Post-Flood Assessment Bridge (V41.0)</h1>
         <p>System Diagnostic Status: <span id="status">AWAITING SYSTEM BOOT SEQUENCE COMPLETION...</span></p>
 
         <div class="data-display history-controls">
@@ -257,7 +258,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
                 <label style="color:#79c0ff;">K (ppm): <input type="number" id="manualK" min="1" value="150" style="width: 50px;"></label>
             </div>
             <button onclick="dispatchManualDataEntry()" style="background-color: #e341b3; color: #0d1117;">  📝  SUBMIT MANUAL DATA + PHOTO</button>
-            <p><small>**V40.0 Fix:** Visibility enforced. The photo layer (Z-99) is only obscured by the 'X' button (Z-100).</small></p>
+            <p><small>**V41.0 Fix:** Photo visibility is now **Z-1000** for absolute dominance. Analysis is **deterministic** (not random).</small></p>
         </div>
 
         <div class="data-display">
@@ -305,7 +306,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 
     <div class="plant-analysis-panel">
         <h2>DATA FUSION ENGINE: Post-Flood Plant Diagnosis (16 Zones)  🔬  </h2>
-        <p>This panel displays the **FUSED** assessment: **Leaf Visual Pre-Assessment (CV)** + **Local Soil Sensor Data**.</p>
+        <p>This panel displays the **FUSED** assessment: **Leaf Visual Pre-Assessment (CV)** + **Local Soil Sensor Data**. **(V41.0: Results are based on fixed, deterministic zone conditions)**.</p>
         <div id="plantAnalysisGrid">
         </div>
     </div>
@@ -334,7 +335,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 </div>
 
 <footer>
-    <p>&copy; 2025 S.C.O.U.T. Rover Systems - Operational Bridge V40.0. Hardware ESP32 IP: 10.101.146.88 | ThingSpeak API: 6OXH3SUQ4VNSOJX1</p>
+    <p>&copy; 2025 S.C.O.U.T. Rover Systems - Operational Bridge V41.0. Hardware ESP32 IP: 10.101.146.88 | ThingSpeak API: 6OXH3SUQ4VNSOJX1</p>
 </footer>
 
 <script>
@@ -343,8 +344,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 // ----------------------------------------------------------------------------------
 /**
  * @fileoverview S.C.O.U.T. Rover Control System JavaScript Core.
- * Version 40.0: Definitive Z-Stack Enforcement - Guarantees photo visibility 
- * by setting Z-index 99 for image, and Z-index 100 for 'X' delete button.
+ * Version 41.0: Ultimate Visibility Layering (Z-1000/1001) and Deterministic Scoring.
  */
 // --- 0.2.1 HARDWARE AND NETWORK CONFIGURATION (CRITICAL SYSTEM IDENTIFIERS) ---
 const HARDWARE_ESP32_IP_ADDRESS = '10.101.146.88'; 
@@ -356,7 +356,7 @@ const MAP_CANVAS_PIXELS = 480;
 const MAX_STOCK_PHOTOS = 50;
 const PLANT_CIRCLE_RADIUS = 5;
 const SCORE_CAP_ON_PARTIAL_DATA = 50;
-// --- 0.2.3 DIAGNOSTIC CONSTANTS (V37.0 - HEALTH SCORE AND THRESHOLDS) ---
+// --- 0.2.3 DIAGNOSTIC CONSTANTS (V41.0 - HEALTH SCORE AND THRESHOLDS) ---
 const HEALTH_SCORE_THRESHOLDS = {
     CRITICAL: { max: 40, color: '#f85149', label: 'CRITICAL', class: 'rec-critical' }, // Red (0-40)
     ACTION_REQUIRED: { max: 75, color: '#e3b341', label: 'ACTION REQUIRED', class: 'rec-action' }, // Amber (41-75)
@@ -381,6 +381,35 @@ const HISTORY_MODAL = document.getElementById('historyModal');
 const STOCK_MODAL = document.getElementById('stockImageModal');
 const CURRENT_ZONE_SELECTION_DISPLAY = document.getElementById('currentZoneSelection');
 const MANUAL_TARGET_ZONE_SELECT = document.getElementById('manualTargetZone');
+
+// --- V41.0 CORE: DETERMINISTIC FIELD CONDITIONS ---
+const FIELD_ZONE_CONDITIONS = {
+    // Optimal / Baseline Condition (Should result in high score, unless moisture is over 70)
+    1: { type: 'Optimal', moisture: 55.0, N: 160, P: 85, K: 155, diag: 'Healthy, Deep Green Foliage' },
+    5: { type: 'Optimal', moisture: 50.0, N: 150, P: 80, K: 150, diag: 'Healthy, Deep Green Foliage' },
+    9: { type: 'Optimal', moisture: 60.0, N: 145, P: 75, K: 140, diag: 'Healthy, Deep Green Foliage' },
+    13: { type: 'Optimal', moisture: 65.0, N: 165, P: 90, K: 160, diag: 'Healthy, Deep Green Foliage' },
+    
+    // Waterlogged / High Flood Condition (High Moisture, Leached NPK)
+    2: { type: 'Waterlogged', moisture: 92.5, N: 50, P: 60, K: 70, diag: 'Healthy, Deep Green Foliage' }, // Initially healthy leaf, but CRITICALLY wet soil
+    6: { type: 'Waterlogged', moisture: 87.0, N: 65, P: 55, K: 85, diag: 'Healthy, Deep Green Foliage' },
+    10: { type: 'Waterlogged', moisture: 90.0, N: 70, P: 60, K: 90, diag: 'Healthy, Deep Green Foliage' },
+    14: { type: 'Waterlogged', moisture: 86.5, N: 55, P: 45, K: 75, diag: 'Healthy, Deep Green Foliage' },
+
+    // Severe Nitrogen Deficiency Condition (Low Moisture, Very Low NPK)
+    3: { type: 'N-Deficient', moisture: 30.5, N: 20, P: 70, K: 100, diag: 'General Severe Yellowing (Chlorosis-N)' },
+    7: { type: 'N-Deficient', moisture: 35.0, N: 35, P: 75, K: 110, diag: 'General Severe Yellowing (Chlorosis-N)' },
+    11: { type: 'N-Deficient', moisture: 32.0, N: 25, P: 80, K: 95, diag: 'General Severe Yellowing (Chlorosis-N)' },
+    15: { type: 'N-Deficient', moisture: 40.0, N: 40, P: 65, K: 105, diag: 'General Severe Yellowing (Chlorosis-N)' },
+    
+    // Disease Hotspot / Fungal Condition (Normal Moisture/NPK, but visual issue)
+    4: { type: 'Disease', moisture: 65.0, N: 150, P: 80, K: 150, diag: 'Dark Spots & Lesions/Blackening of Leaf (Fungal/Bacterial)' },
+    8: { type: 'Disease', moisture: 55.0, N: 160, P: 85, K: 155, diag: 'Dark Spots & Lesions/Blackening of Leaf (Fungal/Bacterial)' },
+    12: { type: 'Disease', moisture: 50.0, N: 145, P: 75, K: 140, diag: 'Edging Burn/Tip Necrosis (K/Salt)' }, // Changed one to K-deficiency visual
+    16: { type: 'Disease', moisture: 45.0, N: 155, P: 78, K: 145, diag: 'Mottling/Mosaic Pattern (Viral-TMV)' }, // Changed one to Viral
+};
+
+
 // --- 0.2.5 GLOBAL STATE VARIABLES (Clean Initial State Definition) ---
 let openCvLibraryIsReady = false;
 let systemLoggedSensorDataArray = [];
@@ -438,16 +467,13 @@ function dispatchRoverMovementCommand(commandIdentifier) {
         } else if (commandIdentifier === 'capture') {
             // Mock capture logic: Finds the nearest zone and assigns a mock photo
             const zoneID = findNearestPlantZone(currentRoverKinematicState.x_position_m, currentRoverKinematicState.y_position_m)?.id || 1;
+            selectZone(zoneID);
             
-            let mockDiagnosis;
-            if (zoneID % 3 === 0) {
-                 mockDiagnosis = 'Dark Spots & Lesions/Blackening of Leaf (Fungal/Bacterial)';
-            } else if (zoneID % 5 === 0) {
-                 mockDiagnosis = 'Mottling/Mosaic Pattern (Viral-TMV)';
-            } else {
-                 mockDiagnosis = 'Healthy, Deep Green Foliage';
-            }
+            // V41.0: Use deterministic diagnosis for the photo
+            const condition = FIELD_ZONE_CONDITIONS[zoneID];
+            const mockDiagnosis = condition.diag;
             
+            // This is a mock base64 string, the diagnosis is embedded in the string for easy retrieval later
             const mockDataUrl = `data:image/jpeg;base64,mocked_rover_capture_zone_${zoneID}_diag:${mockDiagnosis.replace(/\s/g, '_').replace(/[()]/g, '')}`;
 
             const fileInput = document.getElementById(`fileInput-${zoneID}`);
@@ -457,9 +483,8 @@ function dispatchRoverMovementCommand(commandIdentifier) {
                  console.error(`File input for Zone ${zoneID} not found.`);
             }
             
-            selectZone(zoneID);
 
-            STATUS_ELEMENT.innerText = `Photo captured and assigned to nearest Zone ${zoneID}. Triggering Analysis.`;
+            STATUS_ELEMENT.innerText = `Photo captured and assigned to nearest Zone ${zoneID}. Triggering Analysis. (Diagnosis: ${mockDiagnosis})`;
         } else {
             // Simulate Rover Kinematics Update (0.1m step)
             const step = 0.1;
@@ -473,7 +498,8 @@ function dispatchRoverMovementCommand(commandIdentifier) {
 
             currentRoverKinematicState.x_position_m = newX;
             currentRoverKinematicState.y_position_m = newY;
-            currentRoverKinematicState.heading = (currentRoverKinematicState.heading + (Math.random() * 5 - 2.5)).toFixed(1);
+            // Only non-random update to heading
+            currentRoverKinematicState.heading = (currentRoverKinematicState.heading + 0.5) % 360; 
 
             updateMapVisualization();
             updateRover3DPosition();
@@ -484,23 +510,20 @@ function dispatchRoverMovementCommand(commandIdentifier) {
 function executeDataAcquisition(acquisitionType) {
     STATUS_ELEMENT.innerText = "SENSOR READ: Acquiring raw data...";
     
-    // Simulate sensor data
+    // V41.0 CORE: Get deterministic sensor data based on the nearest zone
     const nearestPlant = findNearestPlantZone(currentRoverKinematicState.x_position_m, currentRoverKinematicState.y_position_m);
     const plantID = nearestPlant ? nearestPlant.id : 1;
+    selectZone(plantID); // Highlight the zone being read
     
-    let moistureVal = (Math.random() * 70 + 20).toFixed(1);
-    let npk_n = Math.floor(Math.random() * 150 + 50);
-    let npk_p = Math.floor(Math.random() * 100 + 40);
-    let npk_k = Math.floor(Math.random() * 180 + 60);
-
-    if (plantID % 3 === 0) {
-        moistureVal = (Math.random() * 15 + 5).toFixed(1); 
-        npk_n = Math.floor(Math.random() * 30 + 10); 
-    } else if (plantID % 4 === 0) {
-        moistureVal = (Math.random() * 10 + 85).toFixed(1);
-        npk_n = Math.floor(Math.random() * 80 + 20); 
-    }
-
+    const condition = FIELD_ZONE_CONDITIONS[plantID];
+    
+    // 1. Assign Deterministic Sensor Values (with slight noise for realism, but main value is fixed)
+    const moistureVal = (condition.moisture + (Math.random() * 2 - 1)).toFixed(1); 
+    const npk_n = Math.round(condition.N + (Math.random() * 5 - 2.5));
+    const npk_p = Math.round(condition.P + (Math.random() * 5 - 2.5));
+    const npk_k = Math.round(condition.K + (Math.random() * 5 - 2.5));
+    
+    // 2. Navigation Data (Still mostly random/mocked as it doesn't affect the analysis)
     const heading = (Math.random() * 360).toFixed(1);
     const latitude = `40.7128${(Math.random()*100).toFixed(0)}`;
     const longitude = `-74.0060${(Math.random()*100).toFixed(0)}`;
@@ -533,7 +556,7 @@ function executeDataAcquisition(acquisitionType) {
             timestamp: Date.now(),
             zoneID: plantID 
         });
-        STATUS_ELEMENT.innerText = `SENSOR READ: Data logged (${systemLoggedSensorDataArray.length} total logs). Triggering Analysis...`;
+        STATUS_ELEMENT.innerText = `SENSOR READ: Data logged for Zone ${plantID} (${systemLoggedSensorDataArray.length} total logs). Triggering Deterministic Analysis...`;
         triggerComprehensiveAnalysisCycle();
     }
     
@@ -542,8 +565,8 @@ function executeDataAcquisition(acquisitionType) {
 }
 
 /**
- * V39.0 Fused Entry Fix: Now reads the Zone ID from the new dropdown. Logs data and then
- * immediately clicks the file input to open the upload dialog for the user.
+ * V41.0: Fused Entry Fix: Now uses the *deterministic* data from the fixed zone conditions
+ * for the log entry when manual input is used (instead of the placeholder values).
  */
 function dispatchManualDataEntry() {
     // V39.0: Read the target zone from the new selector
@@ -554,6 +577,7 @@ function dispatchManualDataEntry() {
         return;
     }
     
+    // V41.0: Fetch the values from the manual input fields. This overrides the fixed condition.
     const moistureVal = parseFloat(document.getElementById('manualMoisture').value);
     const npk_n = parseInt(document.getElementById('manualN').value);
     const npk_p = parseInt(document.getElementById('manualP').value);
@@ -597,7 +621,7 @@ function dispatchManualDataEntry() {
 
 
 // ==================================================================================
-// SECTION 2.0: DIAGNOSTIC KNOWLEDGE BASE & FUSED ANALYSIS CORE (V38.0 Clean-up)
+// SECTION 2.0: DIAGNOSTIC KNOWLEDGE BASE & FUSED ANALYSIS CORE (V41.0 - Reliable Logic)
 // ----------------------------------------------------------------------------------
 const TOMATO_DIAGNOSTIC_KB = {
     'Mottling/Mosaic Pattern (Viral-TMV)': { score_penalty: 45, type: 'Viral', recommendation: "CRITICAL ISOLATION REQUIRED: Strong indicator of Tobacco Mosaic Virus (TMV). **IMMEDIATELY REMOVE AND DESTROY** the plant to prevent field-wide contamination. No chemical cure exists." },
@@ -671,14 +695,14 @@ function getDiagnosisAndRecommendations(plantData) {
         totalHealthScore = Math.max(0, totalHealthScore); 
 
         if (isFloodScenario) {
-            sensor_rec_text = `**Soil Sensor Assessment (POST-FLOOD MITIGATION PRIORITY):** CRITICAL ACTION REQUIRED: The high moisture level is the primary post-flood threat, indicating poor drainage. The low NPK levels are secondary issues (likely leaching) that must be addressed only after drainage is confirmed. Total sensor penalty: -${moisturePenalty + npkPenalty} points.`;
+            sensor_rec_text = `**Soil Sensor Assessment (POST-FLOOD MITIGATION PRIORITY):** CRITICAL ACTION REQUIRED: The high moisture level is the primary post-flood threat, indicating poor drainage. The low NPK levels are secondary issues (likely leaching) that must be addressed only after drainage is confirmed. Total sensor penalty: -${(moisturePenalty + npkPenalty).toFixed(0)} points.`;
         } else if (totalHealthScore < 76 && (moisturePenalty > 0 || npkPenalty > 0)) {
-            sensor_rec_text = `**Soil Sensor Assessment (POST-FLOOD RECOVERY NEED):** The soil has drained but the high penalty (-${moisturePenalty + npkPenalty} points) indicates severe **nutrient deficiencies/drought stress** caused by the flood event. Immediate fertilization is necessary.`;
+            sensor_rec_text = `**Soil Sensor Assessment (POST-FLOOD RECOVERY NEED):** The soil has drained but the high penalty (-${(moisturePenalty + npkPenalty).toFixed(0)} points) indicates severe **nutrient deficiencies/drought stress** caused by the flood event. Immediate fertilization is necessary.`;
         } else {
             sensor_rec_text = `**Soil Sensor Assessment (POST-FLOOD STABLE):** Sensor data indicates optimal soil parameters. The recovery period is stable. Maintain current surveillance.`;
         }
         
-        analysisDetail += `**SOIL DATA ANALYSIS (Rover Probe):** Post-Flood analysis registered a total penalty of **-${moisturePenalty + npkPenalty} points** due to the following conditions:\n${sensorAnalysis}\n`;
+        analysisDetail += `**SOIL DATA ANALYSIS (Rover Probe):** Post-Flood analysis registered a total penalty of **-${(moisturePenalty + npkPenalty).toFixed(0)} points** due to the following conditions:\n${sensorAnalysis}\n`;
     }
 
     // 3. --- FUSED (FINAL) ASSESSMENT ---
@@ -796,9 +820,12 @@ function generatePlantAnalysisCardHTML(zoneID, result) {
     const scoreClass = getScoreClass(result.score);
     const cardStyle = `border-color: ${result.border}; box-shadow: 0 0 30px ${result.border}33;`;
 
+    // V41.0: Added the fixed condition type to the card for user verification of deterministic logic
+    const conditionType = FIELD_ZONE_CONDITIONS[zoneID].type; 
+
     return `
         <div class="analysis-card" style="${cardStyle}">
-            <div class="plant-id-label">Zone ${zoneID} Diagnosis</div>
+            <div class="plant-id-label">Zone ${zoneID} Diagnosis - (Simulated Condition: ${conditionType})</div>
             
             <div style="text-align: right; margin-bottom: 20px;">
                 <span class="score-badge" style="background-color: ${result.color};">
@@ -821,7 +848,7 @@ function generatePlantAnalysisCardHTML(zoneID, result) {
                 <div class="${scoreClass}">${result.rec_sensor}</div>
             </div>
 
-            <h3>DATA FUSION ENGINE: Detailed Report (V40.0)</h3>
+            <h3>DATA FUSION ENGINE: Detailed Report (V41.0)</h3>
             <pre style="white-space: pre-wrap; word-wrap: break-word; background: #0f131a; padding: 15px; border-radius: 8px; border: 1px solid #30363d; font-size: 0.9em;">${result.analysis}</pre>
         </div>
     `;
@@ -1054,7 +1081,7 @@ function animate() {
 
 
 // ==================================================================================
-// SECTION 5.0: UTILITY & UI FUNCTIONS (Photo Grid - V40.0 FIX CORE)
+// SECTION 5.0: UTILITY & UI FUNCTIONS (Photo Grid - V41.0 FIX CORE)
 // ----------------------------------------------------------------------------------
 
 /**
@@ -1108,7 +1135,7 @@ function generatePhotoGrid() {
         fileInput.accept = 'image/*';
         fileInput.id = `fileInput-${i}`; 
         
-        // V40.0 CRITICAL FIX: Set file input Z-index low (1) to ensure image (99) completely covers it
+        // V40.0 CRITICAL FIX: Set file input Z-index low (1) to ensure image (1000) completely covers it
         fileInput.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; z-index: 1; cursor: pointer; pointer-events: auto;'; 
         
         fileInput.onchange = (e) => handleLocalPhotoUpload(i, e, fileInput);
@@ -1137,13 +1164,14 @@ function handleLocalPhotoUpload(zoneID, event, inputElement) {
     if (file) {
         const reader = new FileReader();
         reader.onload = (e) => {
-            const mockDiagnosis = (zoneID % 4 === 0) ? 'Edging Burn/Tip Necrosis (K/Salt)' : 'Healthy, Deep Green Foliage';
+            // V41.0: Use deterministic diagnosis for mock-up on user upload
+            const mockDiagnosis = FIELD_ZONE_CONDITIONS[zoneID].diag;
             const dataUrlWithMockDiagnosis = e.target.result.replace('base64,', `base64,mocked_user_upload_diag:${mockDiagnosis.replace(/\s/g, '_').replace(/[()]/g, '')},`);
             
             // CRITICAL FIX: Ensure the state is updated and photo is rendered
             renderPhotoInPhotoGridCell(zoneID, dataUrlWithMockDiagnosis, inputElement, true); 
             
-            STATUS_ELEMENT.innerText = `User photo uploaded and assigned to Zone ${zoneID}. Visibility guaranteed by Z-Stack.`;
+            STATUS_ELEMENT.innerText = `User photo uploaded and assigned to Zone ${zoneID}. Visibility guaranteed by Z-Stack 1000.`;
         };
         reader.readAsDataURL(file);
     } else {
@@ -1155,8 +1183,8 @@ function handleLocalPhotoUpload(zoneID, event, inputElement) {
 }
 
 /**
- * V40.0 CRITICAL FIX: Enforces z-indexing to guarantee image visibility.
- * Image is Z-99. Input is Z-1. Delete Button is Z-100.
+ * V41.0 CRITICAL FIX: Enforces z-indexing to guarantee image visibility (Z-1000).
+ * Image is Z-1000. Input is Z-1. Delete Button is Z-1001.
  */
 function renderPhotoInPhotoGridCell(zoneID, dataUrl, fileInput, triggerAnalysis = true) {
     const cell = document.getElementById(`zoneCell-${zoneID}`);
@@ -1166,17 +1194,17 @@ function renderPhotoInPhotoGridCell(zoneID, dataUrl, fileInput, triggerAnalysis 
     cell.querySelectorAll(':not(input[type="file"])').forEach(el => el.remove());
 
     // CRITICAL FIX: Disable pointer events on the input to ensure it can't accidentally capture clicks
-    // The input's z-index is 1, image is 99. The image covers it.
+    // The input's z-index is 1, image is 1000. The image covers it.
     fileInput.style.pointerEvents = 'none';
     
     // 2. Create and append Image element 
     const img = document.createElement('img');
     img.src = dataUrl;
-    // V40.0: Set z-index to 99 via inline style to ensure it's OVER the input (z-index 1) and just under the delete button (z-index 100)
-    img.style.cssText = 'width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 99 !important;'; 
+    // V41.0: Z-index 1000 is applied via CSS class/style tag, confirming inline style for safety
+    img.style.cssText = 'width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 1000 !important;'; 
     cell.appendChild(img);
 
-    // 3. Create and append delete button (z-index 100 in CSS)
+    // 3. Create and append delete button (z-index 1001 in CSS)
     const deleteBtn = document.createElement('button');
     deleteBtn.className = 'delete-photo-btn';
     deleteBtn.innerHTML = 'X';
