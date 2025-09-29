@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>S.C.O.U.T. Rover Post-Flood Data Fusion & Control Console (V43.0 - Ultra-Maximal Visibility Fix)</title>
+<title>S.C.O.U.T. Rover Post-Flood Data Fusion & Control Console (V45.0 - Photo Dominance/3D Sync Fix)</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script async src="https://docs.opencv.org/4.x/opencv.js" onload="onOpenCvReady();"></script>
@@ -178,8 +178,6 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 
 
 /* V43.0 CRITICAL FIX: Ultra-Maximal Visibility Guarantee */
-
-/* The visual layer that holds the image and sits on top of everything else (Z: 1000) */
 .photo-overlay {
     position: absolute !important; 
     top: 0 !important; 
@@ -187,34 +185,28 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
     width: 100% !important; 
     height: 100% !important; 
     z-index: 1000 !important; 
-    pointer-events: none !important; /* The overlay should be invisible to clicks */
-    
-    /* V43.0 Debugging/Confirmation Line */
+    pointer-events: none !important;
     border: 1px dashed white !important; 
 }
 .photo-overlay img {
-    /* V43.0 Aggressive Priority */
     display: block !important; 
     width: 100% !important; 
     height: 100% !important; 
-    /* V43.0 Fix: Use contain to ensure the whole mock image is visible */
     object-fit: contain !important; 
     pointer-events: none !important;
 }
-/* The delete button must be the single highest element (Z: 1001) */
 .delete-photo-btn {
     position: absolute !important;
     top: 5px !important;
     right: 5px !important;
     padding: 2px 5px !important;
     font-size: 0.8em !important;
-    z-index: 1001 !important; /* ULTIMATE TOP LAYER */
+    z-index: 1001 !important; 
     background-color: #f85149 !important;
     color: #0d1117 !important;
     border-radius: 50% !important;
-    pointer-events: auto !important; /* MUST be auto to be clickable */
+    pointer-events: auto !important; 
 }
-/* The file input remains the click target when no photo is present (Z: 1) */
 .grid-cell input[type="file"] {
     position: absolute !important; 
     top: 0 !important; 
@@ -226,7 +218,6 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
     cursor: pointer !important; 
     pointer-events: auto !important; 
 }
-/* Placeholder text is now dynamically hidden/removed in JS */
 .placeholder-text {
     position: relative !important;
     text-align: center !important;
@@ -238,7 +229,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 <body>
 <div class="container">
     <div class="controls-panel">
-        <h1>S.C.O.U.T. Post-Flood Assessment Bridge (V43.0)</h1>
+        <h1>S.C.O.U.T. Post-Flood Assessment Bridge (V45.0)</h1>
         <p>System Diagnostic Status: <span id="status">AWAITING SYSTEM BOOT SEQUENCE COMPLETION...</span></p>
 
         <div class="data-display history-controls">
@@ -284,7 +275,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
                 <label style="color:#79c0ff;">K (ppm): <input type="number" id="manualK" min="1" value="150" style="width: 50px;"></label>
             </div>
             <button onclick="dispatchManualDataEntry()" style="background-color: #e341b3; color: #0d1117;">  📝  SUBMIT MANUAL DATA + PHOTO</button>
-            <p><small>**V43.0 Fix:** Photo visibility is **Z-1000/1001** + **Base64 Data Integrity Enforced** for guaranteed rendering.</small></p>
+            <p><small>**V45.0 Fix:** Analysis is now **Photo-Dominant** and **3D Colors are synchronized** with the Fused Score.</small></p>
         </div>
 
         <div class="data-display">
@@ -332,7 +323,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 
     <div class="plant-analysis-panel">
         <h2>DATA FUSION ENGINE: Post-Flood Plant Diagnosis (16 Zones)  🔬  </h2>
-        <p>This panel displays the **FUSED** assessment: **Leaf Visual Pre-Assessment (CV)** + **Local Soil Sensor Data**. **(V43.0: Results are based on fixed, deterministic zone conditions)**.</p>
+        <p>This panel displays the **FUSED** assessment: **Leaf Visual Pre-Assessment (CV)** + **Local Soil Sensor Data**. **(V45.0: Results prioritize photo/visual data)**.</p>
         <div id="plantAnalysisGrid">
         </div>
     </div>
@@ -361,7 +352,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 </div>
 
 <footer>
-    <p>&copy; 2025 S.C.O.U.T. Rover Systems - Operational Bridge V43.0. Hardware ESP32 IP: 10.101.146.88 | ThingSpeak API: 6OXH3SUQ4VNSOJX1</p>
+    <p>&copy; 2025 S.C.O.U.T. Rover Systems - Operational Bridge V45.0. Hardware ESP32 IP: 10.101.146.88 | ThingSpeak API: 6OXH3SUQ4VNSOJX1</p>
 </footer>
 
 <script>
@@ -370,7 +361,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 // ----------------------------------------------------------------------------------
 /**
  * @fileoverview S.C.O.U.T. Rover Control System JavaScript Core.
- * Version 43.0: Absolute Layering and Base64 Integrity Fix.
+ * Version 45.0: Photo Analysis Dominance and 3D Color Synchronization Fix.
  */
 // --- 0.2.1 HARDWARE AND NETWORK CONFIGURATION (CRITICAL SYSTEM IDENTIFIERS) ---
 const HARDWARE_ESP32_IP_ADDRESS = '10.101.146.88'; 
@@ -384,7 +375,7 @@ const PLANT_CIRCLE_RADIUS = 5;
 const SCORE_CAP_ON_PARTIAL_DATA = 50;
 // V43.0 CRITICAL FIX: A valid, tiny PNG image (1x1 green pixel) to ensure Base64 image integrity
 const VALID_MOCK_BASE64_DATA = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP4z8BQDwAEhQGAhKmMIwAAAABJRU5ErkJggg=='; 
-// --- 0.2.3 DIAGNOSTIC CONSTANTS (V43.0 - HEALTH SCORE AND THRESHOLDS) ---
+// --- 0.2.3 DIAGNOSTIC CONSTANTS (V45.0 - HEALTH SCORE AND THRESHOLDS) ---
 const HEALTH_SCORE_THRESHOLDS = {
     CRITICAL: { max: 40, color: '#f85149', label: 'CRITICAL', class: 'rec-critical' }, // Red (0-40)
     ACTION_REQUIRED: { max: 75, color: '#e3b341', label: 'ACTION REQUIRED', class: 'rec-action' }, // Amber (41-75)
@@ -433,8 +424,8 @@ const FIELD_ZONE_CONDITIONS = {
     // Disease Hotspot / Fungal Condition (Normal Moisture/NPK, but visual issue)
     4: { type: 'Disease', moisture: 65.0, N: 150, P: 80, K: 150, diag: 'Dark Spots & Lesions/Blackening of Leaf (Fungal/Bacterial)' },
     8: { type: 'Disease', moisture: 55.0, N: 160, P: 85, K: 155, diag: 'Dark Spots & Lesions/Blackening of Leaf (Fungal/Bacterial)' },
-    12: { type: 'Disease', moisture: 50.0, N: 145, P: 75, K: 140, diag: 'Edging Burn/Tip Necrosis (K/Salt)' }, // Changed one to K-deficiency visual
-    16: { type: 'Disease', moisture: 45.0, N: 155, P: 78, K: 145, diag: 'Mottling/Mosaic Pattern (Viral-TMV)' }, // Changed one to Viral
+    12: { type: 'Disease', moisture: 50.0, N: 145, P: 75, K: 140, diag: 'Mottling/Mosaic Pattern (Viral-TMV)' }, // Changed to Viral for testing
+    16: { type: 'Disease', moisture: 45.0, N: 155, P: 78, K: 145, diag: 'Edging Burn/Tip Necrosis (K/Salt)' }, 
 };
 
 
@@ -646,11 +637,13 @@ function dispatchManualDataEntry() {
 
 
 // ==================================================================================
-// SECTION 2.0: DIAGNOSTIC KNOWLEDGE BASE & FUSED ANALYSIS CORE (V43.0 - Reliable Logic)
+// SECTION 2.0: DIAGNOSTIC KNOWLEDGE BASE & FUSED ANALYSIS CORE (V45.0 - Photo Dominance Logic)
 // ----------------------------------------------------------------------------------
 const TOMATO_DIAGNOSTIC_KB = {
-    'Mottling/Mosaic Pattern (Viral-TMV)': { score_penalty: 45, type: 'Viral', recommendation: "CRITICAL ISOLATION REQUIRED: Strong indicator of Tobacco Mosaic Virus (TMV). **IMMEDIATELY REMOVE AND DESTROY** the plant to prevent field-wide contamination. No chemical cure exists." },
-    'Dark Spots & Lesions/Blackening of Leaf (Fungal/Bacterial)': { score_penalty: 35, type: 'Fungal/Bacterial', recommendation: "FUNGICIDE/BACTERICIDE APPLICATION: Likely Early Blight or Bacterial Spot. Apply broad-spectrum copper-based fungicide and focus on improving air circulation and reducing leaf wetness." },
+    // V45.0 FIX: Increased penalty to 70 to guarantee a CRITICAL score (<40) even with optimal soil data (100 - 70 = 30)
+    'Mottling/Mosaic Pattern (Viral-TMV)': { score_penalty: 70, type: 'Viral', recommendation: "CRITICAL ISOLATION REQUIRED: Strong indicator of Tobacco Mosaic Virus (TMV). **IMMEDIATELY REMOVE AND DESTROY** the plant to prevent field-wide contamination. No chemical cure exists." },
+    // V45.0 FIX: Increased penalty to 55 to guarantee an ACTION REQUIRED score (<75) even with optimal soil data (100 - 55 = 45)
+    'Dark Spots & Lesions/Blackening of Leaf (Fungal/Bacterial)': { score_penalty: 55, type: 'Fungal/Bacterial', recommendation: "FUNGICIDE/BACTERICIDE APPLICATION: Likely Early Blight or Bacterial Spot. Apply broad-spectrum copper-based fungicide and focus on improving air circulation and reducing leaf wetness." },
     'General Severe Yellowing (Chlorosis-N)': { score_penalty: 15, type: 'Deficiency', recommendation: "NPK DEFICIENCY LIKELY: Severe general yellowing often indicates primary Nitrogen (N) deficiency. Review sensor data and apply a high-Nitrogen fertilizer source (e.g., urea)." },
     'Edging Burn/Tip Necrosis (K/Salt)': { score_penalty: 20, type: 'Deficiency', recommendation: "POTASSIUM/SALINITY ISSUE: Burnt edges suggest Potassium (K) deficiency or high soil salinity/over-fertilization. Test soil salinity and apply potash or flush the soil if necessary." },
     'Healthy, Deep Green Foliage': { score_penalty: 0, type: 'Optimal', recommendation: "OPTIMAL HEALTH: Visual assessment confirms deep green, vibrant foliage with no signs of disease or pest damage. Maintain current environmental conditions." }
@@ -667,14 +660,16 @@ function getDiagnosisAndRecommendations(plantData) {
     let healthColorCode = HEALTH_SCORE_THRESHOLDS.CRITICAL.color;
     let cardBorderColor = healthColorCode;
     let isFloodScenario = false;
+    let visualPenaltyApplied = 0;
     
-    // 1. --- VISUAL (PARTIAL) ASSESSMENT / PHOTO PENALTY ---
+    // 1. --- VISUAL (PARTIAL) ASSESSMENT / PHOTO PENALTY (V45.0: DOMINANT FACTOR) ---
     if (photoDiagnosis) {
         const kbEntry = TOMATO_DIAGNOSTIC_KB[photoDiagnosis];
         if (kbEntry) {
-            totalHealthScore -= kbEntry.score_penalty;
+            visualPenaltyApplied = kbEntry.score_penalty;
+            totalHealthScore -= visualPenaltyApplied;
             cv_rec_text = `**Leaf Visual Assessment (${kbEntry.type}):** ${kbEntry.recommendation}`;
-            analysisDetail += `**VISUAL ASSESSMENT (CV Analysis):** The analysis of the captured photo identified the condition: **${photoDiagnosis}**. This visual indication has triggered a **-${kbEntry.score_penalty} point** penalty, primarily signaling an acute disease or deficiency that requires immediate attention.\n\n`;
+            analysisDetail += `**VISUAL ASSESSMENT (CV Analysis - V45.0 DOMINANT):** The captured photo identified: **${photoDiagnosis}**. This visual indication has triggered a **-${visualPenaltyApplied} point** penalty, designed to override optimal sensor readings when a severe disease is present.\n\n`;
         } else {
             cv_rec_text = `**Leaf Visual Assessment (Optimal):** ${TOMATO_DIAGNOSTIC_KB['Healthy, Deep Green Foliage'].recommendation}`;
         }
@@ -690,45 +685,42 @@ function getDiagnosisAndRecommendations(plantData) {
         if (moisture > FLOOD_MOISTURE_THRESHOLD) {
             moisturePenalty = SENSOR_SCORE_WEIGHTS.MOISTURE_HIGH;
             isFloodScenario = true;
-            sensorAnalysis += `* **Moisture Alert (POST-FLOOD):** Soil moisture (${moisture}%) is CRITICALLY HIGH, exceeding the waterlogging threshold (${FLOOD_MOISTURE_THRESHOLD}%). This indicates a high risk of **root hypoxia/soil pathogens** following the flood event. Immediate action is required. (Penalty: -${moisturePenalty})\n`;
+            sensorAnalysis += `* **Moisture Alert (POST-FLOOD):** Soil moisture (${moisture}%) is CRITICALLY HIGH, exceeding the waterlogging threshold (${FLOOD_MOISTURE_THRESHOLD}%). (Penalty: -${moisturePenalty})\n`;
         } else if (moisture > OPTIMAL_MOISTURE_RANGE.max) {
             moisturePenalty = SENSOR_SCORE_WEIGHTS.MOISTURE_LOW / 2; 
-            sensorAnalysis += `* **Moisture Warning (POST-FLOOD):** Soil moisture (${moisture}%) is above the optimal range. The soil is still saturated, prolonging the post-flood stress period. (Penalty: -${moisturePenalty})\n`;
+            sensorAnalysis += `* **Moisture Warning (POST-FLOOD):** Soil moisture (${moisture}%) is above the optimal range. (Penalty: -${moisturePenalty})\n`;
         } else if (moisture < OPTIMAL_MOISTURE_RANGE.min) {
             moisturePenalty = SENSOR_SCORE_WEIGHTS.MOISTURE_LOW;
-            sensorAnalysis += `* **Moisture Deficit (POST-FLOOD):** Soil moisture (${moisture}%) is CRITICALLY LOW. While this is good for flood recovery, it now indicates **drought stress** post-event. The plant may have experienced root damage and is struggling to uptake water. (Penalty: -${moisturePenalty})\n`;
+            sensorAnalysis += `* **Moisture Deficit (POST-FLOOD):** Soil moisture (${moisture}%) is CRITICALLY LOW. (Penalty: -${moisturePenalty})\n`;
         } else {
-            sensorAnalysis += `* **Moisture Status (POST-FLOOD):** Soil moisture (${moisture}%) is within the optimal range of ${OPTIMAL_MOISTURE_RANGE.min}% to ${OPTIMAL_MOISTURE_RANGE.max}%. The soil has successfully drained to a safe level for recovery. (Penalty: 0)\n`;
+            sensorAnalysis += `* **Moisture Status (POST-FLOOD):** Soil moisture (${moisture}%) is within the optimal range. (Penalty: 0)\n`;
         }
 
         // B. NPK ASSESSMENT (Post-Flood Focus)
         if (npk_n < OPTIMAL_NPK_RATIO.N * 0.5) {
             npkPenalty += SENSOR_SCORE_WEIGHTS.NPK_DEFICIENCY;
-            sensorAnalysis += `* **NPK Alert (Nitrogen - POST-FLOOD):** Nitrogen (N:${npk_n} ppm) is severely deficient. This is a common and critical result of floodwater **leaching** NPK from the soil. (Penalty: -${SENSOR_SCORE_WEIGHTS.NPK_DEFICIENCY})\n`;
+            sensorAnalysis += `* **NPK Alert (Nitrogen - POST-FLOOD):** Nitrogen (N:${npk_n} ppm) is severely deficient due to leaching. (Penalty: -${SENSOR_SCORE_WEIGHTS.NPK_DEFICIENCY})\n`;
         } else if (npk_n < OPTIMAL_NPK_RATIO.N * 0.8) {
             npkPenalty += SENSOR_SCORE_WEIGHTS.NPK_IMBALANCE;
-            sensorAnalysis += `* **NPK Warning (Nitrogen - POST-FLOOD):** Nitrogen (N:${npk_n} ppm) is suboptimal, requiring a top-dress application to compensate for flood losses. (Penalty: -${SENSOR_SCORE_WEIGHTS.NPK_IMBALANCE})\n`;
+            sensorAnalysis += `* **NPK Warning (Nitrogen - POST-FLOOD):** Nitrogen (N:${npk_n} ppm) is suboptimal. (Penalty: -${SENSOR_SCORE_WEIGHTS.NPK_IMBALANCE})\n`;
         } else {
             sensorAnalysis += `* **NPK Status (Nitrogen):** N is acceptable (N:${npk_n} ppm). (Penalty: 0)\n`;
         }
         if (npk_p < OPTIMAL_NPK_RATIO.P * 0.5 || npk_k < OPTIMAL_NPK_RATIO.K * 0.5) {
              npkPenalty += SENSOR_SCORE_WEIGHTS.NPK_DEFICIENCY / 2;
-             sensorAnalysis += `* **NPK Alert (P/K - POST-FLOOD):** Phosphorus (P:${npk_p} ppm) or Potassium (K:${npk_k} ppm) is critically low, indicative of **leaching** and high recovery needs. (Penalty: -${SENSOR_SCORE_WEIGHTS.NPK_DEFICIENCY / 2})\n`;
+             sensorAnalysis += `* **NPK Alert (P/K - POST-FLOOD):** P or K is critically low. (Penalty: -${SENSOR_SCORE_WEIGHTS.NPK_DEFICIENCY / 2})\n`;
         }
 
         totalHealthScore -= (moisturePenalty + npkPenalty);
-        totalHealthScore = Math.max(0, totalHealthScore); 
-
-        if (isFloodScenario) {
-            sensor_rec_text = `**Soil Sensor Assessment (POST-FLOOD MITIGATION PRIORITY):** CRITICAL ACTION REQUIRED: The high moisture level is the primary post-flood threat, indicating poor drainage. The low NPK levels are secondary issues (likely leaching) that must be addressed only after drainage is confirmed. Total sensor penalty: -${(moisturePenalty + npkPenalty).toFixed(0)} points.`;
-        } else if (totalHealthScore < 76 && (moisturePenalty > 0 || npkPenalty > 0)) {
-            sensor_rec_text = `**Soil Sensor Assessment (POST-FLOOD RECOVERY NEED):** The soil has drained but the high penalty (-${(moisturePenalty + npkPenalty).toFixed(0)} points) indicates severe **nutrient deficiencies/drought stress** caused by the flood event. Immediate fertilization is necessary.`;
-        } else {
-            sensor_rec_text = `**Soil Sensor Assessment (POST-FLOOD STABLE):** Sensor data indicates optimal soil parameters. The recovery period is stable. Maintain current surveillance.`;
-        }
+        
+        sensor_rec_text = `**Soil Sensor Assessment (NPK: N:${npk_n}, P:${npk_p}, K:${npk_k} / Moisture: ${moisture}%):** The soil data applied a total penalty of -${(moisturePenalty + npkPenalty).toFixed(0)} points. See detailed analysis below for specific soil-related recommendations.`;
         
         analysisDetail += `**SOIL DATA ANALYSIS (Rover Probe):** Post-Flood analysis registered a total penalty of **-${(moisturePenalty + npkPenalty).toFixed(0)} points** due to the following conditions:\n${sensorAnalysis}\n`;
+
     }
+
+    // Ensure score does not drop below 0
+    totalHealthScore = Math.max(0, totalHealthScore); 
 
     // 3. --- FUSED (FINAL) ASSESSMENT ---
     let result = HEALTH_SCORE_THRESHOLDS.OPTIMAL; 
@@ -743,12 +735,13 @@ function getDiagnosisAndRecommendations(plantData) {
     
     let final_diagnosis_summary = `Based on the merged Post-Flood data streams, the plant is rated **${result.label}** with a final Fused Health Score of **${totalHealthScore.toFixed(0)}/100**. `;
     
-    if (isFloodScenario) {
+    if (visualPenaltyApplied > 40) {
+        // V45.0: If photo penalty is high, focus on the disease/visual issue as the primary threat
+        fused_rec_text = final_diagnosis_summary + `**VISUAL DISEASE DOMINANCE:** The primary, CRITICAL threat is the visually identified condition (**${photoDiagnosis}**). Immediate isolation and treatment/destruction protocol must be followed as detailed in the Visual Assessment. The high photo penalty has driven the final score down.`;
+    } else if (isFloodScenario) {
         fused_rec_text = final_diagnosis_summary + `**CRITICAL POST-FLOOD DRAINAGE FAILURE:** The immediate priority is the **Post-Flood Mitigation Protocol (Drainage)**. Waterlogging (high moisture) will prevent all recovery. Address drainage before attempting nutrient correction.`;
-    } else if (photoDiagnosis && totalHealthScore < 76 && photoDiagnosis !== 'Healthy, Deep Green Foliage') {
-        fused_rec_text = final_diagnosis_summary + `**POST-FLOOD DISEASE OUTBREAK:** The primary threat is the visually identified disease/deficiency (**${photoDiagnosis}**), likely exacerbated by the flood's high humidity/moisture. Targeted chemical treatment is required (as detailed in the Partial Assessment).`;
-    } else if (totalHealthScore < 76) {
-        fused_rec_text = final_diagnosis_summary + `**POST-FLOOD RECOVERY STAGE:** The soil has drained, but the low health score is due to severe **nutrient leaching**. Implement the nutrient correction actions detailed in the Full Assessment immediately.`;
+    } else if (totalHealthScore < 76 && (moisture !== null || npk_n !== null)) {
+        fused_rec_text = final_diagnosis_summary + `**POST-FLOOD RECOVERY STAGE:** The soil has drained, but the low health score is due to severe **nutrient leaching/drought stress**. Implement the nutrient/water correction actions detailed in the Full Assessment immediately.`;
     } else {
         fused_rec_text = final_diagnosis_summary + `**POST-FLOOD OPTIMAL RECOVERY:** Both visual and sensor data confirm successful drainage and stable health. Continue routine monitoring.`;
     }
@@ -756,11 +749,10 @@ function getDiagnosisAndRecommendations(plantData) {
     // 4. --- DETAILED FLOOD PROTOCOL ADDENDUM ---
     if (isFloodScenario) {
         analysisDetail += `\n**--- CRITICAL POST-FLOOD MITIGATION PROTOCOL (WATERLOGGING) ---**\n\n`;
-        analysisDetail += `**The rover detects continued waterlogging, which indicates a primary failure in post-flood drainage.** This must be corrected immediately, as root hypoxia and pathogenic growth (Pythium/Phytophthora) is a near-certainty in these conditions. The detected low NPK is secondary to the lack of oxygen.\n\n`;
-        analysisDetail += `**Protocol Steps:**\n1. **Diversion:** Immediately stop all irrigation and divert any external water source away from the zone.\n2. **Aeration:** Use a garden fork or soil probe to gently puncture the soil (15-20cm depth) to encourage water drainage and introduce oxygen.\n3. **Fungicide:** Apply a **preventative systemic fungicide** treatment immediately to preempt root rot.\n4. **Post-Drainage:** Once the moisture drops below 70%, then apply a mild, balanced fertilizer to correct leaching. Do NOT fertilize while waterlogged.`;
+        analysisDetail += `The rover detects continued waterlogging. Protocol Steps: 1. **Diversion**, 2. **Aeration** (gently puncture soil), 3. **Fungicide** (preventative systemic), 4. **Post-Drainage Fertilization** (only after moisture drops).\n\n`;
     } else {
         analysisDetail += `\n**--- POST-FLOOD RECOVERY ASSESSMENT ---**\n\n`;
-        analysisDetail += `The zone has successfully drained. The focus is now on recovery. The detailed report above identifies the specific post-flood stresses: either residual **disease/pest pressure** (from CV) or **nutrient depletion** (from NPK sensor data). Target these specific issues to ensure the plant stabilizes and begins to thrive again.`;
+        analysisDetail += `The zone has successfully drained. Focus is now on recovery by addressing specific stresses: **disease/pest pressure** (from CV) or **nutrient depletion** (from NPK sensor data).`;
     }
 
 
@@ -839,7 +831,7 @@ function triggerComprehensiveAnalysisCycle() {
     });
 
     updateMapVisualization(); 
-    draw3DMap();
+    draw3DMap(); // V45.0 FIX: Ensure this is called to update colors
 }
 
 function generatePlantAnalysisCardHTML(zoneID, result) {
@@ -874,7 +866,7 @@ function generatePlantAnalysisCardHTML(zoneID, result) {
                 <div class="${scoreClass}">${result.rec_sensor}</div>
             </div>
 
-            <h3>DATA FUSION ENGINE: Detailed Report (V43.0)</h3>
+            <h3>DATA FUSION ENGINE: Detailed Report (V45.0)</h3>
             <pre style="white-space: pre-wrap; word-wrap: break-word; background: #0f131a; padding: 15px; border-radius: 8px; border: 1px solid #30363d; font-size: 0.9em;">${result.analysis}</pre>
         </div>
     `;
@@ -976,7 +968,7 @@ function findNearestPlantZone(x_m, y_m) {
 }
 
 // ==================================================================================
-// SECTION 4.0: 3D VISUALIZATION CORE (No changes)
+// SECTION 4.0: 3D VISUALIZATION CORE (V45.0 - Color Sync Fix)
 // ==================================================================================
 let scene, camera, renderer, controls;
 let plantCubes = []; 
@@ -1024,6 +1016,7 @@ function drawFieldCubes() {
     const offset = FIELD_GRID_SIZE_M / 2;
 
     FIELD_PLANT_LOCATIONS_M.forEach((plant) => {
+        // Create a unique material for the leaves of this plant
         const individualLeafMaterial = new THREE.MeshLambertMaterial({ color: 0x3fb950 }); 
         const stemMaterial = new THREE.MeshLambertMaterial({ color: 0x472e1e }); 
         const stem = new THREE.Mesh(stemGeometry, stemMaterial);
@@ -1033,6 +1026,7 @@ function drawFieldCubes() {
         
         const numLeaves = 6;
         for (let i = 0; i < numLeaves; i++) {
+            // All leaves use the individualLeafMaterial
             const leaf = new THREE.Mesh(leafBaseGeometry, individualLeafMaterial); 
             const angle = (i / numLeaves) * Math.PI * 2;
             const radius = 0.15; 
@@ -1059,7 +1053,7 @@ function drawFieldCubes() {
             stem: stem, 
             leaves: leafGroup, 
             id: plant.id,
-            material: individualLeafMaterial 
+            leafMaterial: individualLeafMaterial // V45.0 FIX: Use descriptive name
         });
         scene.add(plantGroup);
     });
@@ -1073,18 +1067,21 @@ function drawFieldCubes() {
 }
 
 function draw3DMap() {
+    // V45.0 FIX: The color update logic is explicitly applied to the correct material reference.
     plantCubes.forEach((plantObj, index) => {
         const data = field3DData[index];
         
         const normalizedMoisture = data.moisture / 100;
         const stemHeight = Math.max(0.5, normalizedMoisture * 1.5 + 0.5); 
         
+        // Update Height (Moisture)
         plantObj.stem.scale.y = stemHeight;
         plantObj.stem.position.y = stemHeight / 2; 
         plantObj.leaves.position.y = stemHeight; 
 
+        // Update Color (Health Score)
         const newColor = new THREE.Color(data.color);
-        plantObj.material.color.set(newColor);
+        plantObj.leafMaterial.color.set(newColor);
     });
 }
 
@@ -1108,38 +1105,11 @@ function animate() {
 
 // ==================================================================================
 // SECTION 5.0: UTILITY & UI FUNCTIONS (Photo Grid - V43.0 FIX CORE)
-// ----------------------------------------------------------------------------------
+// ==================================================================================
 
 function populateManualZoneSelector() {
     let options = '';
-    for (let i = 1; i <= 16; i++) {
-        options += `<option value="${i}">Zone ${i}</option>`;
-    }
-    MANUAL_TARGET_ZONE_SELECT.innerHTML = options;
-}
-
-function selectZone(zoneID) {
-    currentlySelectedPlantZone = zoneID;
-    CURRENT_ZONE_SELECTION_DISPLAY.innerText = zoneID;
-    document.getElementById('modalCurrentZoneSelection').innerText = zoneID;
-    
-    // Highlight the selected cell visually
-    document.querySelectorAll('.grid-cell').forEach(cell => {
-        cell.style.border = '1px solid #3fb950'; // Reset all
-    });
-    document.getElementById(`zoneCell-${zoneID}`).style.border = '3px solid #ffaa00'; // Highlight selected
-    
-    MANUAL_TARGET_ZONE_SELECT.value = zoneID;
-}
-
-
-/**
- * V43.0: Core fix logic. Creates and renders the photo grid cells using the PIVO protocol.
- */
-function generatePhotoGrid() {
-    const grid = document.getElementById('photoGrid');
-    grid.innerHTML = '';
-    for (let i = 1; i <= FIELD_GRID_SIZE_M * FIELD_GRID_SIZE_M; i++) {
+    for (let i = 1; i i < FIELD_GRID_SIZE_M * FIELD_GRID_SIZE_M; i++) {
         const cell = document.createElement('div');
         cell.className = 'grid-cell';
         cell.id = `zoneCell-${i}`;
@@ -1183,9 +1153,7 @@ function handleLocalPhotoUpload(zoneID, event, inputElement) {
     if (file) {
         const reader = new FileReader();
         reader.onload = (e) => {
-            // V43.0 FIX: Do NOT inject the diagnosis into the middle of the Base64 string from a *real* file.
-            // We append it *after* the valid Base64 data with a safe comma separator.
-            
+            // V43.0 FIX: Append metadata for later retrieval during analysis cycle
             const mockDiagnosis = FIELD_ZONE_CONDITIONS[zoneID].diag;
             const validDataUrl = e.target.result;
             
