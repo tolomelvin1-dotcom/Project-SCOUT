@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>S.C.O.U.T. Rover Post-Flood Data Fusion & Control Console (V35.0 - Aggressive Rendering Fix)</title>
+<title>S.C.O.U.T. Rover Post-Flood Data Fusion & Control Console (V36.0 - Nuclear DOM Fix)</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script async src="https://docs.opencv.org/4.x/opencv.js" onload="onOpenCvReady();"></script>
@@ -124,6 +124,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
     font-weight: bold;
     color: #4ac9b0;
     transition: border 0.2s, background-color 0.2s;
+    cursor: pointer; /* Ensure the cell is clickable */
 }
 .grid-cell:hover { border: 3px solid #79c0ff; background-color: #2a3038; } 
 
@@ -190,20 +191,17 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
     border-radius: 50%;
     pointer-events: auto; 
 }
-/* V34.0 CRITICAL FIX: Ensure clicks pass through placeholder text to the file input (z-index 5) underneath */
+/* V36.0: Placeholder text no longer needs pointer-events: none because the cell itself is the click target */
 .placeholder-text {
-    z-index: 3; /* Must be lower than file input z-index 5 */
     position: relative;
     text-align: center;
-    /* CRITICAL: Allows click to fall through to the transparent file input */
-    pointer-events: none;
 }
 </style>
 </head>
 <body>
 <div class="container">
     <div class="controls-panel">
-        <h1>S.C.O.U.T. Post-Flood Assessment Bridge (V35.0)</h1>
+        <h1>S.C.O.U.T. Post-Flood Assessment Bridge (V36.0)</h1>
         <p>System Diagnostic Status: <span id="status">AWAITING SYSTEM BOOT SEQUENCE COMPLETION...</span></p>
 
         <div class="data-display history-controls">
@@ -321,7 +319,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 </div>
 
 <footer>
-    <p>&copy; 2025 S.C.O.U.T. Rover Systems - Operational Bridge V35.0. Hardware ESP32 IP: 10.101.146.88 | ThingSpeak API: 6OXH3SUQ4VNSOJX1</p>
+    <p>&copy; 2025 S.C.O.U.T. Rover Systems - Operational Bridge V36.0. Hardware ESP32 IP: 10.101.146.88 | ThingSpeak API: 6OXH3SUQ4VNSOJX1</p>
 </footer>
 
 <script>
@@ -330,7 +328,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 // ----------------------------------------------------------------------------------
 /**
  * @fileoverview S.C.O.U.T. Rover Control System JavaScript Core.
- * Version 35.0: Critical Rendering Fix for Photo Visibility (Aggressive File Input Hiding).
+ * Version 36.0: Critical Rendering Fix for Photo Visibility (Nuclear DOM Fix).
  */
 // --- 0.2.1 HARDWARE AND NETWORK CONFIGURATION (CRITICAL SYSTEM IDENTIFIERS) ---
 const HARDWARE_ESP32_IP_ADDRESS = '10.101.146.88'; 
@@ -342,7 +340,7 @@ const MAP_CANVAS_PIXELS = 480;
 const MAX_STOCK_PHOTOS = 50;
 const PLANT_CIRCLE_RADIUS = 5;
 const SCORE_CAP_ON_PARTIAL_DATA = 50;
-// --- 0.2.3 DIAGNOSTIC CONSTANTS (V35.0 - HEALTH SCORE AND THRESHOLDS) ---
+// --- 0.2.3 DIAGNOSTIC CONSTANTS (V36.0 - HEALTH SCORE AND THRESHOLDS) ---
 const HEALTH_SCORE_THRESHOLDS = {
     CRITICAL: { max: 40, color: '#f85149', label: 'CRITICAL', class: 'rec-critical' }, // Red (0-40)
     ACTION_REQUIRED: { max: 75, color: '#e3b341', label: 'ACTION REQUIRED', class: 'rec-action' }, // Amber (41-75)
@@ -559,7 +557,7 @@ function dispatchManualDataEntry() {
 
 
 // ==================================================================================
-// SECTION 2.0: DIAGNOSTIC KNOWLEDGE BASE & FUSED ANALYSIS CORE (V35.0 Fixes)
+// SECTION 2.0: DIAGNOSTIC KNOWLEDGE BASE & FUSED ANALYSIS CORE (V36.0 Fixes)
 // ----------------------------------------------------------------------------------
 // Base knowledge for photo analysis and associated score penalties
 const TOMATO_DIAGNOSTIC_KB = {
@@ -786,7 +784,7 @@ function generatePlantAnalysisCardHTML(zoneID, result) {
                 <div class="${scoreClass}">${result.rec_sensor}</div>
             </div>
 
-            <h3>DATA FUSION ENGINE: Detailed Report (V35.0)</h3>
+            <h3>DATA FUSION ENGINE: Detailed Report (V36.0)</h3>
             <pre style="white-space: pre-wrap; word-wrap: break-word; background: #0f131a; padding: 15px; border-radius: 8px; border: 1px solid #30363d; font-size: 0.9em;">${result.analysis}</pre>
         </div>
     `;
@@ -1019,11 +1017,11 @@ function animate() {
 
 
 // ==================================================================================
-// SECTION 5.0: UTILITY & UI FUNCTIONS (Photo Grid - V35.0 FIX CORE)
+// SECTION 5.0: UTILITY & UI FUNCTIONS (Photo Grid - V36.0 FIX CORE)
 // ----------------------------------------------------------------------------------
 
 /**
- * V35.0: Sets the currently active zone for UI highlighting and manual data entry.
+ * V36.0: Sets the currently active zone for UI highlighting and manual data entry.
  */
 function selectZone(zoneID) {
     currentlySelectedPlantZone = zoneID;
@@ -1038,7 +1036,35 @@ function selectZone(zoneID) {
 }
 
 /**
- * V35.0: Creates and renders the photo grid cells.
+ * V36.0: Handles the click on the grid cell, selects the zone, and dynamically
+ * creates the file input to trigger the upload dialog.
+ */
+function selectZoneAndTriggerUpload(zoneID) {
+    selectZone(zoneID); // Set highlight
+
+    // If photo already exists, clicking the cell should only select the zone, not re-open the file dialog
+    if (currentPhotoAssignmentData[zoneID]) {
+        return; 
+    }
+    
+    // 1. Create a transient file input element
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = 'image/*';
+    fileInput.style.display = 'none'; // Keep it hidden
+
+    // 2. CRITICAL: Attach the onchange handler which includes the DOM destruction logic
+    // The input element must be passed to the handler so it can remove itself later.
+    fileInput.onchange = (e) => handleLocalPhotoUpload(zoneID, e, fileInput);
+
+    // 3. Temporarily append to the body, trigger the click, and open the file dialog
+    document.body.appendChild(fileInput); 
+    fileInput.click();
+}
+
+
+/**
+ * V36.0: Creates and renders the photo grid cells (now without a permanent input).
  */
 function generatePhotoGrid() {
     const grid = document.getElementById('photoGrid');
@@ -1048,30 +1074,16 @@ function generatePhotoGrid() {
         cell.className = 'grid-cell';
         cell.id = `zoneCell-${i}`;
         
-        // Retain cell click for highlighting 
-        cell.onclick = () => selectZone(i); 
-
-        // V34.0/V35.0: Embed the transparent input in EVERY cell
-        const fileInput = document.createElement('input');
-        fileInput.type = 'file';
-        fileInput.id = `file-input-${i}`;
-        fileInput.accept = 'image/*';
-        
-        // V35.0 Default State: Full size, transparent, and clickable (z-index 5)
-        fileInput.style.cssText = 'opacity: 0; position: absolute; left: 0; top: 0; width: 100%; height: 100%; cursor: pointer; z-index: 5; pointer-events: auto;';
-        
-        fileInput.onchange = (e) => handleLocalPhotoUpload(i, e);
-        
-        cell.appendChild(fileInput);
+        // V36.0: The cell itself is the click target, which calls the dynamic creation logic
+        cell.onclick = () => selectZoneAndTriggerUpload(i); 
 
         if (currentPhotoAssignmentData[i]) {
-            // If photo exists, render the image overlay, and aggressively hide the input
+            // If photo exists, render the image overlay
             renderPhotoInPhotoGridCell(i, currentPhotoAssignmentData[i], false); 
         } else {
             // If no photo, render placeholder text
             const textNode = document.createElement('div');
             textNode.className = 'placeholder-text';
-            // V34.0 Fix is applied in CSS: pointer-events: none to allow clickthrough
             textNode.innerHTML = `Zone ${i}<br>CLICK TO UPLOAD`;
             cell.appendChild(textNode);
         }
@@ -1081,12 +1093,17 @@ function generatePhotoGrid() {
 }
 
 /**
- * V35.0: Handles file upload event from the *local* input.
+ * V36.0: Handles file upload event from the *dynamic* input, and then destroys it.
+ * @param {number} zoneID 
+ * @param {Event} event 
+ * @param {HTMLInputElement} inputElement The dynamically created input to be destroyed.
  */
-function handleLocalPhotoUpload(zoneID, event) {
-    // CRITICAL: Must set the zone selection here since the click went straight to the input
-    selectZone(zoneID); 
-    
+function handleLocalPhotoUpload(zoneID, event, inputElement) {
+    // CRITICAL: Ensure the file input element is removed immediately before proceeding.
+    if (inputElement && inputElement.parentNode) {
+        inputElement.parentNode.removeChild(inputElement);
+    }
+
     const file = event.target.files[0];
     if (file) {
         const reader = new FileReader();
@@ -1101,47 +1118,44 @@ function handleLocalPhotoUpload(zoneID, event) {
             STATUS_ELEMENT.innerText = `User photo uploaded and assigned to Zone ${zoneID}. Diagnosis mocked for now.`;
         };
         reader.readAsDataURL(file);
-    } 
-    
-    // CRITICAL: Reset the input value so the change event fires again if the same file is selected
-    event.target.value = '';
+    } else {
+        // Handle case where user cancels the file dialog, should not break flow
+        STATUS_ELEMENT.innerText = `User cancelled file upload for Zone ${zoneID}.`;
+    }
 }
 
 /**
- * V35.0 CRITICAL FIX: Ensures correct z-indexing and element state for image visibility.
+ * V36.0 CRITICAL FIX: Ensures correct z-indexing and element state for image visibility.
+ * Now it only deals with image and delete button, as input is destroyed.
  * @param {number} zoneID The ID of the zone being rendered.
  * @param {string} dataUrl The base64 data URL of the image.
  * @param {boolean} triggerAnalysis Should the analysis cycle run afterwards.
  */
 function renderPhotoInPhotoGridCell(zoneID, dataUrl, triggerAnalysis = true) {
     const cell = document.getElementById(`zoneCell-${zoneID}`);
-    const fileInput = document.getElementById(`file-input-${zoneID}`);
-    if (!cell || !fileInput) return;
+    if (!cell) return;
     
-    // 1. Clear placeholder text / old elements (must keep the file input)
-    cell.querySelectorAll('.placeholder-text').forEach(el => el.remove()); 
-    cell.querySelectorAll('img, .delete-photo-btn').forEach(el => el.remove());
+    // 1. Clear placeholder text / old elements
+    cell.innerHTML = '';
     
-    // 2. CRITICAL V35.0 FIX: Aggressively hide the file input, ensuring it can't obscure the image.
-    fileInput.style.cssText = 'opacity: 0; position: absolute; left: 0; top: 0; width: 1px; height: 1px; z-index: -1; pointer-events: none;';
-    
-    // 3. Create and append Image element 
+    // 2. Create and append Image element 
     const img = document.createElement('img');
     img.src = dataUrl;
+    // Image is now guaranteed to be z-index 10+ and unobstructed by the file input (which is gone)
     img.style.cssText = 'width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 10;'; 
     cell.appendChild(img);
 
-    // 4. Create and append delete button (z-index 100)
+    // 3. Create and append delete button (z-index 100)
     const deleteBtn = document.createElement('button');
     deleteBtn.className = 'delete-photo-btn';
     deleteBtn.innerHTML = 'X';
     deleteBtn.onclick = (e) => {
-        e.stopPropagation(); // Prevents the input underneath from being clicked
+        e.stopPropagation(); // Prevents cell click (which would trigger upload)
         deletePhotoAssignment(zoneID);
     };
     cell.appendChild(deleteBtn);
     
-    // 5. Update the assignment data
+    // 4. Update the assignment data
     currentPhotoAssignmentData[zoneID] = dataUrl;
     
     if (triggerAnalysis) {
@@ -1152,20 +1166,15 @@ function renderPhotoInPhotoGridCell(zoneID, dataUrl, triggerAnalysis = true) {
 function deletePhotoAssignment(zoneID) {
     delete currentPhotoAssignmentData[zoneID];
     const cell = document.getElementById(`zoneCell-${zoneID}`);
-    const fileInput = document.getElementById(`file-input-${zoneID}`);
-    if (cell && fileInput) {
-        // Clear all elements except the file input
-        cell.querySelectorAll(':not(#file-input-' + zoneID + ')').forEach(el => el.remove());
+    
+    if (cell) {
+        // Clear all elements (image, delete button)
+        cell.innerHTML = '';
         
-        // V35.0: Restore input's size and clickability
-        fileInput.style.cssText = 'opacity: 0; position: absolute; left: 0; top: 0; width: 100%; height: 100%; cursor: pointer; z-index: 5; pointer-events: auto;';
-        
-        // Re-append the placeholder text
+        // Re-append the placeholder text, which is now the click target for the dynamic input
         const textNode = document.createElement('div');
         textNode.className = 'placeholder-text';
         textNode.innerHTML = `Zone ${zoneID}<br>CLICK TO UPLOAD`;
-        
-        // Insert the text node after the file input
         cell.appendChild(textNode);
         
         cell.style.border = '3px solid #ffaa00'; // Keep selected highlight
