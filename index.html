@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>S.C.O.U.T. Rover Post-Flood Data Fusion & Control Console (V34.0 - Critical Clickthrough Fix)</title>
+<title>S.C.O.U.T. Rover Post-Flood Data Fusion & Control Console (V35.0 - Aggressive Rendering Fix)</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script async src="https://docs.opencv.org/4.x/opencv.js" onload="onOpenCvReady();"></script>
@@ -203,7 +203,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 <body>
 <div class="container">
     <div class="controls-panel">
-        <h1>S.C.O.U.T. Post-Flood Assessment Bridge (V34.0)</h1>
+        <h1>S.C.O.U.T. Post-Flood Assessment Bridge (V35.0)</h1>
         <p>System Diagnostic Status: <span id="status">AWAITING SYSTEM BOOT SEQUENCE COMPLETION...</span></p>
 
         <div class="data-display history-controls">
@@ -321,7 +321,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 </div>
 
 <footer>
-    <p>&copy; 2025 S.C.O.U.T. Rover Systems - Operational Bridge V34.0. Hardware ESP32 IP: 10.101.146.88 | ThingSpeak API: 6OXH3SUQ4VNSOJX1</p>
+    <p>&copy; 2025 S.C.O.U.T. Rover Systems - Operational Bridge V35.0. Hardware ESP32 IP: 10.101.146.88 | ThingSpeak API: 6OXH3SUQ4VNSOJX1</p>
 </footer>
 
 <script>
@@ -330,7 +330,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 // ----------------------------------------------------------------------------------
 /**
  * @fileoverview S.C.O.U.T. Rover Control System JavaScript Core.
- * Version 34.0: Critical Clickthrough Fix for File Input (pointer-events: none on placeholder).
+ * Version 35.0: Critical Rendering Fix for Photo Visibility (Aggressive File Input Hiding).
  */
 // --- 0.2.1 HARDWARE AND NETWORK CONFIGURATION (CRITICAL SYSTEM IDENTIFIERS) ---
 const HARDWARE_ESP32_IP_ADDRESS = '10.101.146.88'; 
@@ -342,7 +342,7 @@ const MAP_CANVAS_PIXELS = 480;
 const MAX_STOCK_PHOTOS = 50;
 const PLANT_CIRCLE_RADIUS = 5;
 const SCORE_CAP_ON_PARTIAL_DATA = 50;
-// --- 0.2.3 DIAGNOSTIC CONSTANTS (V34.0 - HEALTH SCORE AND THRESHOLDS) ---
+// --- 0.2.3 DIAGNOSTIC CONSTANTS (V35.0 - HEALTH SCORE AND THRESHOLDS) ---
 const HEALTH_SCORE_THRESHOLDS = {
     CRITICAL: { max: 40, color: '#f85149', label: 'CRITICAL', class: 'rec-critical' }, // Red (0-40)
     ACTION_REQUIRED: { max: 75, color: '#e3b341', label: 'ACTION REQUIRED', class: 'rec-action' }, // Amber (41-75)
@@ -559,7 +559,7 @@ function dispatchManualDataEntry() {
 
 
 // ==================================================================================
-// SECTION 2.0: DIAGNOSTIC KNOWLEDGE BASE & FUSED ANALYSIS CORE (V34.0 Fixes)
+// SECTION 2.0: DIAGNOSTIC KNOWLEDGE BASE & FUSED ANALYSIS CORE (V35.0 Fixes)
 // ----------------------------------------------------------------------------------
 // Base knowledge for photo analysis and associated score penalties
 const TOMATO_DIAGNOSTIC_KB = {
@@ -786,7 +786,7 @@ function generatePlantAnalysisCardHTML(zoneID, result) {
                 <div class="${scoreClass}">${result.rec_sensor}</div>
             </div>
 
-            <h3>DATA FUSION ENGINE: Detailed Report (V34.0)</h3>
+            <h3>DATA FUSION ENGINE: Detailed Report (V35.0)</h3>
             <pre style="white-space: pre-wrap; word-wrap: break-word; background: #0f131a; padding: 15px; border-radius: 8px; border: 1px solid #30363d; font-size: 0.9em;">${result.analysis}</pre>
         </div>
     `;
@@ -1019,11 +1019,11 @@ function animate() {
 
 
 // ==================================================================================
-// SECTION 5.0: UTILITY & UI FUNCTIONS (Photo Grid - V34.0 FIX CORE)
+// SECTION 5.0: UTILITY & UI FUNCTIONS (Photo Grid - V35.0 FIX CORE)
 // ----------------------------------------------------------------------------------
 
 /**
- * V34.0: Sets the currently active zone for UI highlighting and manual data entry.
+ * V35.0: Sets the currently active zone for UI highlighting and manual data entry.
  */
 function selectZone(zoneID) {
     currentlySelectedPlantZone = zoneID;
@@ -1038,7 +1038,7 @@ function selectZone(zoneID) {
 }
 
 /**
- * V34.0: Creates and renders the photo grid cells.
+ * V35.0: Creates and renders the photo grid cells.
  */
 function generatePhotoGrid() {
     const grid = document.getElementById('photoGrid');
@@ -1048,15 +1048,16 @@ function generatePhotoGrid() {
         cell.className = 'grid-cell';
         cell.id = `zoneCell-${i}`;
         
-        // Retain cell click for highlighting (redundant but safe)
+        // Retain cell click for highlighting 
         cell.onclick = () => selectZone(i); 
 
-        // V34.0: Embed the transparent input in EVERY cell
+        // V34.0/V35.0: Embed the transparent input in EVERY cell
         const fileInput = document.createElement('input');
         fileInput.type = 'file';
         fileInput.id = `file-input-${i}`;
         fileInput.accept = 'image/*';
-        // V34.0 Input Styles: Must be visible (transparent) and on top to capture the click
+        
+        // V35.0 Default State: Full size, transparent, and clickable (z-index 5)
         fileInput.style.cssText = 'opacity: 0; position: absolute; left: 0; top: 0; width: 100%; height: 100%; cursor: pointer; z-index: 5; pointer-events: auto;';
         
         fileInput.onchange = (e) => handleLocalPhotoUpload(i, e);
@@ -1064,7 +1065,7 @@ function generatePhotoGrid() {
         cell.appendChild(fileInput);
 
         if (currentPhotoAssignmentData[i]) {
-            // If photo exists, render the image overlay (and update file input styles)
+            // If photo exists, render the image overlay, and aggressively hide the input
             renderPhotoInPhotoGridCell(i, currentPhotoAssignmentData[i], false); 
         } else {
             // If no photo, render placeholder text
@@ -1080,7 +1081,7 @@ function generatePhotoGrid() {
 }
 
 /**
- * V34.0: Handles file upload event from the *local* input.
+ * V35.0: Handles file upload event from the *local* input.
  */
 function handleLocalPhotoUpload(zoneID, event) {
     // CRITICAL: Must set the zone selection here since the click went straight to the input
@@ -1107,7 +1108,7 @@ function handleLocalPhotoUpload(zoneID, event) {
 }
 
 /**
- * V34.0 CRITICAL FIX: Ensures correct z-indexing and element state for image visibility.
+ * V35.0 CRITICAL FIX: Ensures correct z-indexing and element state for image visibility.
  * @param {number} zoneID The ID of the zone being rendered.
  * @param {string} dataUrl The base64 data URL of the image.
  * @param {boolean} triggerAnalysis Should the analysis cycle run afterwards.
@@ -1121,9 +1122,8 @@ function renderPhotoInPhotoGridCell(zoneID, dataUrl, triggerAnalysis = true) {
     cell.querySelectorAll('.placeholder-text').forEach(el => el.remove()); 
     cell.querySelectorAll('img, .delete-photo-btn').forEach(el => el.remove());
     
-    // 2. CRITICAL Z-INDEX FIX: Push input far back and disable interaction.
-    fileInput.style.zIndex = '-1'; 
-    fileInput.style.pointerEvents = 'none'; 
+    // 2. CRITICAL V35.0 FIX: Aggressively hide the file input, ensuring it can't obscure the image.
+    fileInput.style.cssText = 'opacity: 0; position: absolute; left: 0; top: 0; width: 1px; height: 1px; z-index: -1; pointer-events: none;';
     
     // 3. Create and append Image element 
     const img = document.createElement('img');
@@ -1157,9 +1157,8 @@ function deletePhotoAssignment(zoneID) {
         // Clear all elements except the file input
         cell.querySelectorAll(':not(#file-input-' + zoneID + ')').forEach(el => el.remove());
         
-        // V34.0: Restore input's visibility (opacity 0) and clickability
-        fileInput.style.zIndex = '5';
-        fileInput.style.pointerEvents = 'auto';
+        // V35.0: Restore input's size and clickability
+        fileInput.style.cssText = 'opacity: 0; position: absolute; left: 0; top: 0; width: 100%; height: 100%; cursor: pointer; z-index: 5; pointer-events: auto;';
         
         // Re-append the placeholder text
         const textNode = document.createElement('div');
