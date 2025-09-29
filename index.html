@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>S.C.O.U.T. Rover Post-Flood Data Fusion & Control Console (V33.0 - Critical Photo Fix)</title>
+<title>S.C.O.U.T. Rover Post-Flood Data Fusion & Control Console (V34.0 - Critical Clickthrough Fix)</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script async src="https://docs.opencv.org/4.x/opencv.js" onload="onOpenCvReady();"></script>
@@ -188,21 +188,22 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
     background-color: #f85149;
     color: #0d1117;
     border-radius: 50%;
-    /* V33.0: Ensure pointer events are ON for the delete button */
     pointer-events: auto; 
 }
-/* Placeholder text z-index (Must be higher than the file input when empty) */
+/* V34.0 CRITICAL FIX: Ensure clicks pass through placeholder text to the file input (z-index 5) underneath */
 .placeholder-text {
-    z-index: 20; /* Set higher than default input z-index 5 */
+    z-index: 3; /* Must be lower than file input z-index 5 */
     position: relative;
     text-align: center;
+    /* CRITICAL: Allows click to fall through to the transparent file input */
+    pointer-events: none;
 }
 </style>
 </head>
 <body>
 <div class="container">
     <div class="controls-panel">
-        <h1>S.C.O.U.T. Post-Flood Assessment Bridge (V33.0)</h1>
+        <h1>S.C.O.U.T. Post-Flood Assessment Bridge (V34.0)</h1>
         <p>System Diagnostic Status: <span id="status">AWAITING SYSTEM BOOT SEQUENCE COMPLETION...</span></p>
 
         <div class="data-display history-controls">
@@ -320,7 +321,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 </div>
 
 <footer>
-    <p>&copy; 2025 S.C.O.U.T. Rover Systems - Operational Bridge V33.0. Hardware ESP32 IP: 10.101.146.88 | ThingSpeak API: 6OXH3SUQ4VNSOJX1</p>
+    <p>&copy; 2025 S.C.O.U.T. Rover Systems - Operational Bridge V34.0. Hardware ESP32 IP: 10.101.146.88 | ThingSpeak API: 6OXH3SUQ4VNSOJX1</p>
 </footer>
 
 <script>
@@ -329,7 +330,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 // ----------------------------------------------------------------------------------
 /**
  * @fileoverview S.C.O.U.T. Rover Control System JavaScript Core.
- * Version 33.0: Critical Photo Z-Index and Pointer-Event Fix for Visibility.
+ * Version 34.0: Critical Clickthrough Fix for File Input (pointer-events: none on placeholder).
  */
 // --- 0.2.1 HARDWARE AND NETWORK CONFIGURATION (CRITICAL SYSTEM IDENTIFIERS) ---
 const HARDWARE_ESP32_IP_ADDRESS = '10.101.146.88'; 
@@ -341,7 +342,7 @@ const MAP_CANVAS_PIXELS = 480;
 const MAX_STOCK_PHOTOS = 50;
 const PLANT_CIRCLE_RADIUS = 5;
 const SCORE_CAP_ON_PARTIAL_DATA = 50;
-// --- 0.2.3 DIAGNOSTIC CONSTANTS (V33.0 - HEALTH SCORE AND THRESHOLDS) ---
+// --- 0.2.3 DIAGNOSTIC CONSTANTS (V34.0 - HEALTH SCORE AND THRESHOLDS) ---
 const HEALTH_SCORE_THRESHOLDS = {
     CRITICAL: { max: 40, color: '#f85149', label: 'CRITICAL', class: 'rec-critical' }, // Red (0-40)
     ACTION_REQUIRED: { max: 75, color: '#e3b341', label: 'ACTION REQUIRED', class: 'rec-action' }, // Amber (41-75)
@@ -558,7 +559,7 @@ function dispatchManualDataEntry() {
 
 
 // ==================================================================================
-// SECTION 2.0: DIAGNOSTIC KNOWLEDGE BASE & FUSED ANALYSIS CORE (V33.0 Fixes)
+// SECTION 2.0: DIAGNOSTIC KNOWLEDGE BASE & FUSED ANALYSIS CORE (V34.0 Fixes)
 // ----------------------------------------------------------------------------------
 // Base knowledge for photo analysis and associated score penalties
 const TOMATO_DIAGNOSTIC_KB = {
@@ -785,7 +786,7 @@ function generatePlantAnalysisCardHTML(zoneID, result) {
                 <div class="${scoreClass}">${result.rec_sensor}</div>
             </div>
 
-            <h3>DATA FUSION ENGINE: Detailed Report (V33.0)</h3>
+            <h3>DATA FUSION ENGINE: Detailed Report (V34.0)</h3>
             <pre style="white-space: pre-wrap; word-wrap: break-word; background: #0f131a; padding: 15px; border-radius: 8px; border: 1px solid #30363d; font-size: 0.9em;">${result.analysis}</pre>
         </div>
     `;
@@ -1018,11 +1019,11 @@ function animate() {
 
 
 // ==================================================================================
-// SECTION 5.0: UTILITY & UI FUNCTIONS (Photo Grid - V33.0 FIX CORE)
+// SECTION 5.0: UTILITY & UI FUNCTIONS (Photo Grid - V34.0 FIX CORE)
 // ----------------------------------------------------------------------------------
 
 /**
- * V33.0: Sets the currently active zone for UI highlighting and manual data entry.
+ * V34.0: Sets the currently active zone for UI highlighting and manual data entry.
  */
 function selectZone(zoneID) {
     currentlySelectedPlantZone = zoneID;
@@ -1037,7 +1038,7 @@ function selectZone(zoneID) {
 }
 
 /**
- * V33.0: Creates and renders the photo grid cells.
+ * V34.0: Creates and renders the photo grid cells.
  */
 function generatePhotoGrid() {
     const grid = document.getElementById('photoGrid');
@@ -1047,14 +1048,15 @@ function generatePhotoGrid() {
         cell.className = 'grid-cell';
         cell.id = `zoneCell-${i}`;
         
+        // Retain cell click for highlighting (redundant but safe)
         cell.onclick = () => selectZone(i); 
 
-        // V33.0: Embed the transparent input in EVERY cell
+        // V34.0: Embed the transparent input in EVERY cell
         const fileInput = document.createElement('input');
         fileInput.type = 'file';
         fileInput.id = `file-input-${i}`;
         fileInput.accept = 'image/*';
-        // V33.0 Initial Input Styles: Must be visible and on top to capture the click
+        // V34.0 Input Styles: Must be visible (transparent) and on top to capture the click
         fileInput.style.cssText = 'opacity: 0; position: absolute; left: 0; top: 0; width: 100%; height: 100%; cursor: pointer; z-index: 5; pointer-events: auto;';
         
         fileInput.onchange = (e) => handleLocalPhotoUpload(i, e);
@@ -1068,6 +1070,7 @@ function generatePhotoGrid() {
             // If no photo, render placeholder text
             const textNode = document.createElement('div');
             textNode.className = 'placeholder-text';
+            // V34.0 Fix is applied in CSS: pointer-events: none to allow clickthrough
             textNode.innerHTML = `Zone ${i}<br>CLICK TO UPLOAD`;
             cell.appendChild(textNode);
         }
@@ -1077,7 +1080,7 @@ function generatePhotoGrid() {
 }
 
 /**
- * V33.0: Handles file upload event from the *local* input.
+ * V34.0: Handles file upload event from the *local* input.
  */
 function handleLocalPhotoUpload(zoneID, event) {
     // CRITICAL: Must set the zone selection here since the click went straight to the input
@@ -1104,7 +1107,7 @@ function handleLocalPhotoUpload(zoneID, event) {
 }
 
 /**
- * V33.0 CRITICAL FIX: Ensures correct z-indexing and element state for image visibility.
+ * V34.0 CRITICAL FIX: Ensures correct z-indexing and element state for image visibility.
  * @param {number} zoneID The ID of the zone being rendered.
  * @param {string} dataUrl The base64 data URL of the image.
  * @param {boolean} triggerAnalysis Should the analysis cycle run afterwards.
@@ -1154,7 +1157,7 @@ function deletePhotoAssignment(zoneID) {
         // Clear all elements except the file input
         cell.querySelectorAll(':not(#file-input-' + zoneID + ')').forEach(el => el.remove());
         
-        // V33.0: Restore input's visibility and clickability
+        // V34.0: Restore input's visibility (opacity 0) and clickability
         fileInput.style.zIndex = '5';
         fileInput.style.pointerEvents = 'auto';
         
@@ -1225,7 +1228,7 @@ function executeTrialSaveOperation() {
         kinematics: JSON.parse(JSON.stringify(currentRoverKinematicState)),
         sensorData: JSON.parse(JSON.stringify(systemLoggedSensorDataArray)),
         photoAssignments: JSON.parse(JSON.stringify(currentPhotoAssignmentData)),
-        // V33.0: Store only the generated HTML structure from the analysis grid
+        // V34.0: Store only the generated HTML structure from the analysis grid
         analysisResults: document.getElementById('plantAnalysisGrid').innerHTML 
     };
 
@@ -1267,7 +1270,7 @@ function restoreTrialFromHistory(trial) {
     systemLoggedSensorDataArray = trial.sensorData;
     currentPhotoAssignmentData = trial.photoAssignments;
     
-    // V33.0: Restore the exact analysis HTML structure
+    // V34.0: Restore the exact analysis HTML structure
     document.getElementById('plantAnalysisGrid').innerHTML = trial.analysisResults;
     
     // Re-run the core functions to sync map/3D visualization and photo grid display
@@ -1291,7 +1294,7 @@ function executeAllHistoryClearance() {
 }
 
 function resetSensorAndMapData(clearHistory = true) {
-    // V33.0: CRITICAL: Do NOT clear currentPhotoAssignmentData here if loading from localStorage 
+    // V34.0: CRITICAL: Do NOT clear currentPhotoAssignmentData here if loading from localStorage 
     // BUT since we don't load from localStorage in this snippet, we must clear it on new run.
     systemLoggedSensorDataArray = [];
     currentPhotoAssignmentData = {}; 
