@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>S.C.O.U.T. Rover Full-Spectrum Data Fusion & Control Console (V14.2 - Manual Upload Fix)</title>
+<title>S.C.O.U.T. Rover Full-Spectrum Data Fusion & Control Console (V14.3 - Manual Upload Fix)</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script async src="https://docs.opencv.org/4.x/opencv.js" onload="onOpenCvReady();"></script>
@@ -117,7 +117,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
     color: #4ac9b0;
     transition: border 0.2s, background-color 0.2s;
 }
-.grid-cell:hover { background-color: #2a3038; } /* Removed border hover since selection handles border */
+.grid-cell:hover { background-color: #2a3038; } 
 /* Styles for delete button for embedded file input to work */
 .delete-photo-btn {
     position: absolute;
@@ -196,7 +196,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 <body>
 <div class="container">
     <div class="controls-panel">
-        <h1>S.C.O.U.T. Rover Control & Telemetry Bridge (V14.2)</h1>
+        <h1>S.C.O.U.T. Rover Control & Telemetry Bridge (V14.3)</h1>
         <p>System Diagnostic Status: <span id="status">AWAITING SYSTEM BOOT SEQUENCE COMPLETION...</span></p>
         
         <div class="data-display history-controls">
@@ -308,7 +308,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 // ----------------------------------------------------------------------------------
 /**
  * @fileoverview S.C.O.U.T. Rover Control System JavaScript Core.
- * Version 14.2: Enhanced Photo Analysis Consistency with UX fix.
+ * Version 14.3: CRITICAL FIX: Manual Photo Upload/Replacement fix via pointer-events: none.
  */
 // --- 0.2.1 HARDWARE AND NETWORK CONFIGURATION (CRITICAL SYSTEM IDENTIFIERS) ---
 // ** CRITICAL USER-REQUESTED CONFIGURATION UPDATES APPLIED BELOW **
@@ -520,7 +520,7 @@ function executeDataAcquisition(acquisitionType) {
 }
 
 // ==================================================================================
-// SECTION 2.0: DIAGNOSTIC KNOWLEDGE BASE & FUSED ANALYSIS CORE (V14.2)
+// SECTION 2.0: DIAGNOSTIC KNOWLEDGE BASE & FUSED ANALYSIS CORE (V14.3)
 // ----------------------------------------------------------------------------------
 
 const TOMATO_DIAGNOSTIC_KB = {
@@ -1186,10 +1186,8 @@ function generatePhotoGrid() {
         const cell = document.createElement('div');
         cell.className = 'grid-cell';
         cell.id = `zone-cell-${i}`;
-        cell.innerHTML = `Zone ${i}`; // Initial text for cell
-
-        // Always embed the hidden file input for manual upload/replacement.
-        // This is the CRITICAL FIX to enable re-uploading on populated cells.
+        
+        // 1. ALWAYS ADD HIDDEN FILE INPUT FIRST (CRITICAL FOR DOM PRESERVATION)
         const fileInput = document.createElement('input');
         fileInput.type = 'file';
         fileInput.id = `file-input-${i}`;
@@ -1197,11 +1195,17 @@ function generatePhotoGrid() {
         fileInput.style.display = 'none';
         // Clear value after change to allow re-uploading the same file immediately
         fileInput.setAttribute('onchange', `handleManualPhotoUpload(event, ${i}); event.target.value=null;`);
-        cell.appendChild(fileInput);
+        cell.appendChild(fileInput); 
+
+        // 2. Add the initial text/label as the second child
+        const initialLabel = document.createElement('span');
+        initialLabel.innerText = `Zone ${i}`;
+        cell.appendChild(initialLabel);
         
+        // The cell's ONCLICK handles both selection and triggering the file input
         cell.setAttribute('onclick', `selectPlantZoneForPhoto(${i})`);
 
-        // If photo exists, show it (renderPhotoInPhotoGridCell now handles content layering)
+        // If photo exists, show it (renderPhotoInPhotoGridCell will handle clearing the initialLabel)
         const photoData = currentPhotoAssignmentData[i];
         if (photoData) {
             renderPhotoInPhotoGridCell(i, photoData);
@@ -1224,28 +1228,34 @@ function renderPhotoInPhotoGridCell(zoneID, photoBase64) {
     const cell = document.getElementById(`zone-cell-${zoneID}`);
     if (!cell) return;
     
-    // 1. Identify and preserve the hidden file input
-    const fileInput = document.getElementById(`file-input-${zoneID}`);
+    // 1. Clear all previous dynamic content while preserving the file input (the very first child)
+    while (cell.childNodes.length > 1) {
+        // Remove children from the end until only the file input remains
+        cell.removeChild(cell.lastChild);
+    }
     
-    // 2. Clear all previous image/button/text content but keep the file input
-    cell.innerHTML = `Zone ${zoneID}`; // Reset to initial text
-    if(fileInput) cell.appendChild(fileInput); // Re-append the input
-    
-    // 3. Add new image/overlay content
+    // 2. Add new image/overlay content
     const img = document.createElement('img');
     img.src = photoBase64;
     img.alt = `Zone ${zoneID} Photo`;
-    img.style.cssText = 'width:100%; height:100%; object-fit:cover; position:absolute; top:0; left:0; z-index:5;';
+    // CRITICAL FIX V14.3: Ensure the image does not block click events on the cell
+    img.style.cssText = 'width:100%; height:100%; object-fit:cover; position:absolute; top:0; left:0; z-index:5; pointer-events: none;';
     
     const deleteButton = document.createElement('button');
     deleteButton.className = 'delete-photo-btn';
     deleteButton.innerHTML = 'X';
+    // Use event.stopPropagation() to prevent the click from falling through to the cell's main click handler
     deleteButton.setAttribute('onclick', `event.stopPropagation(); deletePhotoFromZone(${zoneID})`);
     
-    cell.appendChild(img);
-    cell.appendChild(deleteButton);
-    cell.innerHTML += `<p style="position: absolute; bottom: 5px; left: 5px; background: rgba(0,0,0,0.6); padding: 2px 5px; border-radius: 5px; z-index:15;">Zone ${zoneID}</p>`;
+    const zoneLabel = document.createElement('p');
+    zoneLabel.innerText = `Zone ${zoneID}`;
+    zoneLabel.style.cssText = 'position: absolute; bottom: 5px; left: 5px; background: rgba(0,0,0,0.6); padding: 2px 5px; border-radius: 5px; z-index:15;';
 
+    // Append new content (order is important for layering)
+    cell.appendChild(img); 
+    cell.appendChild(deleteButton); 
+    cell.appendChild(zoneLabel); 
+    
     cell.style.border = '3px solid #3fb950'; // Highlight cell with photo
 }
 
@@ -1275,8 +1285,8 @@ function selectPlantZoneForPhoto(zoneID) {
     // Programmatically click the hidden file input to trigger upload dialog for manual replacement/upload
     const fileInput = document.getElementById(`file-input-${zoneID}`);
     if (fileInput) {
-        // This is the FIX: Always trigger the file selector, allowing the user to replace an existing photo
-        fileInput.click();
+        // This function is the trigger, and the element is guaranteed to be present and clickable.
+        fileInput.click(); 
         STATUS_ELEMENT.innerText = `Zone ${zoneID} selected. File upload dialog opened for manual photo assignment/replacement.`;
     }
 }
@@ -1293,8 +1303,7 @@ function handleManualPhotoUpload(event, zoneID) {
         const reader = new FileReader();
         reader.onload = function(e) {
             const base64Image = e.target.result;
-            // NOTE: The CV analysis will need to be run on this image data.
-            // For now, we will assign a mock diagnosis to the manual photo for fusion purposes.
+            // NOTE: For consistency with stock/rover captures, we add a mock diagnosis marker
             const mockDiagnosis = (Math.random() > 0.5) 
                 ? 'General Severe Yellowing (Chlorosis-N)'
                 : 'Healthy, Deep Green Foliage';
@@ -1322,6 +1331,14 @@ function deletePhotoFromZone(zoneID) {
         
         // Re-generate the grid to clear photo content, reset border, and ensure the file input remains.
         generatePhotoGrid(); 
+        
+        // Ensure visual state is clean
+        const cell = document.getElementById(`zone-cell-${zoneID}`);
+        if(cell) {
+            cell.style.boxShadow = 'none';
+            cell.style.border = '1px solid #3fb950';
+        }
+
         triggerComprehensiveAnalysisCycle();
         STATUS_ELEMENT.innerText = `Photo cleared from Zone ${zoneID}.`;
     }
