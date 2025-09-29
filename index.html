@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>S.C.O.U.T. Rover Full-Spectrum Data Fusion & Control Console (V21.0 - Complete Fix)</title>
+<title>S.C.O.U.T. Rover Full-Spectrum Data Fusion & Control Console (V22.0 - 3D/Manual Data Fix)</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script async src="https://docs.opencv.org/4.x/opencv.js" onload="onOpenCvReady();"></script>
@@ -83,6 +83,15 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 .arm-controls button { background-color: #3fb950; color: #0d1117; }
 .history-controls button { background-color: #e3b341; color: #0d1117; }
 .photo-controls button { background-color: #f08047; color: #0d1117; }
+/* Manual Input Styling */
+.manual-input-fields input[type="number"] {
+    background-color: #0d1117;
+    border: 1px solid #30363d;
+    color: #c9d1d9;
+    padding: 5px;
+    border-radius: 4px;
+}
+
 /* MAP STYLES */
 #roverMap {
     border: 4px solid #58a6ff;
@@ -219,7 +228,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 <body>
 <div class="container">
     <div class="controls-panel">
-        <h1>S.C.O.U.T. Rover Control & Telemetry Bridge (V21.0)</h1>
+        <h1>S.C.O.U.T. Rover Control & Telemetry Bridge (V22.0)</h1>
         <p>System Diagnostic Status: <span id="status">AWAITING SYSTEM BOOT SEQUENCE COMPLETION...</span></p>
 
         <div class="data-display history-controls">
@@ -249,7 +258,19 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
             <button onclick="dispatchRoverMovementCommand('read_sensors')">  💧  READ ENVIRONMENTAL DATA</button>
             <button onclick="dispatchRoverMovementCommand('read_nav')">  🧭  ACQUIRE GPS/IMU DATA</button>
         </div>
-
+        
+        <div class="data-display arm-controls">
+            <h2>Manual Data Entry (Override)  📝</h2>
+            <p>Assign custom sensor data to the **Current Target Zone**.</p>
+            <div class="manual-input-fields" style="display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap;">
+                <label style="color:#79c0ff;">Moisture %: <input type="number" id="manualMoisture" min="0" max="100" step="0.1" value="50.0" style="width: 70px;"></label>
+                <label style="color:#79c0ff;">N (ppm): <input type="number" id="manualN" min="1" value="150" style="width: 50px;"></label>
+                <label style="color:#79c0ff;">P (ppm): <input type="number" id="manualP" min="1" value="80" style="width: 50px;"></label>
+                <label style="color:#79c0ff;">K (ppm): <input type="number" id="manualK" min="1" value="150" style="width: 50px;"></label>
+            </div>
+            <button onclick="dispatchManualDataEntry()" style="background-color: #e341b3; color: #0d1117;">  📝  SUBMIT MANUAL DATA + PHOTO</button>
+            <p><small>The current zone must have a photo assigned first.</small></p>
+        </div>
         <div class="data-display">
             <h2>Real-time Sensor Telemetry (Raw Feed)</h2>
             <h3>Navigation Subsystem</h3>
@@ -277,8 +298,8 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
     <div class="photo-panel">
         <div class="camera-control data-display">
             <h2>Image Capture & Stock Library</h2>
-            <p>TO UPLOAD: **Click any Zone (1-16)** to select it, then click to upload or use the stock library.</p>
-            <button onclick="dispatchRoverMovementCommand('capture')" class="photo-controls">  📸  TRIGGER CAMERA CAPTURE</button>
+            <p>TO UPLOAD: **Click any Zone (1-16)** to select it, which will **prompt you to upload a file**.</p>
+            <button onclick="dispatchRoverMovementCommand('capture')" class="photo-controls">  📸  TRIGGER CAMERA CAPTURE (Mocked)</button>
             <button onclick="openStockImageGalleryModal()" class="photo-controls">  🖼 ️ VIEW STOCK PHOTOS (50 Presets)</button>
             <p>Current Target Zone: **Zone <span id="currentZoneSelection">N/A</span>**</p>
         </div>
@@ -329,11 +350,11 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 // ----------------------------------------------------------------------------------
 /**
  * @fileoverview S.C.O.U.T. Rover Control System JavaScript Core.
- * Version 21.0: Comprehensive Analysis Fixes, Flood Protocol, 3-Part Recommendations, 2D/3D Visualization Fixes.
+ * Version 22.0: 3D Plant Fix, Photo Upload Fix, Manual Data Entry Restore.
  */
 // --- 0.2.1 HARDWARE AND NETWORK CONFIGURATION (CRITICAL SYSTEM IDENTIFIERS) ---
 const HARDWARE_ESP32_IP_ADDRESS = '192.168.1.50';
-const THINGSPEAK_API_KEY = '6OXH3SUQ4VNSOJX1'; // CONFIRMED: Key retained for ThingSpeak data transmission
+const THINGSPEAK_API_KEY = '6OXH3SUQ4VNSOJX1'; 
 const MAX_HISTORY_TRIALS = 50;
 // --- 0.2.2 PHYSICAL SYSTEM AND UI CONSTANTS (STRICT ADHERENCE TO SPECIFICATIONS) ---
 const FIELD_GRID_SIZE_M = 4;
@@ -341,7 +362,7 @@ const MAP_CANVAS_PIXELS = 480;
 const MAX_STOCK_PHOTOS = 50;
 const PLANT_CIRCLE_RADIUS = 5;
 const SCORE_CAP_ON_PARTIAL_DATA = 50;
-// --- 0.2.3 DIAGNOSTIC CONSTANTS (V21.0 - HEALTH SCORE AND THRESHOLDS) ---
+// --- 0.2.3 DIAGNOSTIC CONSTANTS (V22.0 - HEALTH SCORE AND THRESHOLDS) ---
 const HEALTH_SCORE_THRESHOLDS = {
     CRITICAL: { max: 40, color: '#f85149', label: 'CRITICAL', class: 'rec-critical' }, // Red (0-40)
     ACTION_REQUIRED: { max: 75, color: '#e3b341', label: 'ACTION REQUIRED', class: 'rec-action' }, // Amber (41-75)
@@ -370,7 +391,7 @@ let openCvLibraryIsReady = false;
 let systemLoggedSensorDataArray = [];
 let currentPhotoAssignmentData = {};
 let stockPhotoLibraryData = {};
-let currentlySelectedPlantZone = 0; // CRITICAL: Used by photo handlers
+let currentlySelectedPlantZone = 0; // CRITICAL: Used by photo handlers and manual data entry
 let historyIsBeingViewed = false;
 let currentRoverKinematicState = {
     latitude: 'N/A',
@@ -421,7 +442,7 @@ function dispatchRoverMovementCommand(commandIdentifier) {
         if (commandIdentifier.startsWith('read_') || commandIdentifier === 'probe') {
             executeDataAcquisition(commandIdentifier);
         } else if (commandIdentifier === 'capture') {
-            // Mock capture logic
+            // Mock capture logic: Finds the nearest zone and assigns a mock photo
             const zoneID = findNearestPlantZone(currentRoverKinematicState.x_position_m, currentRoverKinematicState.y_position_m)?.id || 1;
             
             // Mocking a diagnosis based on the zone for testing purposes
@@ -479,13 +500,13 @@ function executeDataAcquisition(acquisitionType) {
 
     // Simulate poor conditions for specific zones (for diverse analysis results)
     if (plantID % 3 === 0) {
-        // Very low moisture (stress) and low N, likely a fungal/bacterial scenario from mock capture
-        moistureVal = (Math.random() * 15 + 5).toFixed(1); // Very low moisture
-        npk_n = Math.floor(Math.random() * 30 + 10); // Very low N
+        // Very low moisture (stress) and low N
+        moistureVal = (Math.random() * 15 + 5).toFixed(1); 
+        npk_n = Math.floor(Math.random() * 30 + 10); 
     } else if (plantID % 4 === 0) {
         // High moisture (simulated flooding)
         moistureVal = (Math.random() * 10 + 85).toFixed(1);
-        npk_n = Math.floor(Math.random() * 80 + 20); // Low N due to potential leaching
+        npk_n = Math.floor(Math.random() * 80 + 20); 
     }
 
     // Navigation Data
@@ -494,8 +515,8 @@ function executeDataAcquisition(acquisitionType) {
     const longitude = `-74.0060${(Math.random()*100).toFixed(0)}`;
 
     // Update Live Display Elements
-    document.getElementById('moistureData').innerText = `${moistureVal}%`;
-    document.getElementById('npkData').innerText = `N:${npk_n}, P:${npk_p}, K:${npk_k}`;
+    MOISTURE_DISPLAY_ELEMENT.innerText = `${moistureVal}%`;
+    NPK_DISPLAY_ELEMENT.innerText = `N:${npk_n}, P:${npk_p}, K:${npk_k}`;
     document.getElementById('headingData').innerText = heading + ' deg';
     document.getElementById('latitudeData').innerText = latitude;
     document.getElementById('longitudeData').innerText = longitude;
@@ -509,7 +530,7 @@ function executeDataAcquisition(acquisitionType) {
         K: npk_k,
         latitude: latitude,
         longitude: longitude,
-        heading: heading // Sending full data packet
+        heading: heading 
     });
 
     if (acquisitionType === 'probe' || acquisitionType === 'read_sensors') {
@@ -532,8 +553,56 @@ function executeDataAcquisition(acquisitionType) {
     draw3DMap();
 }
 
+/**
+ * V22.0 NEW FUNCTION: Submits manually entered sensor data.
+ */
+function dispatchManualDataEntry() {
+    if (currentlySelectedPlantZone === 0) {
+        STATUS_ELEMENT.innerText = "ERROR: Please select a target Zone (1-16) on the grid first by clicking a cell!";
+        return;
+    }
+    const zoneID = currentlySelectedPlantZone;
+    const photoEntry = currentPhotoAssignmentData[zoneID];
+    
+    if (!photoEntry) {
+        STATUS_ELEMENT.innerText = `WARNING: Zone ${zoneID} has no photo assigned. Please assign a photo (upload or stock) first.`;
+        return;
+    }
+
+    const moistureVal = parseFloat(document.getElementById('manualMoisture').value);
+    const npk_n = parseInt(document.getElementById('manualN').value);
+    const npk_p = parseInt(document.getElementById('manualP').value);
+    const npk_k = parseInt(document.getElementById('manualK').value);
+
+    if (isNaN(moistureVal) || isNaN(npk_n) || isNaN(npk_p) || isNaN(npk_k)) {
+        STATUS_ELEMENT.innerText = "ERROR: All manual sensor fields must contain valid numbers.";
+        return;
+    }
+    
+    // 1. Log the manual data to the system array. Use the fixed position of the zone.
+    systemLoggedSensorDataArray.push({
+        x_m: FIELD_PLANT_LOCATIONS_M[zoneID - 1].x,
+        y_m: FIELD_PLANT_LOCATIONS_M[zoneID - 1].y,
+        moisture: moistureVal,
+        npk_n: npk_n,
+        npk_p: npk_p,
+        npk_k: npk_k,
+        timestamp: Date.now(),
+        zoneID: zoneID 
+    });
+    
+    // 2. Update Live Display Elements (Optional, but good UX)
+    MOISTURE_DISPLAY_ELEMENT.innerText = `${moistureVal}% (MANUAL)`;
+    NPK_DISPLAY_ELEMENT.innerText = `N:${npk_n}, P:${npk_p}, K:${npk_k} (MANUAL)`;
+
+    // 3. Trigger analysis
+    STATUS_ELEMENT.innerText = `MANUAL ENTRY: Sensor data for Zone ${zoneID} logged and analysis triggered.`;
+    triggerComprehensiveAnalysisCycle();
+}
+
+
 // ==================================================================================
-// SECTION 2.0: DIAGNOSTIC KNOWLEDGE BASE & FUSED ANALYSIS CORE (V21.0 - FIXED)
+// SECTION 2.0: DIAGNOSTIC KNOWLEDGE BASE & FUSED ANALYSIS CORE (V22.0 - Fixed)
 // ----------------------------------------------------------------------------------
 // Base knowledge for photo analysis and associated score penalties
 const TOMATO_DIAGNOSTIC_KB = {
@@ -545,10 +614,9 @@ const TOMATO_DIAGNOSTIC_KB = {
 };
 
 /**
- * V21.0 CORE FUNCTION: Calculates health score and generates the detailed analysis.
+ * V21.0 CORE FUNCTION: Calculates health score and generates the detailed analysis. (Logic retained)
  */
 function getDiagnosisAndRecommendations(plantData) {
-    // Start with a perfect score (100) and apply penalties
     let totalHealthScore = 100;
     const { moisture, npk_n, npk_p, npk_k, photoDiagnosis } = plantData;
 
@@ -560,7 +628,7 @@ function getDiagnosisAndRecommendations(plantData) {
     let cardBorderColor = healthColorCode;
     let isFloodScenario = false;
     
-    // 1. --- VISUAL (PARTIAL) ASSESSMENT / PHOTO PENALTY (LOWER WEIGHT) ---
+    // 1. --- VISUAL (PARTIAL) ASSESSMENT / PHOTO PENALTY ---
     if (photoDiagnosis) {
         const kbEntry = TOMATO_DIAGNOSTIC_KB[photoDiagnosis];
         if (kbEntry) {
@@ -572,19 +640,19 @@ function getDiagnosisAndRecommendations(plantData) {
         }
     }
     
-    // 2. --- SENSOR (FULL) ASSESSMENT / SOIL PENALTIES (HIGHER WEIGHT) ---
+    // 2. --- SENSOR (FULL) ASSESSMENT / SOIL PENALTIES ---
     if (moisture !== null) {
         let moisturePenalty = 0;
         let npkPenalty = 0;
         let sensorAnalysis = "";
 
-        // A. MOISTURE ASSESSMENT (The primary driver for flood/drought)
+        // A. MOISTURE ASSESSMENT 
         if (moisture > FLOOD_MOISTURE_THRESHOLD) {
             moisturePenalty = SENSOR_SCORE_WEIGHTS.MOISTURE_HIGH;
             isFloodScenario = true;
             sensorAnalysis += `* **Moisture Alert:** Soil moisture (${moisture}%) is CRITICALLY HIGH, exceeding the flood threshold (${FLOOD_MOISTURE_THRESHOLD}%). This indicates a **waterlogging/flood-stress event** risk. Severe root hypoxia and pathogen growth are likely. (Penalty: -${moisturePenalty})\n`;
         } else if (moisture > OPTIMAL_MOISTURE_RANGE.max) {
-            moisturePenalty = SENSOR_SCORE_WEIGHTS.MOISTURE_LOW / 2; // Half the low penalty for slight overwatering
+            moisturePenalty = SENSOR_SCORE_WEIGHTS.MOISTURE_LOW / 2; 
             sensorAnalysis += `* **Moisture Warning:** Soil moisture (${moisture}%) is above the optimal range. Overwatering is probable, causing minor stress and potential root issues. (Penalty: -${moisturePenalty})\n`;
         } else if (moisture < OPTIMAL_MOISTURE_RANGE.min) {
             moisturePenalty = SENSOR_SCORE_WEIGHTS.MOISTURE_LOW;
@@ -603,7 +671,7 @@ function getDiagnosisAndRecommendations(plantData) {
         } else {
             sensorAnalysis += `* **NPK Status (Nitrogen):** N is acceptable (N:${npk_n} ppm). (Penalty: 0)\n`;
         }
-        // Similar checks for P and K would be added here to be fully comprehensive. For brevity:
+        // Simplified P and K check
         if (npk_p < OPTIMAL_NPK_RATIO.P * 0.5 || npk_k < OPTIMAL_NPK_RATIO.K * 0.5) {
              npkPenalty += SENSOR_SCORE_WEIGHTS.NPK_DEFICIENCY / 2;
              sensorAnalysis += `* **NPK Alert (P/K):** Phosphorus (P:${npk_p} ppm) or Potassium (K:${npk_k} ppm) is critically low. (Penalty: -${SENSOR_SCORE_WEIGHTS.NPK_DEFICIENCY / 2})\n`;
@@ -611,7 +679,7 @@ function getDiagnosisAndRecommendations(plantData) {
 
         // Apply all sensor penalties
         totalHealthScore -= (moisturePenalty + npkPenalty);
-        totalHealthScore = Math.max(0, totalHealthScore); // Cap at 0
+        totalHealthScore = Math.max(0, totalHealthScore); 
 
         // Determine Sensor Recommendation Text
         if (isFloodScenario) {
@@ -626,7 +694,7 @@ function getDiagnosisAndRecommendations(plantData) {
     }
 
     // 3. --- FUSED (FINAL) ASSESSMENT ---
-    let result = HEALTH_SCORE_THRESHOLDS.OPTIMAL; // Default to Optimal
+    let result = HEALTH_SCORE_THRESHOLDS.OPTIMAL; 
     if (totalHealthScore <= HEALTH_SCORE_THRESHOLDS.CRITICAL.max) {
         result = HEALTH_SCORE_THRESHOLDS.CRITICAL;
     } else if (totalHealthScore <= HEALTH_SCORE_THRESHOLDS.ACTION_REQUIRED.max) {
@@ -649,7 +717,7 @@ function getDiagnosisAndRecommendations(plantData) {
         fused_rec_text = final_diagnosis_summary + `Both visual and sensor data confirm optimal health. Continue routine monitoring.`;
     }
 
-    // 4. --- DETAILED FLOOD PROTOCOL ADDENDUM (V21.0 LONGER ANALYSIS) ---
+    // 4. --- DETAILED FLOOD PROTOCOL ADDENDUM ---
     if (isFloodScenario) {
         analysisDetail += `\n**--- CRITICAL FLOOD RESPONSE PROTOCOL INITIATED ---**\n\n`;
         analysisDetail += `**Root Damage Mitigation:** The prolonged saturation risk requires immediate action. The high moisture level prevents oxygen from reaching the root zone (Hypoxia), which will cause rapid root death if not addressed. The detected low NPK is likely due to nutrient leaching and the plant's inability to uptake nutrients under stress.\n\n`;
@@ -689,47 +757,7 @@ function getLatestSensorDataForZone(zoneID) {
 }
 
 /**
- * V21.0: Generates the HTML for a single, comprehensive analysis card.
- */
-function generatePlantAnalysisCardHTML(zoneID, result) {
-    const scoreClass = getScoreClass(result.score);
-    
-    // This is the CRITICAL fix: Set the border color of the card to reflect the score
-    const cardStyle = `border-color: ${result.border}; box-shadow: 0 0 30px ${result.border}33;`;
-
-    return `
-        <div class="analysis-card" style="${cardStyle}">
-            <div class="plant-id-label">Zone ${zoneID} Diagnosis</div>
-            
-            <div style="text-align: right; margin-bottom: 20px;">
-                <span class="score-badge" style="background-color: ${result.color};">
-                    FUSED HEALTH SCORE: ${result.score.toFixed(0)}/100
-                </span>
-            </div>
-
-            <div class="assessment-section">
-                <div class="rec-title">FUSED ASSESSMENT (Final Protocol)</div>
-                <div class="${scoreClass}">${result.rec_fused}</div>
-            </div>
-
-            <div class="assessment-section">
-                <div class="rec-title">Partial Assessment (CV Only)</div>
-                <div class="${getScoreClass(result.score)}">${result.rec_cv}</div>
-            </div>
-
-            <div class="assessment-section">
-                <div class="rec-title">Full Assessment (Sensor Only)</div>
-                <div class="${getScoreClass(result.score)}">${result.rec_sensor}</div>
-            </div>
-
-            <h3>DATA FUSION ENGINE: Detailed Report (V21.0)</h3>
-            <pre style="white-space: pre-wrap; word-wrap: break-word; background: #0f131a; padding: 15px; border-radius: 8px; border: 1px solid #30363d; font-size: 0.9em;">${result.analysis}</pre>
-        </div>
-    `;
-}
-
-/**
- * V21.0: Main analysis loop. Iterates through all 16 zones.
+ * V21.0: Main analysis loop. Iterates through all 16 zones. (Logic retained)
  */
 function triggerComprehensiveAnalysisCycle() {
     const analysisGrid = document.getElementById('plantAnalysisGrid');
@@ -741,7 +769,7 @@ function triggerComprehensiveAnalysisCycle() {
         
         let photoDiagnosis = null;
         if (photoEntry) {
-             // Extract diagnosis from the mocked photo data URL (CRITICAL MOCK LOGIC)
+             // Extract diagnosis from the photo data URL (CRITICAL MOCK LOGIC)
              const match = photoEntry.match(/diag:([^/]+)/);
              if (match) {
                  photoDiagnosis = match[1].replace(/_/g, ' ');
@@ -754,7 +782,7 @@ function triggerComprehensiveAnalysisCycle() {
             // Case 1: No data for this zone
             analysisResult = {
                 score: NaN,
-                color: HEALTH_SCORE_THRESHOLDS.CRITICAL.color, // Fallback color
+                color: HEALTH_SCORE_THRESHOLDS.CRITICAL.color, 
                 border: '#58a6ff',
                 analysis: 'Awaiting both image and sensor data for this zone. No diagnosis possible.',
                 rec_cv: '<span class="rec-no-data">N/A: No photo data available.</span>',
@@ -771,8 +799,8 @@ function triggerComprehensiveAnalysisCycle() {
                 photoDiagnosis: photoDiagnosis
             });
             // Update 3D visualization data immediately with the new color/score
-            // This is CRITICAL for the 3D fix
             const index = zone.id - 1;
+            field3DData[index].moisture = latestSensorData ? latestSensorData.moisture : field3DData[index].moisture; // Update moisture for 3D height
             field3DData[index].healthScore = analysisResult.score;
             field3DData[index].color = analysisResult.color;
         }
@@ -783,6 +811,44 @@ function triggerComprehensiveAnalysisCycle() {
     // CRITICAL FIX: Re-draw map and 3D immediately after updating the data
     updateMapVisualization(); 
     draw3DMap();
+}
+
+// ... generatePlantAnalysisCardHTML (retained from V21.0) ...
+function generatePlantAnalysisCardHTML(zoneID, result) {
+    const scoreClass = getScoreClass(result.score);
+    
+    // This is the CRITICAL fix: Set the border color of the card to reflect the score
+    const cardStyle = `border-color: ${result.border}; box-shadow: 0 0 30px ${result.border}33;`;
+
+    return `
+        <div class="analysis-card" style="${cardStyle}">
+            <div class="plant-id-label">Zone ${zoneID} Diagnosis</div>
+            
+            <div style="text-align: right; margin-bottom: 20px;">
+                <span class="score-badge" style="background-color: ${result.color};">
+                    FUSED HEALTH SCORE: ${isNaN(result.score) ? 'N/A' : result.score.toFixed(0)}/100
+                </span>
+            </div>
+
+            <div class="assessment-section">
+                <div class="rec-title">FUSED ASSESSMENT (Final Protocol)</div>
+                <div class="${scoreClass}">${result.rec_fused}</div>
+            </div>
+
+            <div class="assessment-section">
+                <div class="rec-title">Partial Assessment (CV Only)</div>
+                <div class="${scoreClass}">${result.rec_cv}</div>
+            </div>
+
+            <div class="assessment-section">
+                <div class="rec-title">Full Assessment (Sensor Only)</div>
+                <div class="${scoreClass}">${result.rec_sensor}</div>
+            </div>
+
+            <h3>DATA FUSION ENGINE: Detailed Report (V22.0)</h3>
+            <pre style="white-space: pre-wrap; word-wrap: break-word; background: #0f131a; padding: 15px; border-radius: 8px; border: 1px solid #30363d; font-size: 0.9em;">${result.analysis}</pre>
+        </div>
+    `;
 }
 
 // Placeholder for the no-data rendering logic (used on initial load)
@@ -804,7 +870,7 @@ function renderNoDataCards() {
 }
 
 // ==================================================================================
-// SECTION 3.0: 2D MAP VISUALIZATION (V21.0 - HEALTH COLOR FIX)
+// SECTION 3.0: 2D MAP VISUALIZATION (V21.0 - HEALTH COLOR FIX) - Logic retained
 // ----------------------------------------------------------------------------------
 function updateMapVisualization() {
     const ctx = MAP_CONTEXT;
@@ -813,7 +879,7 @@ function updateMapVisualization() {
 
     // 1. Clear and Draw Grid Background
     ctx.clearRect(0, 0, size, size);
-    ctx.fillStyle = '#0f131a'; // Dark background for the map
+    ctx.fillStyle = '#0f131a'; 
     ctx.fillRect(0, 0, size, size);
 
     // Draw 1m x 1m grid lines
@@ -831,14 +897,14 @@ function updateMapVisualization() {
     // 2. Draw Plant Zones (V21.0 FIX: Color based on FUSED health score)
     FIELD_PLANT_LOCATIONS_M.forEach((plant, index) => {
         const px = plant.x * scale;
-        const py = size - (plant.y * scale); // Invert Y-axis for canvas
+        const py = size - (plant.y * scale); 
 
-        // Get the health data from the 3D data structure (which is updated in the analysis cycle)
+        // Get the health data from the 3D data structure 
         const healthData = field3DData[index];
         const circleColor = healthData.color || '#58a6ff'; // Default to blue if no data
 
         ctx.beginPath();
-        ctx.arc(px, py, PLANT_CIRCLE_RADIUS * 2, 0, Math.PI * 2); // Increased radius for visibility
+        ctx.arc(px, py, PLANT_CIRCLE_RADIUS * 2, 0, Math.PI * 2); 
         ctx.fillStyle = circleColor;
         ctx.fill();
         ctx.strokeStyle = '#c9d1d9';
@@ -853,9 +919,9 @@ function updateMapVisualization() {
     // Draw Blue Triangle (Rover)
     ctx.fillStyle = '#58a6ff';
     ctx.beginPath();
-    ctx.moveTo(roverX, roverY - 10); // Nose
-    ctx.lineTo(roverX - 10, roverY + 10); // Bottom Left
-    ctx.lineTo(roverX + 10, roverY + 10); // Bottom Right
+    ctx.moveTo(roverX, roverY - 10); 
+    ctx.lineTo(roverX - 10, roverY + 10); 
+    ctx.lineTo(roverX + 10, roverY + 10); 
     ctx.closePath();
     ctx.fill();
 
@@ -864,11 +930,11 @@ function updateMapVisualization() {
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(roverX, roverY);
-    const angleRad = (90 - currentRoverKinematicState.heading) * (Math.PI / 180); // Convert heading to math angle
+    const angleRad = (90 - currentRoverKinematicState.heading) * (Math.PI / 180); 
     const lineLength = 20;
     ctx.lineTo(
         roverX + lineLength * Math.cos(angleRad),
-        roverY - lineLength * Math.sin(angleRad) // Subtract for canvas Y-down
+        roverY - lineLength * Math.sin(angleRad) 
     );
     ctx.stroke();
 }
@@ -890,12 +956,13 @@ function findNearestPlantZone(x_m, y_m) {
 }
 
 // ==================================================================================
-// SECTION 4.0: 3D VISUALIZATION CORE (V21.0 - COLOR FIX)
+// SECTION 4.0: 3D VISUALIZATION CORE (V22.0 - PLANT STRUCTURE FIX)
 // ----------------------------------------------------------------------------------
 let scene, camera, renderer, controls;
-let plantCubes = []; // Global array to hold the 16 Three.js mesh objects
+// CRITICAL FIX: Update plantCubes to hold an object with the group and its components
+let plantCubes = []; 
 
-// Initialize mock 3D data structure (defaulting to middle/optimal)
+// Initialize mock 3D data structure
 const field3DData = FIELD_PLANT_LOCATIONS_M.map(() => ({ 
     moisture: 50, 
     healthScore: 75, 
@@ -944,23 +1011,41 @@ function initThreeD() {
     window.addEventListener('resize', onWindowResize, false);
 }
 
+/**
+ * V22.0: Creates the stem and leaves plant structure.
+ */
 function drawFieldCubes() {
-    const baseGeometry = new THREE.BoxGeometry(0.3, 1, 0.3);
-    const offset = FIELD_GRID_SIZE_M / 2; // Offset to center the 4x4 grid (0 to 4 becomes -2 to 2)
+    // 1. Stem Geometry (Cylinder)
+    const stemGeometry = new THREE.CylinderGeometry(0.05, 0.05, 1, 8); // Thin cylinder
+    
+    // 2. Leaf Geometry (Simple sphere to represent foliage)
+    const leafGeometry = new THREE.SphereGeometry(0.2, 10, 10); 
+    const offset = FIELD_GRID_SIZE_M / 2;
 
-    FIELD_PLANT_LOCATIONS_M.forEach((plant, index) => {
-        const material = new THREE.MeshLambertMaterial({ color: 0x3fb950 }); // Default color
-        const cube = new THREE.Mesh(baseGeometry, material);
+    FIELD_PLANT_LOCATIONS_M.forEach((plant) => {
+        // Stem
+        const stemMaterial = new THREE.MeshLambertMaterial({ color: 0x472e1e }); // Brown
+        const stem = new THREE.Mesh(stemGeometry, stemMaterial);
+        stem.position.y = 0.5; // Half height of initial cylinder
         
-        // Position the cube in the 3D scene
-        // X and Z are horizontal axes, Y is height
-        cube.position.x = plant.x - offset;
-        cube.position.z = plant.y - offset;
-        cube.position.y = 0; // Starts at ground level
+        // Leaves (Default green)
+        const leafMaterial = new THREE.MeshLambertMaterial({ color: 0x3fb950 }); 
+        const leaves = new THREE.Mesh(leafGeometry, leafMaterial);
+        leaves.position.y = 1.0; // At the top of the initial stem
         
-        // Store the cube and set its initial mock data
-        plantCubes.push(cube);
-        scene.add(cube);
+        // Group the parts
+        const plantGroup = new THREE.Group();
+        plantGroup.add(stem);
+        plantGroup.add(leaves);
+        
+        // Position the whole group in the 3D scene (X and Z are horizontal axes)
+        plantGroup.position.x = plant.x - offset;
+        plantGroup.position.z = plant.y - offset;
+        plantGroup.position.y = 0; // Ground level
+
+        // CRITICAL: Store the components for individual updates
+        plantCubes.push({ group: plantGroup, stem: stem, leaves: leaves, id: plant.id });
+        scene.add(plantGroup);
     });
     
     // Add a simple ground plane
@@ -968,45 +1053,38 @@ function drawFieldCubes() {
     const planeMaterial = new THREE.MeshLambertMaterial({ color: 0x1f272e, side: THREE.DoubleSide });
     const plane = new THREE.Mesh(planeGeometry, planeMaterial);
     plane.rotation.x = Math.PI / 2; // Rotate to lie flat
-    plane.position.y = -0.5; // Position it below the cubes
+    plane.position.y = -0.05; // Position it just below the base of the stems
     scene.add(plane);
 }
 
 /**
- * V21.0 FIX: This function is now responsible for updating the height (Moisture)
- * and the color (Health Score) of the 3D objects based on the latest analysis.
+ * V22.0: Updates the plant structure's height and color based on analysis data.
  */
 function draw3DMap() {
-    plantCubes.forEach((cube, index) => {
+    plantCubes.forEach((plantObj, index) => {
         const data = field3DData[index];
         
-        // 1. Update Height (Moisture)
+        // 1. Update Height (Moisture) - Scales the stem
         // Map moisture (0-100) to height (0.5 to 2.0)
         const normalizedMoisture = data.moisture / 100;
-        const newHeight = Math.max(0.5, normalizedMoisture * 1.5 + 0.5); // Min height 0.5
+        const stemHeight = Math.max(0.5, normalizedMoisture * 1.5 + 0.5); // Min height 0.5
         
-        // Update geometry height (only needed if height changes, for simplicity we re-create)
-        const newGeometry = new THREE.BoxGeometry(0.3, newHeight, 0.3);
-        cube.geometry.dispose(); // Dispose old geometry
-        cube.geometry = newGeometry;
+        // Scale the stem (Y-axis)
+        plantObj.stem.scale.y = stemHeight;
         
-        // Adjust position so the base stays on the ground (y = height/2)
-        cube.position.y = newHeight / 2 - 0.5;
+        // Reposition stem and leaves correctly after scaling
+        plantObj.stem.position.y = stemHeight / 2; // Keep center of scaled stem at half height
+        plantObj.leaves.position.y = stemHeight; // Place leaves at the top of the stem
 
-        // 2. Update Color (Health Score) - CRITICAL FIX
+        // 2. Update Color (Health Score) - Changes leaf color
         const newColor = new THREE.Color(data.color);
-        cube.material.color.set(newColor);
+        plantObj.leaves.material.color.set(newColor);
     });
-
-    // Rover Position (Mock Cube) - Optional but good for consistency
-    // ... (logic for 3D rover position update can be added here)
 }
 
 function updateRover3DPosition() {
-    // This is a simple mock update for the rover's cube position
-    // Since we don't have a 3D rover, we just update the camera position slightly
-    // to simulate a moving observation point, but we keep the main scene fixed.
-    // For a simple demo, we will skip moving the camera to maintain focus on the field.
+    // Kinematic updates in 3D are currently not visualized in this iteration 
+    // to maintain focus on the stationary plant data visualization.
 }
 
 function onWindowResize() {
@@ -1027,20 +1105,31 @@ function animate() {
 // SECTION 5.0: UTILITY & UI FUNCTIONS (History, Modals, Initialization)
 // ----------------------------------------------------------------------------------
 
-// (All other utility functions from V14.2 are retained here: 
-// generatePhotoGrid, selectZoneForPhotoAssignment, handlePhotoUpload, 
-// openStockImageGalleryModal, populateStockPhotos, 
-// restoreTrialFromHistory, executeTrialSaveOperation, etc.)
-
 function selectZoneForPhotoAssignment(zoneID) {
     currentlySelectedPlantZone = zoneID;
     CURRENT_ZONE_SELECTION_DISPLAY.innerText = zoneID;
     document.getElementById('modalCurrentZoneSelection').innerText = zoneID;
+    
     // Highlight the selected cell visually
     document.querySelectorAll('.grid-cell').forEach(cell => {
         cell.style.border = '1px solid #3fb950'; // Reset all
     });
     document.getElementById(`zoneCell-${zoneID}`).style.border = '3px solid #ffaa00'; // Highlight selected
+
+    // V22.0 FIX: Create and trigger hidden file input when a cell is selected to enable local file upload
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = 'image/*';
+    fileInput.style.display = 'none';
+    
+    // Event listener must be attached before click()
+    fileInput.onchange = (event) => {
+        handlePhotoUpload(event);
+        document.body.removeChild(fileInput); // Clean up after selection
+    };
+    
+    document.body.appendChild(fileInput);
+    fileInput.click();
 }
 
 function generatePhotoGrid() {
@@ -1050,7 +1139,14 @@ function generatePhotoGrid() {
         const cell = document.createElement('div');
         cell.className = 'grid-cell';
         cell.id = `zoneCell-${i}`;
-        cell.innerHTML = `Zone ${i}<br>NO PHOTO`;
+        
+        // Check if a photo is already assigned to this cell from history/session
+        if (currentPhotoAssignmentData[i]) {
+            renderPhotoInPhotoGridCell(i, currentPhotoAssignmentData[i]);
+        } else {
+            cell.innerHTML = `Zone ${i}<br>NO PHOTO`;
+        }
+        
         cell.onclick = () => selectZoneForPhotoAssignment(i);
         grid.appendChild(cell);
     }
@@ -1069,7 +1165,7 @@ function renderPhotoInPhotoGridCell(zoneID, dataUrl) {
     img.style.width = '100%';
     img.style.height = '100%';
     img.style.objectFit = 'cover';
-    img.style.pointerEvents = 'none'; // Prevent image click from overriding cell click
+    img.style.pointerEvents = 'none'; 
 
     // Create delete button
     const deleteBtn = document.createElement('button');
@@ -1101,19 +1197,25 @@ function deletePhotoAssignment(zoneID) {
     triggerComprehensiveAnalysisCycle();
 }
 
+/**
+ * V22.0: Handles file upload event from the hidden input.
+ */
 function handlePhotoUpload(event) {
     if (currentlySelectedPlantZone === 0) {
-        alert("Please select a target Zone (1-16) on the grid first!");
-        return;
+        // This shouldn't happen if selectZoneForPhotoAssignment is called first
+        return; 
     }
 
     const file = event.target.files[0];
     if (file) {
         const reader = new FileReader();
         reader.onload = (e) => {
-            // Mock a diagnosis for the uploaded image based on zone, as actual CV is complex
             const zoneID = currentlySelectedPlantZone;
-            const mockDiagnosis = (zoneID % 3 === 0) ? 'Dark Spots & Lesions/Blackening of Leaf (Fungal/Bacterial)' : 'Healthy, Deep Green Foliage';
+            
+            // Mock a diagnosis for the uploaded image based on zone, as actual CV is complex
+            const mockDiagnosis = (zoneID % 4 === 0) ? 'Edging Burn/Tip Necrosis (K/Salt)' : 'Healthy, Deep Green Foliage';
+            
+            // Embed mock diagnosis into the data URL for later retrieval
             const dataUrlWithMockDiagnosis = e.target.result.replace('base64,', `base64,mocked_user_upload_diag:${mockDiagnosis.replace(/\s/g, '_').replace(/[()]/g, '')},`);
             
             currentPhotoAssignmentData[currentlySelectedPlantZone] = dataUrlWithMockDiagnosis;
@@ -1122,8 +1224,14 @@ function handlePhotoUpload(event) {
             STATUS_ELEMENT.innerText = `User photo uploaded and assigned to Zone ${currentlySelectedPlantZone}. Diagnosis mocked for now.`;
         };
         reader.readAsDataURL(file);
+    } else {
+        // If the user cancels the file dialog, reset the border highlight
+        document.querySelectorAll('.grid-cell').forEach(cell => {
+            cell.style.border = '1px solid #3fb950'; // Reset all
+        });
     }
 }
+
 
 function openStockImageGalleryModal() {
     if (currentlySelectedPlantZone === 0) {
@@ -1167,7 +1275,7 @@ function populateStockPhotos() {
     }
 }
 
-// --- History and State Management (Retained from V14.2) ---
+// --- History and State Management (Retained from V21.0) ---
 function executeTrialSaveOperation() {
     if (trialHistoryRecords.length >= MAX_HISTORY_TRIALS) {
         trialHistoryRecords.shift(); // FIFO: Remove oldest
@@ -1229,9 +1337,6 @@ function restoreTrialFromHistory(trial) {
     
     // Restore photo grid display
     generatePhotoGrid();
-    Object.keys(currentPhotoAssignmentData).forEach(zoneID => {
-        renderPhotoInPhotoGridCell(parseInt(zoneID), currentPhotoAssignmentData[zoneID]);
-    });
     
     STATUS_ELEMENT.innerText = `SUCCESS: Restored Trial ID ${trial.id} from history.`;
     closeHistoryModal();
@@ -1272,6 +1377,14 @@ function resetSensorAndMapData(clearHistory = true) {
     generatePhotoGrid(); // Re-render photo grid to clear images
     renderNoDataCards(); // Clear analysis grid
 
+    // Reset 3D data structure to default moisture/score
+    field3DData.forEach(data => {
+        data.moisture = 50;
+        data.healthScore = 75;
+        data.color = HEALTH_SCORE_THRESHOLDS.OPTIMAL.color;
+    });
+    draw3DMap();
+
     if (clearHistory) {
          // Also reset history ID for a clean slate
          currentIncrementalTrialID = 1;
@@ -1282,9 +1395,8 @@ function resetSensorAndMapData(clearHistory = true) {
     }
 }
 
-// --- Initial Load Logic ---
+// --- Initial Load Logic (Retained for compatibility) ---
 (function(D){
-    // Mock selector for image diagnosis extraction
     D.querySelector = function(s){
         if(s.indexOf(':contains') === -1) return D.querySelector(s);
         let [selector, text] = s.split(':contains');
@@ -1302,9 +1414,7 @@ function resetSensorAndMapData(clearHistory = true) {
 function onDocumentReady() {
     initThreeD();
     populateStockPhotos(); 
-    generatePhotoGrid();
     
-    // V21.0: Do not clear sensor/photo data on soft init, but ensure visualization is ready
     resetSensorAndMapData(false); 
     
     // CRITICAL FIX: Guarantee analysis view is rendered with the 16 card structure on load.
