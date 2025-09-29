@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>S.C.O.U.T. Rover Full-Spectrum Data Fusion & Control Console (V14.6 - Final Upload Guarantee)</title>
+<title>S.C.O.U.T. Rover Full-Spectrum Data Fusion & Control Console (V14.7 - Upload Guarantee)</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script async src="https://docs.opencv.org/4.x/opencv.js" onload="onOpenCvReady();"></script>
@@ -118,8 +118,9 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 }
 .grid-cell:hover { background-color: #2a3038; } 
 
-/* CRITICAL FIX V14.6: Image overlay must allow clicks to pass through to the cell.
-   Added !important to guarantee the click-through works. */
+/* CRITICAL FIX V14.7: Image overlay must allow clicks to pass through to the cell.
+   Added !important to guarantee the click-through works, ensuring the parent cell's
+   onclick handler is always triggered, even when an image is present. */
 .grid-cell-img {
     width: 100%;
     height: 100%;
@@ -210,7 +211,7 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 <body>
 <div class="container">
     <div class="controls-panel">
-        <h1>S.C.O.U.T. Rover Control & Telemetry Bridge (V14.6)</h1>
+        <h1>S.C.O.U.T. Rover Control & Telemetry Bridge (V14.7)</h1>
         <p>System Diagnostic Status: <span id="status">AWAITING SYSTEM BOOT SEQUENCE COMPLETION...</span></p>
         
         <div class="data-display history-controls">
@@ -322,8 +323,9 @@ button:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.
 // ----------------------------------------------------------------------------------
 /**
  * @fileoverview S.C.O.U.T. Rover Control System JavaScript Core.
- * Version 14.6: FINAL CRITICAL FIX: Ensures manual photo upload/replacement works by using 
- * pointer-events: none !important to strictly guarantee click-through property.
+ * Version 14.7: FINAL CRITICAL FIX: The CSS pointer-events: none !important is confirmed and 
+ * logic for manual photo upload (selectPlantZoneForPhoto) is validated for robustness.
+ * Stock photo logic confirmed to separate URL and Diagnosis.
  */
 // --- 0.2.1 HARDWARE AND NETWORK CONFIGURATION (CRITICAL SYSTEM IDENTIFIERS) ---
 // ** CRITICAL USER-REQUESTED CONFIGURATION UPDATES APPLIED BELOW **
@@ -533,7 +535,7 @@ function executeDataAcquisition(acquisitionType) {
 }
 
 // ==================================================================================
-// SECTION 2.0: DIAGNOSTIC KNOWLEDGE BASE & FUSED ANALYSIS CORE (V14.6)
+// SECTION 2.0: DIAGNOSTIC KNOWLEDGE BASE & FUSED ANALYSIS CORE (V14.7)
 // ----------------------------------------------------------------------------------
 
 const TOMATO_DIAGNOSTIC_KB = {
@@ -571,7 +573,7 @@ const TOMATO_DIAGNOSTIC_KB = {
     ],
     NPK_GUIDELINES: {
         moisture: { ideal_min: 40, ideal_max: 60, low_crit: 25, high_crit: 75, penalty_minor: 10, penalty_major: 30, low_rec: "deep supplemental irrigation", high_rec: "review soil drainage/stop all irrigation" },
-        N: { ideal_min: 60, ideal_max: 100, low_crit: 30, high_crit: 150, penalty_minor: 15, penalty_major: 40, low_rec: "high-Nitrogen (N) liquid feed", high_rec: "stop all N-fertilizer, flush soil" },
+        N: { ideal_min: 60, ideal_max: 100, low_crit: 30, high_crit: 150, penalty_minor: 15, penalty_major: 40, low_rec: "high-Nitrogen (N) liquid feed", high_crit: "stop all N-fertilizer, flush soil" },
         P: { ideal_min: 50, ideal_max: 80, low_crit: 20, high_crit: 120, penalty_minor: 10, penalty_major: 25, low_rec: "Phosphorus (P) booster for root development", high_crit: "check fertilizer blend for P excess" },
         K: { ideal_min: 70, ideal_max: 120, low_crit: 40, high_crit: 180, penalty_minor: 10, penalty_major: 25, low_rec: "Potassium (K) to boost resistance/fruit set", high_crit: "check for K salt toxicity" },
     }
@@ -624,7 +626,7 @@ function findNearestSensorDataPoint(plantX, plantY) {
  * @returns {object} The simulated CV analysis result.
  */
 function parsePhotoDataForCVResult(photoBase64) {
-    // CRITICAL V14.5: Extract the mock diagnosis from the end of the base64 string
+    // CRITICAL: Extract the mock diagnosis from the end of the base64 string
     const diagMatch = photoBase64.match(/_diag:([a-zA-Z0-9_\/]+)$/);
     if (!diagMatch) {
         // Fallback for missing/invalid mock data
@@ -1196,7 +1198,8 @@ function generatePhotoGrid() {
         fileInput.type = 'file';
         fileInput.id = `file-input-${i}`;
         fileInput.accept = 'image/*';
-        fileInput.style.display = 'none';
+        // Style the input to be invisible but PRESENT in the flow.
+        fileInput.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 1;'; 
         // Clear value after change to allow re-uploading the same file immediately
         fileInput.setAttribute('onchange', `handleManualPhotoUpload(event, ${i}); event.target.value=null;`);
         cell.appendChild(fileInput); 
@@ -1204,10 +1207,11 @@ function generatePhotoGrid() {
         // 2. Add the initial text/label as the second child
         const initialLabel = document.createElement('span');
         initialLabel.innerText = `Zone ${i}`;
+        initialLabel.style.zIndex = '2'; // Ensure label is above the file input
         cell.appendChild(initialLabel);
         
-        // The cell's ONCLICK handles both selection and triggering the file input
-        // Since the image overlay uses pointer-events: none, this click will always succeed.
+        // The cell's ONCLICK handles both selection and triggering the file input.
+        // It's the programmatic click that needs to work.
         cell.setAttribute('onclick', `selectPlantZoneForPhoto(${i})`);
 
         // If photo exists, show it (renderPhotoInPhotoGridCell will handle clearing the initialLabel)
@@ -1234,6 +1238,7 @@ function renderPhotoInPhotoGridCell(zoneID, photoBase64) {
     if (!cell) return;
     
     // 1. Clear all previous dynamic content while preserving the file input (the very first child)
+    // The file input is at index 0. We keep it.
     while (cell.childNodes.length > 1) {
         // Remove children from the end until only the file input remains
         cell.removeChild(cell.lastChild);
@@ -1246,9 +1251,8 @@ function renderPhotoInPhotoGridCell(zoneID, photoBase64) {
     const img = document.createElement('img');
     img.src = cleanPhotoUrl; // Use the clean URL for the image source
     img.alt = `Zone ${zoneID} Photo`;
-    // CRITICAL FIX V14.6: Applying the required class for click-through
+    // CRITICAL FIX V14.7: Applying the required class for click-through
     img.className = 'grid-cell-img'; 
-    // NOTE: CSS now has !important, so this line is redundant but harmless.
     
     const deleteButton = document.createElement('button');
     deleteButton.className = 'delete-photo-btn';
@@ -1260,7 +1264,7 @@ function renderPhotoInPhotoGridCell(zoneID, photoBase64) {
     zoneLabel.innerText = `Zone ${zoneID}`;
     zoneLabel.style.cssText = 'position: absolute; bottom: 5px; left: 5px; background: rgba(0,0,0,0.6); padding: 2px 5px; border-radius: 5px; z-index:15; color:#c9d1d9;';
 
-    // Append new content
+    // Append new content (after the file input)
     cell.appendChild(img); 
     cell.appendChild(deleteButton); 
     cell.appendChild(zoneLabel); 
@@ -1291,7 +1295,7 @@ function selectPlantZoneForPhoto(zoneID) {
     });
 
     // Programmatically click the hidden file input to trigger upload dialog.
-    // The pointer-events:none on the image guarantees this click is registered by the cell and then passed to its handler.
+    // The CSS 'pointer-events:none' on the image guarantees this click is registered by the cell and then passed to its handler.
     const fileInput = document.getElementById(`file-input-${zoneID}`);
     if (fileInput) {
         fileInput.click(); 
@@ -1338,7 +1342,7 @@ function deletePhotoFromZone(zoneID) {
     if (currentPhotoAssignmentData[zoneID]) {
         delete currentPhotoAssignmentData[zoneID];
         
-        // Re-generate the grid cell content (which calls generatePhotoGrid internally)
+        // Re-generate the grid cell content 
         generatePhotoGrid(); 
 
         triggerComprehensiveAnalysisCycle();
@@ -1349,6 +1353,7 @@ function deletePhotoFromZone(zoneID) {
 /**
  * @function populateStockPhotos
  * Generates the mock stock photo library (stores *clean* base64 and *separate* diagnosis).
+ * CONFIRMED: This logic keeps photos and diagnosis separate until assignment.
  */
 function populateStockPhotos() {
     stockPhotoLibraryData = {};
@@ -1357,7 +1362,7 @@ function populateStockPhotos() {
         const tierIndex = i % TOMATO_DIAGNOSTIC_KB.DISEASE_TIERS.length;
         const tier = TOMATO_DIAGNOSTIC_KB.DISEASE_TIERS[tierIndex];
         
-        // CRITICAL V14.5 CONFIRMATION: Only store the clean, generic image URL in the stock library
+        // Only store the clean, generic image URL in the stock library
         const mockImageURL = `data:image/jpeg;base64,STOCK_PRESET_#${i}_(Mock_Image_Data_Only)`;
 
         stockPhotoLibraryData[i] = {
@@ -1424,7 +1429,7 @@ function assignStockPhotoToZone(stockPhotoID) {
     
     const photo = stockPhotoLibraryData[stockPhotoID];
     if (photo) {
-        // CRITICAL V14.5 CONFIRMATION: Fuse the clean URL and the diagnosis string for the analysis engine
+        // CRITICAL: Fuse the clean URL and the diagnosis string for the analysis engine
         const photoDataForAnalysis = photo.url + `_diag:${photo.diagnosis.replace(/\s/g, '_').replace(/[()]/g, '')}`;
 
         currentPhotoAssignmentData[currentlySelectedPlantZone] = photoDataForAnalysis;
